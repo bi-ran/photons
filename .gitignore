@@ -1,0 +1,29 @@
+# ignore files without extensions
+*
+!*.*
+!*/
+
+# dependency files
+*.d
+
+# temporary files
+*.swp
+.__afs*
+
+# root files
+*.root
+
+# figures
+*.pdf
+*.png
+
+# misc.
+*.dat
+*.list
+*.log
+*.tar.gz
+
+# directories
+configs/
+local/
+tex/
