@@ -1,0 +1,3 @@
+[submodule "git/config"]
+	path = git/config
+	url = git@github.com:bi-ran/config.git
