@@ -12,6 +12,10 @@
     B_VAR_M(ACTION, ## __VA_ARGS__)                                         \
     B_VEC_D(ACTION, ## __VA_ARGS__)                                         \
     B_VEC_M(ACTION, ## __VA_ARGS__)                                         \
+    B_VAR_J(ACTION, ## __VA_ARGS__)                                         \
+    B_VAR_G(ACTION, ## __VA_ARGS__)                                         \
+    B_ARR_J(ACTION, ## __VA_ARGS__)                                         \
+    B_ARR_G(ACTION, ## __VA_ARGS__)                                         \
 
 #define B_VAR_D(ACTION, ...)                                                \
     ACTION(UInt_t, run, ## __VA_ARGS__)                                     \
@@ -96,7 +100,21 @@
     ACTION(std::vector<float>, mcTrkIsoDR03, ## __VA_ARGS__)                \
     ACTION(std::vector<float>, mcTrkIsoDR04, ## __VA_ARGS__)                \
 
+#define B_VAR_J(ACTION, ...)                                                \
+    ACTION(int, nref, ## __VA_ARGS__)                                       \
+
+#define B_ARR_J(ACTION, ...)                                                \
+    ACTION(std::vector<float>, rawpt, ## __VA_ARGS__)                       \
+    ACTION(std::vector<float>, jtpt, ## __VA_ARGS__)                        \
+    ACTION(std::vector<float>, jteta, ## __VA_ARGS__)                       \
+    ACTION(std::vector<float>, jtphi, ## __VA_ARGS__)                       \
+
+#define B_VAR_G(ACTION, ...)                                                \
+
+#define B_ARR_G(ACTION, ...)                                                \
+
 class photontree;
+class jettree;
 
 class pjtree {
     public:
@@ -104,6 +122,8 @@ class pjtree {
             this->mc_branches = 0;
             B_VAR_D(INVALID)
             B_VAR_M(INVALID)
+            B_VAR_J(INVALID)
+            B_VAR_G(INVALID)
         };
 
         pjtree(TTree* t, bool mc_branches)
@@ -117,14 +137,20 @@ class pjtree {
         void branch(TTree* t) {
             B_VAR_D(CREATE, t)
             B_VEC_D(CREATE, t)
+            B_VAR_J(CREATE, t)
+            B_ARR_J(CREATE, t)
             if (mc_branches) {
                 B_VAR_M(CREATE, t)
-                B_VEC_M(CREATE, t) }
+                B_VEC_M(CREATE, t)
+                B_VAR_G(CREATE, t)
+                B_ARR_G(CREATE, t) }
         };
 
         void clear() {
             B_VEC_D(CLEAR)
             B_VEC_M(CLEAR)
+            B_ARR_J(CLEAR)
+            B_ARR_G(CLEAR)
         };
 
         void copy(photontree* t) {
@@ -133,6 +159,14 @@ class pjtree {
             if (mc_branches) {
                 B_VAR_M(VARCOPY, t)
                 B_VEC_M(VECCOPY, t) }
+        };
+
+        void copy(jettree* t) {
+            B_VAR_J(VARCOPY, t)
+            B_ARR_J(ARRCOPY, t, nref)
+            if (mc_branches) {
+                B_VAR_G(VARCOPY, t)
+                B_ARR_G(ARRCOPY, t, nref) }
         };
 
     private:
