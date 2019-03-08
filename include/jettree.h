@@ -29,8 +29,12 @@
     B_AAJ_M(ACTION, ## __VA_ARGS__)                                         \
 
 #define B_AVJ_M(ACTION, ...)                                                \
+    ACTION(int, ngen, ## __VA_ARGS__)                                       \
 
 #define B_AAJ_M(ACTION, ...)                                                \
+    ACTION(float, genpt, ## __VA_ARGS__)                                    \
+    ACTION(float, geneta, ## __VA_ARGS__)                                   \
+    ACTION(float, genphi, ## __VA_ARGS__)                                   \
 
 static constexpr int size = 1000;
 

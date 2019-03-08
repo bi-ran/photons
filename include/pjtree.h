@@ -110,8 +110,12 @@
     ACTION(std::vector<float>, jtphi, ## __VA_ARGS__)                       \
 
 #define B_VAR_G(ACTION, ...)                                                \
+    ACTION(int, ngen, ## __VA_ARGS__)                                       \
 
 #define B_ARR_G(ACTION, ...)                                                \
+    ACTION(std::vector<float>, genpt, ## __VA_ARGS__)                       \
+    ACTION(std::vector<float>, geneta, ## __VA_ARGS__)                      \
+    ACTION(std::vector<float>, genphi, ## __VA_ARGS__)                      \
 
 class photontree;
 class jettree;
