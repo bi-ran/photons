@@ -170,9 +170,6 @@ class pjtree {
                 B_ARR_G(ARRCOPY, t, ngen) }
         };
 
-    private:
-        bool mc_branches;
-
         B_VAR_D(DECLARE)
         B_VAR_M(DECLARE)
         B_VEC_D(DECLPTR)
@@ -181,6 +178,9 @@ class pjtree {
         B_VAR_G(DECLARE)
         B_ARR_J(DECLPTR)
         B_ARR_G(DECLPTR)
+
+    private:
+        bool mc_branches;
 };
 
 #endif /* PJTREE_H */
