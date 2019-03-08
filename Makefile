@@ -25,14 +25,14 @@ all: $(RPPEXES) $(CPPEXES)
 
 $(BINDIR)/% : $(SRCDIR)/%.C
 	@mkdir -p $(BINDIR)
-	@mkdir -p $(BLDDIR)/$(@D)
-	$(CXX) $(CXXFLAGS) $(RCXXFLAGS) -MMD -MF $(BLDDIR)/$(@D)/$(*F).d $< -o $@ \
+	@mkdir -p $(BLDDIR)
+	$(CXX) $(CXXFLAGS) $(RCXXFLAGS) -MMD -MF $(BLDDIR)/$(*F).d $< -o $@ \
 		$(LDFLAGS) $(RLDFLAGS)
 
 $(BINDIR)/% : $(SRCDIR)/%.cpp
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(BLDDIR)/$(@D)
-	$(CXX) $(CXXFLAGS) -MMD -MF $(BLDDIR)/$(@D)/$(*F).d $< -o $@ \
+	$(CXX) $(CXXFLAGS) -MMD -MF $(BLDDIR)/$(*F).d $< -o $@ \
 		$(LDFLAGS)
 
 clean:
