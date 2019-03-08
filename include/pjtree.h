@@ -116,11 +116,11 @@ class pjtree {
             this->mc_branches = mc_branches;
             B_VAR_D(INVALID)
             B_VAR_J(INVALID)
-            B_VAR_M(INVALID)
-            B_VAR_G(INVALID)
+            B_VEC_D(NEWVEC)
+            B_ARR_J(NEWVEC)
             if (mc_branches) {
-                B_VEC_D(NEWVEC)
-                B_ARR_J(NEWVEC)
+                B_VAR_M(INVALID)
+                B_VAR_G(INVALID)
                 B_VEC_M(NEWVEC)
                 B_ARR_G(NEWVEC) }
         };
