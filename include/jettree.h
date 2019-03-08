@@ -40,17 +40,17 @@ class jettree {
     friend pjtree;
 
     public:
-        jettree() {
-            this->mc_branches = 0;
+        jettree(bool mc_branches) {
+            this->mc_branches = mc_branches;
             B_AVJ_D(ZERO)
-            B_AVJ_M(ZERO)
             B_AAJ_D(NEWARR, size)
-            B_AAJ_M(NEWARR, size)
+            if (mc_branches) {
+                B_AVJ_M(ZERO)
+                B_AAJ_M(NEWARR, size) }
         };
 
         jettree(TTree* t, bool mc_branches)
-                : jettree() {
-            this->mc_branches = mc_branches;
+                : jettree(mc_branches) {
             read(t);
         }
 

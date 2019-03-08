@@ -112,21 +112,21 @@ class jettree;
 
 class pjtree {
     public:
-        pjtree() {
-            this->mc_branches = 0;
+        pjtree(bool mc_branches) {
+            this->mc_branches = mc_branches;
             B_VAR_D(INVALID)
             B_VAR_J(INVALID)
             B_VAR_M(INVALID)
             B_VAR_G(INVALID)
-            B_VEC_D(NEWVEC)
-            B_ARR_J(NEWVEC)
-            B_VEC_M(NEWVEC)
-            B_ARR_G(NEWVEC)
+            if (mc_branches) {
+                B_VEC_D(NEWVEC)
+                B_ARR_J(NEWVEC)
+                B_VEC_M(NEWVEC)
+                B_ARR_G(NEWVEC) }
         };
 
         pjtree(TTree* t, bool mc_branches)
-                : pjtree() {
-            this->mc_branches = mc_branches;
+                : pjtree(mc_branches) {
             branch(t);
         };
 

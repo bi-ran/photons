@@ -96,17 +96,17 @@ class photontree {
     friend pjtree;
 
     public:
-        photontree() {
-            this->mc_branches = 0;
+        photontree(bool mc_branches) {
+            this->mc_branches = mc_branches;
             B_AVE_D(ZERO)
-            B_AVE_M(ZERO)
             B_ARE_D(ZERO)
-            B_ARE_M(ZERO)
+            if (mc_branches) {
+                B_AVE_M(ZERO)
+                B_ARE_M(ZERO) }
         };
 
         photontree(TTree* t, bool mc_branches)
-                : photontree() {
-            this->mc_branches = mc_branches;
+                : photontree(mc_branches) {
             read(t);
         }
 
