@@ -134,6 +134,18 @@ class pjtree {
 
         ~pjtree() = default;
 
+        void read(TTree* t) {
+            B_VAR_D(RREF, t)
+            B_VAR_J(RREF, t)
+            B_VEC_D(RVAR, t)
+            B_ARR_J(RVAR, t)
+            if (mc_branches) {
+                B_VAR_M(RREF, t)
+                B_VAR_G(RREF, t)
+                B_VEC_M(RVAR, t)
+                B_ARR_G(RVAR, t) }
+        };
+
         void branch(TTree* t) {
             B_VAR_D(BRNREF, t)
             B_VAR_J(BRNREF, t)
