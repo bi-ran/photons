@@ -165,7 +165,7 @@ class pjtree {
             B_ARR_J(ARRCOPY, t, nref)
             if (mc_branches) {
                 B_VAR_G(VARCOPY, t)
-                B_ARR_G(ARRCOPY, t, nref) }
+                B_ARR_G(ARRCOPY, t, ngen) }
         };
 
     private:
