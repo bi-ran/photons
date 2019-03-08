@@ -7,10 +7,6 @@
 
 #include "defines.h"
 
-#define BRANCHES_JET(ACTION, ...)                                           \
-    B_ALJ_D(ACTION, ## __VA_ARGS__)                                         \
-    B_ALJ_M(ACTION, ## __VA_ARGS__)                                         \
-
 #define B_ALJ_D(ACTION, ...)                                                \
     B_AVJ_D(ACTION, ## __VA_ARGS__)                                         \
     B_AAJ_D(ACTION, ## __VA_ARGS__)                                         \
