@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "defines.h"
+#include "photontree.h"
+#include "jettree.h"
 
 #define B_VAR_D(ACTION, ...)                                                \
     ACTION(UInt_t, run, ## __VA_ARGS__)                                     \
