@@ -43,9 +43,9 @@ class jettree {
         jettree() {
             this->mc_branches = 0;
             B_AVJ_D(ZERO)
-            B_AAJ_D(MALLOC, size)
             B_AVJ_M(ZERO)
-            B_AAJ_M(MALLOC, size)
+            B_AAJ_D(NEWARR, size)
+            B_AAJ_M(NEWARR, size)
         };
 
         jettree(TTree* t, bool mc_branches)
@@ -57,19 +57,19 @@ class jettree {
         ~jettree() = default;
 
         void read(TTree* t) {
-            B_AVJ_D(READ, t)
-            B_AAJ_D(RARR, t)
+            B_AVJ_D(RREF, t)
+            B_AAJ_D(RVAR, t)
             if (mc_branches) {
-                B_AVJ_M(READ, t)
-                B_AAJ_M(RARR, t) }
+                B_AVJ_M(RREF, t)
+                B_AAJ_M(RVAR, t) }
         };
 
     private:
         bool mc_branches;
 
         B_AVJ_D(DECLARE)
-        B_AAJ_D(DECLPTR)
         B_AVJ_M(DECLARE)
+        B_AAJ_D(DECLPTR)
         B_AAJ_M(DECLPTR)
 };
 

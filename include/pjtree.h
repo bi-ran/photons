@@ -7,16 +7,6 @@
 
 #include "defines.h"
 
-#define BRANCHES(ACTION, ...)                                               \
-    B_VAR_D(ACTION, ## __VA_ARGS__)                                         \
-    B_VAR_M(ACTION, ## __VA_ARGS__)                                         \
-    B_VEC_D(ACTION, ## __VA_ARGS__)                                         \
-    B_VEC_M(ACTION, ## __VA_ARGS__)                                         \
-    B_VAR_J(ACTION, ## __VA_ARGS__)                                         \
-    B_VAR_G(ACTION, ## __VA_ARGS__)                                         \
-    B_ARR_J(ACTION, ## __VA_ARGS__)                                         \
-    B_ARR_G(ACTION, ## __VA_ARGS__)                                         \
-
 #define B_VAR_D(ACTION, ...)                                                \
     ACTION(UInt_t, run, ## __VA_ARGS__)                                     \
     ACTION(ULong64_t, event, ## __VA_ARGS__)                                \
@@ -125,9 +115,13 @@ class pjtree {
         pjtree() {
             this->mc_branches = 0;
             B_VAR_D(INVALID)
-            B_VAR_M(INVALID)
             B_VAR_J(INVALID)
+            B_VAR_M(INVALID)
             B_VAR_G(INVALID)
+            B_VEC_D(NEWVEC)
+            B_ARR_J(NEWVEC)
+            B_VEC_M(NEWVEC)
+            B_ARR_G(NEWVEC)
         };
 
         pjtree(TTree* t, bool mc_branches)
@@ -139,22 +133,23 @@ class pjtree {
         ~pjtree() = default;
 
         void branch(TTree* t) {
-            B_VAR_D(CREATE, t)
-            B_VEC_D(CREATE, t)
-            B_VAR_J(CREATE, t)
-            B_ARR_J(CREATE, t)
+            B_VAR_D(BRNREF, t)
+            B_VAR_J(BRNREF, t)
+            B_VEC_D(BRNVAR, t)
+            B_ARR_J(BRNVAR, t)
             if (mc_branches) {
-                B_VAR_M(CREATE, t)
-                B_VEC_M(CREATE, t)
-                B_VAR_G(CREATE, t)
-                B_ARR_G(CREATE, t) }
+                B_VAR_M(BRNREF, t)
+                B_VAR_G(BRNREF, t)
+                B_VEC_M(BRNVAR, t)
+                B_ARR_G(BRNVAR, t) }
         };
 
         void clear() {
             B_VEC_D(CLEAR)
-            B_VEC_M(CLEAR)
             B_ARR_J(CLEAR)
-            B_ARR_G(CLEAR)
+            if (mc_branches) {
+                B_VEC_M(CLEAR)
+                B_ARR_G(CLEAR) }
         };
 
         void copy(photontree* t) {
@@ -176,7 +171,14 @@ class pjtree {
     private:
         bool mc_branches;
 
-        BRANCHES(DECLARE)
+        B_VAR_D(DECLARE)
+        B_VAR_M(DECLARE)
+        B_VEC_D(DECLPTR)
+        B_VEC_M(DECLPTR)
+        B_VAR_J(DECLARE)
+        B_VAR_G(DECLARE)
+        B_ARR_J(DECLPTR)
+        B_ARR_G(DECLPTR)
 };
 
 #endif /* PJTREE_H */
