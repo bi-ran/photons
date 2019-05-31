@@ -9,6 +9,7 @@
 #include "../include/jettree.h"
 #include "../include/photontree.h"
 #include "../include/pjtree.h"
+#include "../include/tracktree.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -24,22 +25,26 @@ int extract(char const* config, char const* output) {
 
     TChain* chain_eg = new TChain("ggHiNtuplizerGED/EventTree");
     TChain* chain_jet = new TChain("ak4PFJetAnalyzer/t");
+    TChain* chain_trk = new TChain("ppTrack/trackTree");
     TChain* chain_hlt = hlt_branches ? new TChain("hltanalysis/HltTree") : 0;
 
     chain_eg->SetBranchStatus("*", 0);
     chain_jet->SetBranchStatus("*", 0);
+    chain_trk->SetBranchStatus("*", 0);
     if (hlt_branches)
         chain_hlt->SetBranchStatus("*", 0);
 
     for (auto const& f : files) {
         chain_eg->Add(f.data());
         chain_jet->Add(f.data());
+        chain_trk->Add(f.data());
         if (hlt_branches)
             chain_hlt->Add(f.data());
     }
 
     auto tree_eg = new photontree(chain_eg, mc_branches);
     auto tree_jet = new jettree(chain_jet, mc_branches);
+    auto tree_trk = new tracktree(chain_trk);
 
     TFile* fout = new TFile(output, "recreate");
     TTree* tout = new TTree("pj", "photon-jet");
@@ -56,6 +61,7 @@ int extract(char const* config, char const* output) {
 
         chain_eg->GetEntry(i);
         chain_jet->GetEntry(i);
+        chain_trk->GetEntry(i);
         if (hlt_branches)
             chain_hlt->GetEntry(i);
 
@@ -64,6 +70,7 @@ int extract(char const* config, char const* output) {
 
         tree_pj->copy(tree_eg);
         tree_pj->copy(tree_jet);
+        tree_pj->copy(tree_trk);
 
         tout->Fill();
     }

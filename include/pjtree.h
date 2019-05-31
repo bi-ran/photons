@@ -8,6 +8,7 @@
 #include "defines.h"
 #include "photontree.h"
 #include "jettree.h"
+#include "tracktree.h"
 
 #define B_VAR_D(ACTION, ...)                                                \
     ACTION(UInt_t, run, ## __VA_ARGS__)                                     \
@@ -109,8 +110,33 @@
     ACTION(std::vector<float>, geneta, ## __VA_ARGS__)                      \
     ACTION(std::vector<float>, genphi, ## __VA_ARGS__)                      \
 
+#define B_VAR_T(ACTION, ...)                                                \
+    ACTION(int, nTrk, ## __VA_ARGS__)                                       \
+
+#define B_ARR_T(ACTION, ...)                                                \
+    ACTION(std::vector<float>, trkPt, ## __VA_ARGS__)                       \
+    ACTION(std::vector<float>, trkPtError, ## __VA_ARGS__)                  \
+    ACTION(std::vector<uint8_t>, trkNHit, ## __VA_ARGS__)                   \
+    ACTION(std::vector<uint8_t>, trkNlayer, ## __VA_ARGS__)                 \
+    ACTION(std::vector<float>, trkEta, ## __VA_ARGS__)                      \
+    ACTION(std::vector<float>, trkPhi, ## __VA_ARGS__)                      \
+    ACTION(std::vector<int32_t>, trkCharge, ## __VA_ARGS__)                 \
+    ACTION(std::vector<bool>, highPurity, ## __VA_ARGS__)                   \
+    ACTION(std::vector<float>, trkChi2, ## __VA_ARGS__)                     \
+    ACTION(std::vector<uint8_t>, trkNdof, ## __VA_ARGS__)                   \
+    ACTION(std::vector<float>, trkDxy1, ## __VA_ARGS__)                     \
+    ACTION(std::vector<float>, trkDxyError1, ## __VA_ARGS__)                \
+    ACTION(std::vector<float>, trkDz1, ## __VA_ARGS__)                      \
+    ACTION(std::vector<float>, trkDzError1, ## __VA_ARGS__)                 \
+    ACTION(std::vector<bool>, trkFake, ## __VA_ARGS__)                      \
+    ACTION(std::vector<int32_t>, pfType, ## __VA_ARGS__)                    \
+    ACTION(std::vector<float>, pfCandPt, ## __VA_ARGS__)                    \
+    ACTION(std::vector<float>, pfEcal, ## __VA_ARGS__)                      \
+    ACTION(std::vector<float>, pfHcal, ## __VA_ARGS__)                      \
+
 class photontree;
 class jettree;
+class tracktree;
 
 class pjtree {
     public:
@@ -118,8 +144,10 @@ class pjtree {
             this->mc_branches = mc_branches;
             B_VAR_D(INVALID)
             B_VAR_J(INVALID)
+            B_VAR_T(INVALID)
             B_VEC_D(NEWVEC)
             B_ARR_J(NEWVEC)
+            B_ARR_T(NEWVEC)
             if (mc_branches) {
                 B_VAR_M(INVALID)
                 B_VAR_G(INVALID)
@@ -137,8 +165,10 @@ class pjtree {
         void read(TTree* t) {
             B_VAR_D(RREF, t)
             B_VAR_J(RREF, t)
+            B_VAR_T(RREF, t)
             B_VEC_D(RVAR, t)
             B_ARR_J(RVAR, t)
+            B_ARR_T(RVAR, t)
             if (mc_branches) {
                 B_VAR_M(RREF, t)
                 B_VAR_G(RREF, t)
@@ -149,8 +179,10 @@ class pjtree {
         void branch(TTree* t) {
             B_VAR_D(BRNREF, t)
             B_VAR_J(BRNREF, t)
+            B_VAR_T(BRNREF, t)
             B_VEC_D(BRNVAR, t)
             B_ARR_J(BRNVAR, t)
+            B_ARR_T(BRNVAR, t)
             if (mc_branches) {
                 B_VAR_M(BRNREF, t)
                 B_VAR_G(BRNREF, t)
@@ -161,6 +193,7 @@ class pjtree {
         void clear() {
             B_VEC_D(CLEAR)
             B_ARR_J(CLEAR)
+            B_ARR_T(CLEAR)
             if (mc_branches) {
                 B_VEC_M(CLEAR)
                 B_ARR_G(CLEAR) }
@@ -182,6 +215,11 @@ class pjtree {
                 B_ARR_G(ARRCOPY, t, ngen) }
         };
 
+        void copy(tracktree* t) {
+            B_VAR_T(VARCOPY, t)
+            B_ARR_T(ARRCOPY, t, nTrk)
+        };
+
         B_VAR_D(DECLARE)
         B_VAR_M(DECLARE)
         B_VEC_D(DECLPTR)
@@ -190,6 +228,8 @@ class pjtree {
         B_VAR_G(DECLARE)
         B_ARR_J(DECLPTR)
         B_ARR_G(DECLPTR)
+        B_VAR_T(DECLARE)
+        B_ARR_T(DECLPTR)
 
     private:
         bool mc_branches;

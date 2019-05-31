@@ -32,8 +32,6 @@
     ACTION(float, geneta, ## __VA_ARGS__)                                   \
     ACTION(float, genphi, ## __VA_ARGS__)                                   \
 
-static constexpr int size = 1000;
-
 class pjtree;
 
 class jettree {

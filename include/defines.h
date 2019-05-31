@@ -33,4 +33,6 @@
     if (tree->var != nullptr)                                               \
         std::copy(tree->var, tree->var + size, std::back_inserter(*var));
 
+static constexpr int size = 1000;
+
 #endif /* DEFINES_H */
