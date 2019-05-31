@@ -134,10 +134,6 @@
     ACTION(std::vector<float>, pfEcal, ## __VA_ARGS__)                      \
     ACTION(std::vector<float>, pfHcal, ## __VA_ARGS__)                      \
 
-class photontree;
-class jettree;
-class tracktree;
-
 class pjtree {
     public:
         pjtree(bool mc_branches) {
