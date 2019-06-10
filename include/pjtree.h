@@ -136,8 +136,8 @@
 
 class pjtree {
     public:
-        pjtree(bool mc_branches) {
-            this->mc_branches = mc_branches;
+        pjtree(TTree* t, bool mc_branches)
+                : pjtree(mc_branches) {
             B_VAR_D(INVALID)
             B_VAR_J(INVALID)
             B_VAR_T(INVALID)
@@ -149,42 +149,28 @@ class pjtree {
                 B_VAR_G(INVALID)
                 B_VEC_M(NEWVEC)
                 B_ARR_G(NEWVEC) }
-        };
 
-        pjtree(TTree* t, bool mc_branches)
-                : pjtree(mc_branches) {
             branch(t);
-        };
+        }
+
+        pjtree(bool mc_branches, TTree* t)
+                : pjtree(mc_branches) {
+            B_VAR_D(ZERO)
+            B_VAR_J(ZERO)
+            B_VAR_T(ZERO)
+            B_VEC_D(ZERO)
+            B_ARR_J(ZERO)
+            B_ARR_T(ZERO)
+            if (mc_branches) {
+                B_VAR_M(ZERO)
+                B_VAR_G(ZERO)
+                B_VEC_M(ZERO)
+                B_ARR_G(ZERO) }
+
+            read(t);
+        }
 
         ~pjtree() = default;
-
-        void read(TTree* t) {
-            B_VAR_D(RREF, t)
-            B_VAR_J(RREF, t)
-            B_VAR_T(RREF, t)
-            B_VEC_D(RVAR, t)
-            B_ARR_J(RVAR, t)
-            B_ARR_T(RVAR, t)
-            if (mc_branches) {
-                B_VAR_M(RREF, t)
-                B_VAR_G(RREF, t)
-                B_VEC_M(RVAR, t)
-                B_ARR_G(RVAR, t) }
-        };
-
-        void branch(TTree* t) {
-            B_VAR_D(BRNREF, t)
-            B_VAR_J(BRNREF, t)
-            B_VAR_T(BRNREF, t)
-            B_VEC_D(BRNVAR, t)
-            B_ARR_J(BRNVAR, t)
-            B_ARR_T(BRNVAR, t)
-            if (mc_branches) {
-                B_VAR_M(BRNREF, t)
-                B_VAR_G(BRNREF, t)
-                B_VEC_M(BRNVAR, t)
-                B_ARR_G(BRNVAR, t) }
-        };
 
         void clear() {
             B_VEC_D(CLEAR)
@@ -193,7 +179,7 @@ class pjtree {
             if (mc_branches) {
                 B_VEC_M(CLEAR)
                 B_ARR_G(CLEAR) }
-        };
+        }
 
         void copy(photontree* t) {
             B_VAR_D(VARCOPY, t)
@@ -201,7 +187,7 @@ class pjtree {
             if (mc_branches) {
                 B_VAR_M(VARCOPY, t)
                 B_VEC_M(VECCOPY, t) }
-        };
+        }
 
         void copy(jettree* t) {
             B_VAR_J(VARCOPY, t)
@@ -209,12 +195,12 @@ class pjtree {
             if (mc_branches) {
                 B_VAR_G(VARCOPY, t)
                 B_ARR_G(ARRCOPY, t, ngen) }
-        };
+        }
 
         void copy(tracktree* t) {
             B_VAR_T(VARCOPY, t)
             B_ARR_T(ARRCOPY, t, nTrk)
-        };
+        }
 
         B_VAR_D(DECLARE)
         B_VAR_M(DECLARE)
@@ -228,6 +214,37 @@ class pjtree {
         B_ARR_T(DECLPTR)
 
     private:
+        pjtree(bool mc_branches)
+            : mc_branches(mc_branches) { }
+
+        void branch(TTree* t) {
+            B_VAR_D(BRNREF, t)
+            B_VAR_J(BRNREF, t)
+            B_VAR_T(BRNREF, t)
+            B_VEC_D(BRNVAR, t)
+            B_ARR_J(BRNVAR, t)
+            B_ARR_T(BRNVAR, t)
+            if (mc_branches) {
+                B_VAR_M(BRNREF, t)
+                B_VAR_G(BRNREF, t)
+                B_VEC_M(BRNVAR, t)
+                B_ARR_G(BRNVAR, t) }
+        }
+
+        void read(TTree* t) {
+            B_VAR_D(RREF, t)
+            B_VAR_J(RREF, t)
+            B_VAR_T(RREF, t)
+            B_VEC_D(RREF, t)
+            B_ARR_J(RREF, t)
+            B_ARR_T(RREF, t)
+            if (mc_branches) {
+                B_VAR_M(RREF, t)
+                B_VAR_G(RREF, t)
+                B_VEC_M(RREF, t)
+                B_ARR_G(RREF, t) }
+        }
+
         bool mc_branches;
 };
 

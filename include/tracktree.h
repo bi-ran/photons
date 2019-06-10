@@ -12,7 +12,7 @@
     B_AAT_D(ACTION, ## __VA_ARGS__)                                         \
 
 #define B_AVT_D(ACTION, ...)                                                \
-    ACTION(int32_t, nTrk, ## __VA_ARGS__)                                   \
+    ACTION(int, nTrk, ## __VA_ARGS__)                                       \
 
 #define B_AAT_D(ACTION, ...)                                                \
     ACTION(float, trkPt, ## __VA_ARGS__)                                    \
@@ -41,12 +41,11 @@ class tracktree {
     friend pjtree;
 
     public:
-        tracktree() {
+        tracktree(TTree* t)
+                : tracktree() {
             B_AVT_D(ZERO)
             B_AAT_D(NEWARR, size)
-        };
 
-        tracktree(TTree* t) {
             read(t);
         }
 
@@ -55,9 +54,11 @@ class tracktree {
         void read(TTree* t) {
             B_AVT_D(RREF, t)
             B_AAT_D(RVAR, t)
-        };
+        }
 
     private:
+        tracktree() { }
+
         B_AVT_D(DECLARE)
         B_AAT_D(DECLPTR)
 };

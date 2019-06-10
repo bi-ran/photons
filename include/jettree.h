@@ -38,17 +38,14 @@ class jettree {
     friend pjtree;
 
     public:
-        jettree(bool mc_branches) {
-            this->mc_branches = mc_branches;
+        jettree(TTree* t, bool mc_branches)
+                : jettree(mc_branches) {
             B_AVJ_D(ZERO)
             B_AAJ_D(NEWARR, size)
             if (mc_branches) {
                 B_AVJ_M(ZERO)
                 B_AAJ_M(NEWARR, size) }
-        };
 
-        jettree(TTree* t, bool mc_branches)
-                : jettree(mc_branches) {
             read(t);
         }
 
@@ -60,9 +57,12 @@ class jettree {
             if (mc_branches) {
                 B_AVJ_M(RREF, t)
                 B_AAJ_M(RVAR, t) }
-        };
+        }
 
     private:
+        jettree(bool mc_branches)
+            : mc_branches(mc_branches) { }
+
         bool mc_branches;
 
         B_AVJ_D(DECLARE)
