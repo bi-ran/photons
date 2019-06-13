@@ -22,6 +22,7 @@ int extract(char const* config, char const* output) {
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
+    auto hlt_path = conf->get<std::string>("hlt_path");
 
     TChain* chain_eg = new TChain("ggHiNtuplizerGED/EventTree");
     TChain* chain_jet = new TChain("ak4PFJetAnalyzer/t");
@@ -33,6 +34,12 @@ int extract(char const* config, char const* output) {
     chain_trk->SetBranchStatus("*", 0);
     if (hlt_branches)
         chain_hlt->SetBranchStatus("*", 0);
+
+    int hlt;
+    if (hlt_branches) {
+        chain_hlt->SetBranchStatus(hlt_path.data(), 1);
+        chain_hlt->SetBranchAddress(hlt_path.data(), &hlt);
+    }
 
     for (auto const& f : files) {
         chain_eg->Add(f.data());
@@ -59,14 +66,17 @@ int extract(char const* config, char const* output) {
     for (int64_t i = 0; i < nentries; ++i) {
         tree_pj->clear();
 
-        chain_eg->GetEntry(i);
-        chain_jet->GetEntry(i);
-        chain_trk->GetEntry(i);
         if (hlt_branches)
             chain_hlt->GetEntry(i);
 
         if (i % 10000 == 0)
             printf("entry: %li\n", i);
+
+        if (hlt_branches && !hlt) { continue; }
+
+        chain_eg->GetEntry(i);
+        chain_jet->GetEntry(i);
+        chain_trk->GetEntry(i);
 
         tree_pj->copy(tree_eg);
         tree_pj->copy(tree_jet);
