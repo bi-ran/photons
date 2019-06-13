@@ -163,12 +163,18 @@ int flatten(char const* config, char const* output) {
 
     auto ntrk = std::make_unique<dhist>("ntrk"s, incl, mdphi);
     auto sumpt = std::make_unique<dhist>("sumpt"s, incl, mdphi);
+    auto mix_ntrk = std::make_unique<dhist>("ntrk_mix"s, incl, mdphi);
+    auto mix_sumpt = std::make_unique<dhist>("sumpt_mix"s, incl, mdphi);
 
     auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s, rntrk, mptdphi);
     auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s, rsumpt, mptdphi);
+    auto mix_evt_f_ntrk = std::make_unique<dhist>("mix_evt_f_ntrk"s, rntrk, mptdphi);
+    auto mix_evt_f_sumpt = std::make_unique<dhist>("mix_evt_f_sumpt"s, rsumpt, mptdphi);
 
     auto trk_f_dphi = std::make_unique<dhist>("trk_f_dphi"s, rdphi, mpt);
     auto trk_f_pt = std::make_unique<dhist>("trk_f_pt"s, rtrkpt, mptdphi);
+    auto mix_trk_f_dphi = std::make_unique<dhist>("mix_trk_f_dphi"s, rdphi, mpt);
+    auto mix_trk_f_pt = std::make_unique<dhist>("mix_trk_f_pt"s, rtrkpt, mptdphi);
 
     auto pjet_f_dphi = std::make_unique<dhist>(
         "pjet_f_dphi"s, rdphi, mptntrk2sumpt2);
@@ -177,11 +183,22 @@ int flatten(char const* config, char const* output) {
     auto pjet_f_x = std::make_unique<dhist>(
         "pjet_f_x"s, rx, mptntrk2sumpt2);
 
+    auto mix_pjet_f_dphi = std::make_unique<dhist>(
+        "mix_pjet_f_dphi"s, rdphi, mptntrk2sumpt2);
+    auto mix_pjet_f_jetpt = std::make_unique<dhist>(
+        "mix_pjet_f_jetpt"s, rpt, mptntrk2sumpt2);
+    auto mix_pjet_f_x = std::make_unique<dhist>(
+        "mix_pjet_f_x"s, rx, mptntrk2sumpt2);
+
     printf("iterate..\n");
 
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
     auto pjt = new pjtree(mc_branches, t);
+
+    TFile* fm = new TFile(mix.data(), "read");
+    TTree* tm = (TTree*)fm->Get("pj");
+    auto pjtm = new pjtree(mc_branches, tm);
 
     TFile* fout = new TFile(output, "recreate");
 
@@ -191,7 +208,8 @@ int flatten(char const* config, char const* output) {
 
     int64_t nentries = static_cast<int64_t>(t->GetEntries());
     if (max_entries) { nentries = std::min(nentries, max_entries); }
-    for (int64_t i = 0; i < nentries; ++i) {
+    int64_t mentries = static_cast<int64_t>(tm->GetEntries());
+    for (int64_t i = 0, m = 0; i < nentries; ++i) {
         if (i % 1000 == 0) { printf("entry: %li/%li\n", i, nentries); }
 
         t->GetEntry(i);
@@ -241,6 +259,25 @@ int flatten(char const* config, char const* output) {
                   photon_leading_pt, photon_phi, photon_pt_x,
                   ntrk, sumpt, intrk, isumpt, norm,
                   pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
+
+        /* mixing events in minimum bias */
+        for (int64_t k = 0; k < 100; ++k) {
+            tm->GetEntry(m);
+
+            fill_tracks(pjtm, trk_pt_min, trk_eta_abs,
+                        photon_phi, photon_pt_x,
+                        idphi, mdphi,
+                        mix_ntrk, mix_sumpt,
+                        mix_trk_f_dphi, mix_trk_f_pt,
+                        mix_evt_f_ntrk, mix_evt_f_sumpt);
+
+            fill_jets(pjtm, jet_pt_min, jet_eta_abs,
+                      photon_leading_pt, photon_phi, photon_pt_x,
+                      mix_ntrk, mix_sumpt, intrk, isumpt, norm,
+                      mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
+
+            m = (m + 1) % mentries;
+        }
     }
 
     /* integrate histograms */
@@ -253,6 +290,17 @@ int flatten(char const* config, char const* output) {
     auto pjet_f_x_d_perp_sumpt = pjet_f_x_d_near_perp_sumpt
         ->sum(0);   /* near_sumpt */
     auto pjet_f_x_d_near_sumpt = pjet_f_x_d_near_perp_sumpt
+        ->sum(1);   /* perp_sumpt */
+
+    /* mixed events */
+    auto mix_pjet_f_x_d_near_perp_sumpt = mix_pjet_f_x
+        ->sum(0)    /* photon pt */
+        ->sum(0)    /* near_ntrk */
+        ->sum(0);   /* perp_ntrk */
+
+    auto mix_pjet_f_x_d_perp_sumpt = mix_pjet_f_x_d_near_perp_sumpt
+        ->sum(0);   /* near_sumpt */
+    auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_near_perp_sumpt
         ->sum(1);   /* perp_sumpt */
 
     printf("painting..\n");
@@ -280,6 +328,22 @@ int flatten(char const* config, char const* output) {
         (*pjet_f_x_d_near_sumpt)[i]->SetMarkerColor(2);
         (*pjet_f_x_d_near_sumpt)[i]->SetMarkerStyle(20);
         (*pjet_f_x_d_near_sumpt)(i, FP_TH1_DRAW, "same p e");
+
+        auto mix_perp_integral = (*mix_pjet_f_x_d_perp_sumpt)[i]->Integral();
+        (*mix_pjet_f_x_d_perp_sumpt)[i]->Scale(1. / mix_perp_integral);
+
+        (*mix_pjet_f_x_d_perp_sumpt)[i]->SetStats(0);
+        (*mix_pjet_f_x_d_perp_sumpt)[i]->SetMarkerStyle(25);
+        (*mix_pjet_f_x_d_perp_sumpt)(i, FP_TH1_DRAW, "same p e");
+
+        auto mix_near_integral = (*mix_pjet_f_x_d_near_sumpt)[i]->Integral();
+        (*mix_pjet_f_x_d_near_sumpt)[i]->Scale(1. / mix_near_integral);
+
+        (*mix_pjet_f_x_d_near_sumpt)[i]->SetStats(0);
+        (*mix_pjet_f_x_d_near_sumpt)[i]->SetLineColor(2);
+        (*mix_pjet_f_x_d_near_sumpt)[i]->SetMarkerColor(2);
+        (*mix_pjet_f_x_d_near_sumpt)[i]->SetMarkerStyle(24);
+        (*mix_pjet_f_x_d_near_sumpt)(i, FP_TH1_DRAW, "same p e");
     }
 
     c1->SaveAs("c1.pdf");
