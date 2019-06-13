@@ -26,12 +26,98 @@ using namespace std::literals::string_literals;
 
 using dhist = differential_histograms;
 
+void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
+                 int64_t photon_phi, int64_t photon_pt_x,
+                 std::shared_ptr<interval>& idphi,
+                 std::shared_ptr<multival>& mdphi,
+                 std::unique_ptr<differential_histograms>& ntrk,
+                 std::unique_ptr<differential_histograms>& sumpt,
+                 std::unique_ptr<differential_histograms>& trk_f_dphi,
+                 std::unique_ptr<differential_histograms>& trk_f_pt,
+                 std::unique_ptr<differential_histograms>& evt_f_ntrk,
+                 std::unique_ptr<differential_histograms>& evt_f_sumpt) {
+    for (int64_t j = 0; j < pjt->nTrk; ++j) {
+        if ((*pjt->trkPt)[j] < trk_pt_min) { continue; }
+        if (std::abs((*pjt->trkEta)[j]) > trk_eta_abs) { continue; }
+
+        /* track quality selections */
+
+        double trk_pt = (*pjt->trkPt)[j];
+        auto trk_phi = convert_radians((*pjt->trkPhi)[j]);
+        auto photon_trk_dphi = std::abs(photon_phi - trk_phi);
+        int64_t dphi_x = idphi->index_for(photon_trk_dphi);
+
+        (*ntrk)(dphi_x, FP_TH1_FILLW, 1., 1.);
+        (*sumpt)(dphi_x, FP_TH1_FILLW, 1., trk_pt);
+
+        (*trk_f_dphi)(photon_pt_x, FP_TH1_FILL,
+                      static_cast<double>(photon_trk_dphi));
+        (*trk_f_pt)(x{photon_pt_x, dphi_x}, FP_TH1_FILL, trk_pt);
+    }
+
+    for (int64_t j = 0; j < mdphi->size(); ++j) {
+        double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1);
+        double evt_sumpt = (*sumpt)(j, FP_TH1_GETBC, 1);
+
+        (*evt_f_ntrk)(x{photon_pt_x, j}, FP_TH1_FILL, evt_ntrk);
+        (*evt_f_sumpt)(x{photon_pt_x, j}, FP_TH1_FILL, evt_sumpt);
+    }
+}
+
+void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
+               double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
+               std::unique_ptr<differential_histograms>& ntrk,
+               std::unique_ptr<differential_histograms>& sumpt,
+               std::shared_ptr<interval>& intrk,
+               std::shared_ptr<interval>& isumpt,
+               double norm,
+               std::unique_ptr<differential_histograms>& pjet_f_dphi,
+               std::unique_ptr<differential_histograms>& pjet_f_jetpt,
+               std::unique_ptr<differential_histograms>& pjet_f_x) {
+    int64_t near_ntrk_x = intrk->index_for((*ntrk)(0, FP_TH1_GETBC, 1) / norm);
+    int64_t perp_ntrk_x = intrk->index_for((*ntrk)(1, FP_TH1_GETBC, 1) / norm);
+
+    int64_t near_sumpt_x = isumpt->index_for((*sumpt)(0, FP_TH1_GETBC, 1) / norm);
+    int64_t perp_sumpt_x = isumpt->index_for((*sumpt)(1, FP_TH1_GETBC, 1) / norm);
+
+    for (int64_t j = 0; j < pjt->nref; ++j) {
+        if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
+        if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
+
+        auto jet_phi = convert_radians((*pjt->jtphi)[j]);
+        auto photon_jet_dphi = std::abs(photon_phi - jet_phi);
+
+        (*pjet_f_dphi)(x{photon_pt_x,
+                         near_ntrk_x, perp_ntrk_x,
+                         near_sumpt_x, perp_sumpt_x},
+                       FP_TH1_FILL,
+                       static_cast<double>(photon_jet_dphi));
+
+        /* require back-to-back jets */
+        if (photon_jet_dphi < 0.875_pi) { continue; }
+
+        double jet_pt = (*pjt->jtpt)[j];
+
+        (*pjet_f_jetpt)(x{photon_pt_x,
+                          near_ntrk_x, perp_ntrk_x,
+                          near_sumpt_x, perp_sumpt_x},
+                        FP_TH1_FILL,
+                        jet_pt);
+        (*pjet_f_x)(x{photon_pt_x,
+                      near_ntrk_x, perp_ntrk_x,
+                      near_sumpt_x, perp_sumpt_x},
+                    FP_TH1_FILL,
+                    jet_pt / photon_leading_pt);
+    }
+}
+
 int flatten(char const* config, char const* output) {
     printf("load config options..\n");
 
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
+    auto mix = conf->get<std::string>("mix");
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
 
@@ -70,28 +156,26 @@ int flatten(char const* config, char const* output) {
     auto mpt = std::make_shared<multival>(dpt);
     auto mdphi = std::make_shared<multival>(ddphi);
     auto mptdphi = std::make_shared<multival>(dpt, ddphi);
-    auto mptntrk3sumpt3 = std::make_shared<multival>(
-        dpt, dntrk, dntrk, dntrk, dsumpt, dsumpt, dsumpt);
+    auto mptntrk2sumpt2 = std::make_shared<multival>(
+        dpt, dntrk, dntrk, dsumpt, dsumpt);
 
     auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s, rpt, mincl);
 
     auto ntrk = std::make_unique<dhist>("ntrk"s, incl, mdphi);
     auto sumpt = std::make_unique<dhist>("sumpt"s, incl, mdphi);
 
-    auto evt_f_ntrk = std::make_unique<dhist>(
-        "evt_f_ntrk"s, rntrk, mptdphi);
-    auto evt_f_sumpt = std::make_unique<dhist>(
-        "evt_f_sumpt"s, rsumpt, mptdphi);
+    auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s, rntrk, mptdphi);
+    auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s, rsumpt, mptdphi);
 
     auto trk_f_dphi = std::make_unique<dhist>("trk_f_dphi"s, rdphi, mpt);
     auto trk_f_pt = std::make_unique<dhist>("trk_f_pt"s, rtrkpt, mptdphi);
 
     auto pjet_f_dphi = std::make_unique<dhist>(
-        "pjet_f_dphi"s, rdphi, mptntrk3sumpt3);
+        "pjet_f_dphi"s, rdphi, mptntrk2sumpt2);
     auto pjet_f_jetpt = std::make_unique<dhist>(
-        "pjet_f_jetpt"s, rpt, mptntrk3sumpt3);
+        "pjet_f_jetpt"s, rpt, mptntrk2sumpt2);
     auto pjet_f_x = std::make_unique<dhist>(
-        "pjet_f_x"s, rx, mptntrk3sumpt3);
+        "pjet_f_x"s, rx, mptntrk2sumpt2);
 
     printf("iterate..\n");
 
@@ -118,6 +202,7 @@ int flatten(char const* config, char const* output) {
         for (int64_t j = 0; j < pjt->nPho; ++j) {
             if ((*pjt->phoEt)[j] < photon_pt_min) { continue; }
             if (std::abs((*pjt->phoEta)[j]) > photon_eta_abs) { continue; }
+            if ((*pjt->phoHoverE)[j] > 0.1) { continue; }
             if ((*pjt->phoSigmaIEtaIEta_2012)[j] > 0.01) { continue; }
 
             /* isolation requirement */
@@ -143,88 +228,27 @@ int flatten(char const* config, char const* output) {
             (*sumpt)(j, FP_TH1_SETBC, 1, 0.);
         }
 
-        for (int64_t j = 0; j < pjt->nTrk; ++j) {
-            if ((*pjt->trkPt)[j] < trk_pt_min) { continue; }
-            if (std::abs((*pjt->trkEta)[j]) > trk_eta_abs) { continue; }
+        fill_tracks(pjt, trk_pt_min, trk_eta_abs,
+                    photon_phi, photon_pt_x,
+                    idphi, mdphi,
+                    ntrk, sumpt,
+                    trk_f_dphi, trk_f_pt,
+                    evt_f_ntrk, evt_f_sumpt);
 
-            /* track quality selections */
+        double norm = 2. * trk_eta_abs * 2. * M_PI / 3.;
 
-            double trk_pt = (*pjt->trkPt)[j];
-            auto trk_phi = convert_radians((*pjt->trkPhi)[j]);
-            auto photon_trk_dphi = std::abs(photon_phi - trk_phi);
-            int64_t dphi_x = idphi->index_for(photon_trk_dphi);
-
-            (*ntrk)(dphi_x, FP_TH1_FILLW, 1., 1.);
-            (*sumpt)(dphi_x, FP_TH1_FILLW, 1., trk_pt);
-
-            (*trk_f_dphi)(photon_pt_x, FP_TH1_FILL,
-                          static_cast<double>(photon_trk_dphi));
-            (*trk_f_pt)(x{photon_pt_x, dphi_x}, FP_TH1_FILL, trk_pt);
-        }
-
-        for (int64_t j = 0; j < mdphi->size(); ++j) {
-            double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1);
-            double evt_sumpt = (*sumpt)(j, FP_TH1_GETBC, 1);
-
-            (*evt_f_ntrk)(x{photon_pt_x, j}, FP_TH1_FILL, evt_ntrk);
-            (*evt_f_sumpt)(x{photon_pt_x, j}, FP_TH1_FILL, evt_sumpt);
-        }
-
-        double inorm = 2. * trk_eta_abs * 2. * M_PI;
-        double dnorm = inorm / 3.;
-
-        int64_t incl_ntrk_x = intrk->index_for(
-            ntrk->sum(x{0}, 0)->GetBinContent(1) / inorm);
-        int64_t near_ntrk_x = intrk->index_for((*ntrk)[0]->Integral() / dnorm);
-        int64_t perp_ntrk_x = intrk->index_for((*ntrk)[1]->Integral() / dnorm);
-
-        int64_t incl_sumpt_x = isumpt->index_for(
-            sumpt->sum(x{0}, 0)->GetBinContent(1) / inorm);
-        int64_t near_sumpt_x = isumpt->index_for((*sumpt)[0]->Integral() / dnorm);
-        int64_t perp_sumpt_x = isumpt->index_for((*sumpt)[1]->Integral() / dnorm);
-
-#define REPEAT_FOR_ALL_REGIONS(expr)    \
-    incl_##expr, near_##expr, perp_##expr
-
-        for (int64_t j = 0; j < pjt->nref; ++j) {
-            if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
-            if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
-
-            auto jet_phi = convert_radians((*pjt->jtphi)[j]);
-            auto pjet_dphi = std::abs(photon_phi - jet_phi);
-
-            (*pjet_f_dphi)(x{photon_pt_x,
-                                   REPEAT_FOR_ALL_REGIONS(ntrk_x),
-                                   REPEAT_FOR_ALL_REGIONS(sumpt_x)},
-                                 FP_TH1_FILL,
-                                 static_cast<double>(pjet_dphi));
-
-            /* require back-to-back jets */
-            if (pjet_dphi < 0.875_pi) { continue; }
-
-            double jet_pt = (*pjt->jtpt)[j];
-
-            (*pjet_f_jetpt)(x{photon_pt_x,
-                              REPEAT_FOR_ALL_REGIONS(ntrk_x),
-                              REPEAT_FOR_ALL_REGIONS(sumpt_x)},
-                            FP_TH1_FILL,
-                            jet_pt);
-            (*pjet_f_x)(x{photon_pt_x,
-                          REPEAT_FOR_ALL_REGIONS(ntrk_x),
-                          REPEAT_FOR_ALL_REGIONS(sumpt_x)},
-                        FP_TH1_FILL,
-                        jet_pt / photon_leading_pt);
-        }
+        fill_jets(pjt, jet_pt_min, jet_eta_abs,
+                  photon_leading_pt, photon_phi, photon_pt_x,
+                  ntrk, sumpt, intrk, isumpt, norm,
+                  pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
     }
 
     /* integrate histograms */
     /* photon-jet momentum imbalance as function of perp sumpt */
     auto pjet_f_x_d_near_perp_sumpt = pjet_f_x
         ->sum(0)    /* photon pt */
-        ->sum(0)    /* incl_ntrk */
         ->sum(0)    /* near_ntrk */
-        ->sum(0)    /* perp_ntrk */
-        ->sum(0);   /* incl_sumpt */
+        ->sum(0);   /* perp_ntrk */
 
     auto pjet_f_x_d_perp_sumpt = pjet_f_x_d_near_perp_sumpt
         ->sum(0);   /* near_sumpt */
