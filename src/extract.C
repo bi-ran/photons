@@ -53,6 +53,8 @@ int extract(char const* config, char const* output) {
     auto tree_jet = new jettree(chain_jet, mc_branches);
     auto tree_trk = new tracktree(chain_trk);
 
+    TTree::SetMaxTreeSize(1000000000000LL);
+
     TFile* fout = new TFile(output, "recreate");
     TTree* tout = new TTree("pj", "photon-jet");
 
