@@ -24,9 +24,12 @@ class multival {
         std::vector<int64_t> indices(_shape);
         for (int64_t i = 0; i < _dims; ++i) {
             indices[i] = _intervals[i].index_for(values[i]);
-
-            if (indices[i] < 0 || indices[i] == _shape[i])
-                return std::vector<int64_t>();
+#ifdef DEBUG
+            if (indices[i] < 0 || indices[i] == _shape[i]) {
+                printf("value: %f [%i] exceeds boundaries!\n", values[i], i);
+                exit(1);
+            }
+#endif /* DEBUG */
         }
 
         return indices;

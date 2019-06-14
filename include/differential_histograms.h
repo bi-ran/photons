@@ -185,8 +185,6 @@ class differential_histograms {
     T operator()(U<double> const& values, T (TH1::* function)(V...),
                  V... args) {
         auto indices = intervals->indices_for(values);
-        if (indices.empty()) { return T(); }
-
         return forward(index_for(indices), function, args...);
     }
 
@@ -194,8 +192,6 @@ class differential_histograms {
     T operator()(U<double> const& values, T (TH1::* function)(V...) const,
                  V... args) {
         auto indices = intervals->indices_for(values);
-        if (indices.empty()) { return T(); }
-
         return forward(index_for(indices), function, args...);
     }
 
