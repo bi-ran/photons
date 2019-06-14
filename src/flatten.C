@@ -176,6 +176,9 @@ int flatten(char const* config, char const* output) {
     auto mix_trk_f_dphi = std::make_unique<dhist>("mix_trk_f_dphi"s, rdphi, mpt);
     auto mix_trk_f_pt = std::make_unique<dhist>("mix_trk_f_pt"s, rtrkpt, mptdphi);
 
+    auto nevt = std::make_unique<dhist>("nevt"s, incl, mptntrk2sumpt2);
+    auto nmix = std::make_unique<dhist>("nmix"s, incl, mptntrk2sumpt2);
+
     auto pjet_f_dphi = std::make_unique<dhist>(
         "pjet_f_dphi"s, rdphi, mptntrk2sumpt2);
     auto pjet_f_jetpt = std::make_unique<dhist>(
