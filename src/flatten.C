@@ -71,6 +71,7 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                std::shared_ptr<interval>& intrk,
                std::shared_ptr<interval>& isumpt,
                double norm,
+               std::unique_ptr<differential_histograms>& nevt,
                std::unique_ptr<differential_histograms>& pjet_f_dphi,
                std::unique_ptr<differential_histograms>& pjet_f_jetpt,
                std::unique_ptr<differential_histograms>& pjet_f_x) {
@@ -80,6 +81,11 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
     int64_t near_sumpt_x = isumpt->index_for((*sumpt)(0, FP_TH1_GETBC, 1) / norm);
     int64_t perp_sumpt_x = isumpt->index_for((*sumpt)(1, FP_TH1_GETBC, 1) / norm);
 
+    auto index = nevt->index_for(
+        x{photon_pt_x, near_ntrk_x, perp_ntrk_x, near_sumpt_x, perp_sumpt_x});
+
+    (*nevt)(index, FP_TH1_FILL, 1.);
+
     for (int64_t j = 0; j < pjt->nref; ++j) {
         if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
         if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
@@ -87,28 +93,33 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         auto jet_phi = convert_radians((*pjt->jtphi)[j]);
         auto photon_jet_dphi = std::abs(photon_phi - jet_phi);
 
-        (*pjet_f_dphi)(x{photon_pt_x,
-                         near_ntrk_x, perp_ntrk_x,
-                         near_sumpt_x, perp_sumpt_x},
-                       FP_TH1_FILL,
-                       static_cast<double>(photon_jet_dphi));
+        (*pjet_f_dphi)(index, FP_TH1_FILL, static_cast<double>(photon_jet_dphi));
 
         /* require back-to-back jets */
         if (photon_jet_dphi < 0.875_pi) { continue; }
 
         double jet_pt = (*pjt->jtpt)[j];
 
-        (*pjet_f_jetpt)(x{photon_pt_x,
-                          near_ntrk_x, perp_ntrk_x,
-                          near_sumpt_x, perp_sumpt_x},
-                        FP_TH1_FILL,
-                        jet_pt);
-        (*pjet_f_x)(x{photon_pt_x,
-                      near_ntrk_x, perp_ntrk_x,
-                      near_sumpt_x, perp_sumpt_x},
-                    FP_TH1_FILL,
-                    jet_pt / photon_leading_pt);
+        (*pjet_f_jetpt)(index, FP_TH1_FILL, jet_pt);
+        (*pjet_f_x)(index, FP_TH1_FILL, jet_pt / photon_leading_pt);
     }
+}
+
+void normalise(std::unique_ptr<differential_histograms>& norm,
+               std::unique_ptr<differential_histograms>& last) {
+    /* assume object, normalisation have equal shapes */
+    for (int64_t j = 0; j < norm->size(); ++j) {
+        auto count = (*norm)[j]->GetBinContent(1);
+        if (count != 0) { (*last)[j]->Scale(1. / count); }
+    }
+}
+
+template <typename... T>
+void normalise(std::unique_ptr<differential_histograms>& norm,
+               std::unique_ptr<differential_histograms>& first,
+               std::unique_ptr<T>&... others) {
+    normalise(norm, first);
+    normalise(norm, others...);
 }
 
 int flatten(char const* config, char const* output) {
@@ -247,6 +258,8 @@ int flatten(char const* config, char const* output) {
         for (int64_t j = 0; j < mdphi->size(); ++j) {
             (*ntrk)(j, FP_TH1_SETBC, 1, 0.);
             (*sumpt)(j, FP_TH1_SETBC, 1, 0.);
+            (*mix_ntrk)(j, FP_TH1_SETBC, 1, 0.);
+            (*mix_sumpt)(j, FP_TH1_SETBC, 1, 0.);
         }
 
         fill_tracks(pjt, trk_pt_min, trk_eta_abs,
@@ -261,7 +274,7 @@ int flatten(char const* config, char const* output) {
         fill_jets(pjt, jet_pt_min, jet_eta_abs,
                   photon_leading_pt, photon_phi, photon_pt_x,
                   ntrk, sumpt, intrk, isumpt, norm,
-                  pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
+                  nevt, pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
 
         /* mixing events in minimum bias */
         for (int64_t k = 0; k < 100; ++k) {
@@ -277,13 +290,22 @@ int flatten(char const* config, char const* output) {
             fill_jets(pjtm, jet_pt_min, jet_eta_abs,
                       photon_leading_pt, photon_phi, photon_pt_x,
                       mix_ntrk, mix_sumpt, intrk, isumpt, norm,
-                      mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
+                      nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
 
             m = (m + 1) % mentries;
         }
     }
 
+    /* normalise histograms */
+    normalise(nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
+
     /* integrate histograms */
+    /* photon (event) count */
+    auto nevt_d_near_perp_sumpt = nevt->sum(0)->sum(0)->sum(0);
+
+    auto nevt_d_perp_sumpt = nevt_d_near_perp_sumpt->sum(0);
+    auto nevt_d_near_sumpt = nevt_d_near_perp_sumpt->sum(1);
+
     /* photon-jet momentum imbalance as function of perp sumpt */
     auto pjet_f_x_d_near_perp_sumpt = pjet_f_x
         ->sum(0)    /* photon pt */
@@ -306,6 +328,12 @@ int flatten(char const* config, char const* output) {
     auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_near_perp_sumpt
         ->sum(1);   /* perp_sumpt */
 
+    /* normalise to number of photons (events) */
+    normalise(nevt_d_perp_sumpt, pjet_f_x_d_perp_sumpt);
+    normalise(nevt_d_near_sumpt, pjet_f_x_d_near_sumpt);
+    normalise(nevt_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt);
+    normalise(nevt_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
+
     printf("painting..\n");
 
     TCanvas* c1 = new TCanvas("c1", "", 800, 1200);
@@ -315,16 +343,10 @@ int flatten(char const* config, char const* output) {
     for (int64_t i = 0; i < isumpt->size(); ++i) {
         c1->cd(i + 1);
 
-        auto perp_integral = (*pjet_f_x_d_perp_sumpt)[i]->Integral();
-        (*pjet_f_x_d_perp_sumpt)[i]->Scale(1. / perp_integral);
-
         (*pjet_f_x_d_perp_sumpt)[i]->SetStats(0);
         (*pjet_f_x_d_perp_sumpt)[i]->SetMarkerStyle(21);
         (*pjet_f_x_d_perp_sumpt)[i]->SetAxisRange(0, 0.12, "Y");
         (*pjet_f_x_d_perp_sumpt)(i, FP_TH1_DRAW, "p e");
-
-        auto near_integral = (*pjet_f_x_d_near_sumpt)[i]->Integral();
-        (*pjet_f_x_d_near_sumpt)[i]->Scale(1. / near_integral);
 
         (*pjet_f_x_d_near_sumpt)[i]->SetStats(0);
         (*pjet_f_x_d_near_sumpt)[i]->SetLineColor(2);
@@ -332,15 +354,9 @@ int flatten(char const* config, char const* output) {
         (*pjet_f_x_d_near_sumpt)[i]->SetMarkerStyle(20);
         (*pjet_f_x_d_near_sumpt)(i, FP_TH1_DRAW, "same p e");
 
-        auto mix_perp_integral = (*mix_pjet_f_x_d_perp_sumpt)[i]->Integral();
-        (*mix_pjet_f_x_d_perp_sumpt)[i]->Scale(1. / mix_perp_integral);
-
         (*mix_pjet_f_x_d_perp_sumpt)[i]->SetStats(0);
         (*mix_pjet_f_x_d_perp_sumpt)[i]->SetMarkerStyle(25);
         (*mix_pjet_f_x_d_perp_sumpt)(i, FP_TH1_DRAW, "same p e");
-
-        auto mix_near_integral = (*mix_pjet_f_x_d_near_sumpt)[i]->Integral();
-        (*mix_pjet_f_x_d_near_sumpt)[i]->Scale(1. / mix_near_integral);
 
         (*mix_pjet_f_x_d_near_sumpt)[i]->SetStats(0);
         (*mix_pjet_f_x_d_near_sumpt)[i]->SetLineColor(2);
