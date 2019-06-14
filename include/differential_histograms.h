@@ -108,12 +108,34 @@ class differential_histograms {
         return indices;
     }
 
+    void add(differential_histograms const& other, double c1) {
+        for (int64_t i = 0; i < _size; ++i)
+            histograms[i]->Add(other[i], c1);
+    }
+
+    void operator+=(differential_histograms const& other) {
+        this->add(other, 1);
+    }
+
+    void operator-=(differential_histograms const& other) {
+        this->add(other, -1);
+    }
+
     TH1F*& operator[](int64_t index) {
+        return histograms[index];
+    }
+
+    TH1F* const& operator[](int64_t index) const {
         return histograms[index];
     }
 
     template <template <typename...> class T>
     TH1F*& operator[](T<int64_t> const& indices) {
+        return histograms[index_for(indices)];
+    }
+
+    template <template <typename...> class T>
+    TH1F* const& operator[](T<int64_t> const& indices) const {
         return histograms[index_for(indices)];
     }
 

@@ -328,6 +328,10 @@ int flatten(char const* config, char const* output) {
     auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_near_perp_sumpt
         ->sum(1);   /* perp_sumpt */
 
+    /* subtract histograms */
+    *pjet_f_x_d_perp_sumpt -= *mix_pjet_f_x_d_perp_sumpt;
+    *pjet_f_x_d_near_sumpt -= *mix_pjet_f_x_d_near_sumpt;
+
     /* normalise to number of photons (events) */
     normalise(nevt_d_perp_sumpt, pjet_f_x_d_perp_sumpt);
     normalise(nevt_d_near_sumpt, pjet_f_x_d_near_sumpt);
