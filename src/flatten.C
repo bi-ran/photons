@@ -321,6 +321,8 @@ int flatten(char const* config, char const* output) {
 
     /* integrate histograms */
     /* photon (event) count */
+    auto nevt_d_photon_pt = nevt->sum(1)->sum(1)->sum(1)->sum(1);
+
     auto nevt_d_near_perp_sumpt = nevt->sum(0)->sum(0)->sum(0);
 
     auto nevt_d_perp_sumpt = nevt_d_near_perp_sumpt->sum(0);
@@ -361,6 +363,14 @@ int flatten(char const* config, char const* output) {
     for (int64_t i = 0; i < idphi->size(); ++i) {
         (*ntrk_f_pt)[i]->Divide((*photon_f_pt)[0]);
         (*sumpt_f_pt)[i]->Divide((*photon_f_pt)[0]);
+    }
+
+    for (int64_t i = 0; i < ipt->size(); ++i) {
+        auto norm_d_photon_pt = 1. / (*nevt_d_photon_pt)(i, FP_TH1_GETBC, 1);
+        for (int64_t j = 0; j < idphi->size(); ++j) {
+            (*evt_f_ntrk)[x{i, j}]->Scale(norm_d_photon_pt);
+            (*evt_f_sumpt)[x{i, j}]->Scale(norm_d_photon_pt);
+        }
     }
 
     printf("painting..\n");
@@ -427,6 +437,37 @@ int flatten(char const* config, char const* output) {
     (*sumpt_f_pt)(1, FP_TH1_DRAW, "same p e");
 
     c2->SaveAs("c2.pdf");
+
+    TCanvas* c3 = new TCanvas("c3", "", 800, 1200);
+
+    c3->Divide(2, 3);
+
+    for (int64_t i = 0; i < ipt->size(); ++i) {
+        c3->cd(i + 1);
+
+        (*evt_f_ntrk)[x{i, 0}]->SetStats(0);
+        (*evt_f_ntrk)[x{i, 0}]->SetMarkerStyle(21);
+        (*evt_f_ntrk)[x{i, 0}]->SetAxisRange(0, 0.25, "Y");
+        (*evt_f_ntrk)(x{i, 0}, FP_TH1_DRAW, "p e");
+
+        (*evt_f_ntrk)[x{i, 1}]->SetStats(0);
+        (*evt_f_ntrk)[x{i, 1}]->SetLineColor(2);
+        (*evt_f_ntrk)[x{i, 1}]->SetMarkerColor(2);
+        (*evt_f_ntrk)[x{i, 1}]->SetMarkerStyle(20);
+        (*evt_f_ntrk)(x{i, 1}, FP_TH1_DRAW, "same p e");
+
+        (*evt_f_sumpt)[x{i, 0}]->SetStats(0);
+        (*evt_f_sumpt)[x{i, 0}]->SetMarkerStyle(25);
+        (*evt_f_sumpt)(x{i, 0}, FP_TH1_DRAW, "same p e");
+
+        (*evt_f_sumpt)[x{i, 1}]->SetStats(0);
+        (*evt_f_sumpt)[x{i, 1}]->SetLineColor(2);
+        (*evt_f_sumpt)[x{i, 1}]->SetMarkerColor(2);
+        (*evt_f_sumpt)[x{i, 1}]->SetMarkerStyle(24);
+        (*evt_f_sumpt)(x{i, 1}, FP_TH1_DRAW, "same p e");
+    }
+
+    c3->SaveAs("c3.pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 
