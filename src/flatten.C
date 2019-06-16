@@ -26,7 +26,7 @@ using namespace std::literals::string_literals;
 
 using dhist = differential_histograms;
 
-void fill_tracks(pjtree* pjt, double norm, float trk_pt_min, float trk_eta_abs,
+void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
                  double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
                  std::shared_ptr<interval>& idphi,
                  std::shared_ptr<multival>& mdphi,
@@ -61,9 +61,14 @@ void fill_tracks(pjtree* pjt, double norm, float trk_pt_min, float trk_eta_abs,
         (*trk_f_pt)(x{photon_pt_x, dphi_x}, FP_TH1_FILL, trk_pt);
     }
 
+    double norm = 2. * trk_eta_abs * 2. * M_PI / 3.;
+
+    ntrk->multiply(1. / norm);
+    sumpt->multiply(1. / norm);
+
     for (int64_t j = 0; j < mdphi->size(); ++j) {
-        double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1) / norm;
-        double evt_sumpt = (*sumpt)(j, FP_TH1_GETBC, 1) / norm;
+        double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1);
+        double evt_sumpt = (*sumpt)(j, FP_TH1_GETBC, 1);
 
         (*evt_f_ntrk)(x{photon_pt_x, j}, FP_TH1_FILL, evt_ntrk);
         (*evt_f_sumpt)(x{photon_pt_x, j}, FP_TH1_FILL, evt_sumpt);
@@ -73,7 +78,7 @@ void fill_tracks(pjtree* pjt, double norm, float trk_pt_min, float trk_eta_abs,
     }
 }
 
-void fill_jets(pjtree* pjt, double norm, float jet_pt_min, float jet_eta_abs,
+void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
                std::unique_ptr<differential_histograms>& ntrk,
                std::unique_ptr<differential_histograms>& sumpt,
@@ -83,11 +88,11 @@ void fill_jets(pjtree* pjt, double norm, float jet_pt_min, float jet_eta_abs,
                std::unique_ptr<differential_histograms>& pjet_f_dphi,
                std::unique_ptr<differential_histograms>& pjet_f_jetpt,
                std::unique_ptr<differential_histograms>& pjet_f_x) {
-    int64_t near_ntrk_x = intrk->index_for((*ntrk)(0, FP_TH1_GETBC, 1) / norm);
-    int64_t perp_ntrk_x = intrk->index_for((*ntrk)(1, FP_TH1_GETBC, 1) / norm);
+    int64_t near_ntrk_x = intrk->index_for((*ntrk)(0, FP_TH1_GETBC, 1));
+    int64_t perp_ntrk_x = intrk->index_for((*ntrk)(1, FP_TH1_GETBC, 1));
 
-    int64_t near_sumpt_x = isumpt->index_for((*sumpt)(0, FP_TH1_GETBC, 1) / norm);
-    int64_t perp_sumpt_x = isumpt->index_for((*sumpt)(1, FP_TH1_GETBC, 1) / norm);
+    int64_t near_sumpt_x = isumpt->index_for((*sumpt)(0, FP_TH1_GETBC, 1));
+    int64_t perp_sumpt_x = isumpt->index_for((*sumpt)(1, FP_TH1_GETBC, 1));
 
     auto index = nevt->index_for(
         x{photon_pt_x, near_ntrk_x, perp_ntrk_x, near_sumpt_x, perp_sumpt_x});
@@ -272,8 +277,6 @@ int flatten(char const* config, char const* output) {
         /* set (phi) axis of leading photon */
         auto photon_phi = convert_radians((*pjt->phoPhi)[photon_leading]);
 
-        double norm = 2. * trk_eta_abs * 2. * M_PI / 3.;
-
         /* clear counts (sums) */
         for (int64_t j = 0; j < mdphi->size(); ++j) {
             (*ntrk)(j, FP_TH1_SETBC, 1, 0.);
@@ -282,7 +285,7 @@ int flatten(char const* config, char const* output) {
             (*mix_sumpt)(j, FP_TH1_SETBC, 1, 0.);
         }
 
-        fill_tracks(pjt, norm, trk_pt_min, trk_eta_abs,
+        fill_tracks(pjt, trk_pt_min, trk_eta_abs,
                     photon_leading_pt, photon_phi, photon_pt_x,
                     idphi, mdphi,
                     ntrk, sumpt,
@@ -290,7 +293,7 @@ int flatten(char const* config, char const* output) {
                     trk_f_dphi, trk_f_pt,
                     evt_f_ntrk, evt_f_sumpt);
 
-        fill_jets(pjt, norm, jet_pt_min, jet_eta_abs,
+        fill_jets(pjt, jet_pt_min, jet_eta_abs,
                   photon_leading_pt, photon_phi, photon_pt_x,
                   ntrk, sumpt, intrk, isumpt,
                   nevt, pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
@@ -299,7 +302,7 @@ int flatten(char const* config, char const* output) {
         for (int64_t k = 0; k < 100; ++k) {
             tm->GetEntry(m);
 
-            fill_tracks(pjtm, norm, trk_pt_min, trk_eta_abs,
+            fill_tracks(pjtm, trk_pt_min, trk_eta_abs,
                         photon_leading_pt, photon_phi, photon_pt_x,
                         idphi, mdphi,
                         mix_ntrk, mix_sumpt,
@@ -307,7 +310,7 @@ int flatten(char const* config, char const* output) {
                         mix_trk_f_dphi, mix_trk_f_pt,
                         mix_evt_f_ntrk, mix_evt_f_sumpt);
 
-            fill_jets(pjtm, norm, jet_pt_min, jet_eta_abs,
+            fill_jets(pjtm, jet_pt_min, jet_eta_abs,
                       photon_leading_pt, photon_phi, photon_pt_x,
                       mix_ntrk, mix_sumpt, intrk, isumpt,
                       nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
