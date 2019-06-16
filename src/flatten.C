@@ -136,6 +136,8 @@ int flatten(char const* config, char const* output) {
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
 
+    auto freq = conf->get<int64_t>("frequency");
+
     auto photon_pt_min = conf->get<float>("photon_pt_min");
     auto photon_eta_abs = conf->get<float>("photon_eta_abs");
     auto jet_pt_min = conf->get<float>("jet_pt_min");
@@ -158,6 +160,9 @@ int flatten(char const* config, char const* output) {
     /* convert to integral angle units (cast to double) */
     for (auto& i : rdphi) { i = convert_degrees(i); }
     for (auto& i : ddphi) { i = convert_degrees(i); }
+
+    /* default values for config options */
+    freq = freq ? freq : 10000;
 
     printf("prepare histograms..\n");
 
@@ -228,7 +233,7 @@ int flatten(char const* config, char const* output) {
     if (max_entries) { nentries = std::min(nentries, max_entries); }
     int64_t mentries = static_cast<int64_t>(tm->GetEntries());
     for (int64_t i = 0, m = 0; i < nentries; ++i) {
-        if (i % 1000 == 0) { printf("entry: %li/%li\n", i, nentries); }
+        if (i % freq == 0) { printf("entry: %li/%li\n", i, nentries); }
 
         t->GetEntry(i);
 
