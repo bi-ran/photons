@@ -26,12 +26,14 @@ using namespace std::literals::string_literals;
 
 using dhist = differential_histograms;
 
-void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
-                 int64_t photon_phi, int64_t photon_pt_x,
+void fill_tracks(pjtree* pjt, double norm, float trk_pt_min, float trk_eta_abs,
+                 double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
                  std::shared_ptr<interval>& idphi,
                  std::shared_ptr<multival>& mdphi,
                  std::unique_ptr<differential_histograms>& ntrk,
                  std::unique_ptr<differential_histograms>& sumpt,
+                 std::unique_ptr<differential_histograms>& ntrk_f_pt,
+                 std::unique_ptr<differential_histograms>& sumpt_f_pt,
                  std::unique_ptr<differential_histograms>& trk_f_dphi,
                  std::unique_ptr<differential_histograms>& trk_f_pt,
                  std::unique_ptr<differential_histograms>& evt_f_ntrk,
@@ -60,21 +62,23 @@ void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
     }
 
     for (int64_t j = 0; j < mdphi->size(); ++j) {
-        double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1);
-        double evt_sumpt = (*sumpt)(j, FP_TH1_GETBC, 1);
+        double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1) / norm;
+        double evt_sumpt = (*sumpt)(j, FP_TH1_GETBC, 1) / norm;
 
         (*evt_f_ntrk)(x{photon_pt_x, j}, FP_TH1_FILL, evt_ntrk);
         (*evt_f_sumpt)(x{photon_pt_x, j}, FP_TH1_FILL, evt_sumpt);
+
+        (*ntrk_f_pt)(j, FP_TH1_FILLW, photon_leading_pt, evt_ntrk);
+        (*sumpt_f_pt)(j, FP_TH1_FILLW, photon_leading_pt, evt_sumpt);
     }
 }
 
-void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
+void fill_jets(pjtree* pjt, double norm, float jet_pt_min, float jet_eta_abs,
                double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
                std::unique_ptr<differential_histograms>& ntrk,
                std::unique_ptr<differential_histograms>& sumpt,
                std::shared_ptr<interval>& intrk,
                std::shared_ptr<interval>& isumpt,
-               double norm,
                std::unique_ptr<differential_histograms>& nevt,
                std::unique_ptr<differential_histograms>& pjet_f_dphi,
                std::unique_ptr<differential_histograms>& pjet_f_jetpt,
@@ -183,8 +187,13 @@ int flatten(char const* config, char const* output) {
 
     auto ntrk = std::make_unique<dhist>("ntrk"s, incl, mdphi);
     auto sumpt = std::make_unique<dhist>("sumpt"s, incl, mdphi);
-    auto mix_ntrk = std::make_unique<dhist>("ntrk_mix"s, incl, mdphi);
-    auto mix_sumpt = std::make_unique<dhist>("sumpt_mix"s, incl, mdphi);
+    auto mix_ntrk = std::make_unique<dhist>("mix_ntrk"s, incl, mdphi);
+    auto mix_sumpt = std::make_unique<dhist>("mix_sumpt"s, incl, mdphi);
+
+    auto ntrk_f_pt = std::make_unique<dhist>("ntrk_f_pt"s, rpt, mdphi);
+    auto sumpt_f_pt = std::make_unique<dhist>("sumpt_f_pt"s, rpt, mdphi);
+    auto mix_ntrk_f_pt = std::make_unique<dhist>("mix_ntrk_f_pt"s, rpt, mdphi);
+    auto mix_sumpt_f_pt = std::make_unique<dhist>("mix_sumpt_f_pt"s, rpt, mdphi);
 
     auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s, rntrk, mptdphi);
     auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s, rsumpt, mptdphi);
@@ -263,6 +272,8 @@ int flatten(char const* config, char const* output) {
         /* set (phi) axis of leading photon */
         auto photon_phi = convert_radians((*pjt->phoPhi)[photon_leading]);
 
+        double norm = 2. * trk_eta_abs * 2. * M_PI / 3.;
+
         /* clear counts (sums) */
         for (int64_t j = 0; j < mdphi->size(); ++j) {
             (*ntrk)(j, FP_TH1_SETBC, 1, 0.);
@@ -271,34 +282,34 @@ int flatten(char const* config, char const* output) {
             (*mix_sumpt)(j, FP_TH1_SETBC, 1, 0.);
         }
 
-        fill_tracks(pjt, trk_pt_min, trk_eta_abs,
-                    photon_phi, photon_pt_x,
+        fill_tracks(pjt, norm, trk_pt_min, trk_eta_abs,
+                    photon_leading_pt, photon_phi, photon_pt_x,
                     idphi, mdphi,
                     ntrk, sumpt,
+                    ntrk_f_pt, sumpt_f_pt,
                     trk_f_dphi, trk_f_pt,
                     evt_f_ntrk, evt_f_sumpt);
 
-        double norm = 2. * trk_eta_abs * 2. * M_PI / 3.;
-
-        fill_jets(pjt, jet_pt_min, jet_eta_abs,
+        fill_jets(pjt, norm, jet_pt_min, jet_eta_abs,
                   photon_leading_pt, photon_phi, photon_pt_x,
-                  ntrk, sumpt, intrk, isumpt, norm,
+                  ntrk, sumpt, intrk, isumpt,
                   nevt, pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
 
         /* mixing events in minimum bias */
         for (int64_t k = 0; k < 100; ++k) {
             tm->GetEntry(m);
 
-            fill_tracks(pjtm, trk_pt_min, trk_eta_abs,
-                        photon_phi, photon_pt_x,
+            fill_tracks(pjtm, norm, trk_pt_min, trk_eta_abs,
+                        photon_leading_pt, photon_phi, photon_pt_x,
                         idphi, mdphi,
                         mix_ntrk, mix_sumpt,
+                        mix_ntrk_f_pt, mix_sumpt_f_pt,
                         mix_trk_f_dphi, mix_trk_f_pt,
                         mix_evt_f_ntrk, mix_evt_f_sumpt);
 
-            fill_jets(pjtm, jet_pt_min, jet_eta_abs,
+            fill_jets(pjtm, norm, jet_pt_min, jet_eta_abs,
                       photon_leading_pt, photon_phi, photon_pt_x,
-                      mix_ntrk, mix_sumpt, intrk, isumpt, norm,
+                      mix_ntrk, mix_sumpt, intrk, isumpt,
                       nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
 
             m = (m + 1) % mentries;
@@ -347,6 +358,11 @@ int flatten(char const* config, char const* output) {
     normalise(nevt_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt);
     normalise(nevt_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
 
+    for (int64_t i = 0; i < idphi->size(); ++i) {
+        (*ntrk_f_pt)[i]->Divide((*photon_f_pt)[0]);
+        (*sumpt_f_pt)[i]->Divide((*photon_f_pt)[0]);
+    }
+
     printf("painting..\n");
 
     TCanvas* c1 = new TCanvas("c1", "", 800, 1200);
@@ -379,6 +395,38 @@ int flatten(char const* config, char const* output) {
     }
 
     c1->SaveAs("c1.pdf");
+
+    TCanvas* c2 = new TCanvas("c2", "", 800, 400);
+
+    c2->Divide(2, 1);
+
+    c2->cd(1);
+
+    (*ntrk_f_pt)[0]->SetStats(0);
+    (*ntrk_f_pt)[0]->SetMarkerStyle(21);
+    (*ntrk_f_pt)[0]->SetAxisRange(0, 10, "Y");
+    (*ntrk_f_pt)(0, FP_TH1_DRAW, "p e");
+
+    (*ntrk_f_pt)[1]->SetStats(0);
+    (*ntrk_f_pt)[1]->SetLineColor(2);
+    (*ntrk_f_pt)[1]->SetMarkerColor(2);
+    (*ntrk_f_pt)[1]->SetMarkerStyle(21);
+    (*ntrk_f_pt)(1, FP_TH1_DRAW, "same p e");
+
+    c2->cd(2);
+
+    (*sumpt_f_pt)[0]->SetStats(0);
+    (*sumpt_f_pt)[0]->SetMarkerStyle(21);
+    (*sumpt_f_pt)[0]->SetAxisRange(0, 10, "Y");
+    (*sumpt_f_pt)(0, FP_TH1_DRAW, "p e");
+
+    (*sumpt_f_pt)[1]->SetStats(0);
+    (*sumpt_f_pt)[1]->SetLineColor(2);
+    (*sumpt_f_pt)[1]->SetMarkerColor(2);
+    (*sumpt_f_pt)[1]->SetMarkerStyle(21);
+    (*sumpt_f_pt)(1, FP_TH1_DRAW, "same p e");
+
+    c2->SaveAs("c2.pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 

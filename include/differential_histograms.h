@@ -121,6 +121,19 @@ class differential_histograms {
         this->add(other, -1);
     }
 
+    void multiply(double c1) {
+        for (int64_t i = 0; i < _size; ++i)
+            histograms[i]->Scale(c1);
+    }
+
+    void operator*=(double c1) {
+        this->multiply(c1);
+    }
+
+    void operator/=(double c1) {
+        this->multiply(1. / c1);
+    }
+
     TH1F*& operator[](int64_t index) {
         return histograms[index];
     }
