@@ -41,6 +41,10 @@ void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
         if (std::abs((*pjt->trkEta)[j]) > trk_eta_abs) { continue; }
 
         /* track quality selections */
+        if (!(*pjt->highPurity)[j]) { continue; }
+        if ((*pjt->trkPtError)[j] / (*pjt->trkPt)[j] > 0.1) { continue; }
+        if ((*pjt->trkDxy1)[j] / (*pjt->trkDxyError1)[j] > 3.) { continue; }
+        if ((*pjt->trkDz1)[j] / (*pjt->trkDzError1)[j] > 3.) { continue; }
 
         double trk_pt = (*pjt->trkPt)[j];
         auto trk_phi = convert_radians((*pjt->trkPhi)[j]);
