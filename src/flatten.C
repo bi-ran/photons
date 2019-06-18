@@ -26,6 +26,7 @@
 #define FP_TH1_DRAW (void (TH1::*)(char const*))&TH1::Draw
 
 using namespace std::literals::string_literals;
+using namespace std::placeholders;
 
 using dhist = differential_histograms;
 
@@ -407,7 +408,13 @@ int flatten(char const* config, char const* output) {
     hb->set_binary("type");
     hb->sketch();
 
+    auto formatter = [](TH1* obj, double min, double max) {
+        obj->SetStats(0);
+        obj->SetAxisRange(min, max, "Y");
+    };
+
     auto c1 = new paper("c1");
+    c1->format(std::bind(formatter, _1, 0., 0.12));
     for (int64_t i = 0; i < isumpt->size(); ++i) {
         c1->add((*pjet_f_x_d_perp_sumpt)[i]);
         c1->stack((*pjet_f_x_d_near_sumpt)[i]);
@@ -416,6 +423,7 @@ int flatten(char const* config, char const* output) {
     }
 
     auto c2 = new paper("c2");
+    c2->format(std::bind(formatter, _1, 0., 10.));
     c2->divide(2, 1);
     c2->add((*ntrk_f_pt)[0]);
     c2->stack((*ntrk_f_pt)[1]);
@@ -423,6 +431,7 @@ int flatten(char const* config, char const* output) {
     c2->stack((*sumpt_f_pt)[1]);
 
     auto c3 = new paper("c3");
+    c3->format(std::bind(formatter, _1, 0., 0.25));
     for (int64_t i = 0; i < ipt->size(); ++i) {
         c3->add((*evt_f_ntrk)[x{i, 0}]);
         c3->stack((*evt_f_ntrk)[x{i, 1}]);
