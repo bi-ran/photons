@@ -18,38 +18,14 @@ class pencil {
 
     ~pencil() = default;
 
-    void category(std::string const& label, std::string const& item) {
-        if (categories.find(label) == categories.end()) {
-            categories[label] = {
-                static_cast<int64_t>(categories.size()) - 1, 0 };
-        }
-
-        if (attributes.find(item) == attributes.end()) {
-            attributes[item] = categories[label];
-            ++categories[label][1];
-        }
+    template <typename... T>
+    void category(std::string const& label, T const&... items) {
+        (void) (int [sizeof...(T)]) { (category(label, items), 0)... };
     }
 
     template <typename... T>
-    void category(std::string const& label, std::string const& first,
-                  T const&... items) {
-        category(label, first);
-        category(label, items...);
-    }
-
-    void describe(TObject* const object, std::string const& description) {
-        if (objects.find(object) == objects.end())
-            objects[object] = std::vector<int64_t>(categories.size());
-
-        auto attr = attributes[description];
-        objects[object][attr[0]] = attr[1];
-    }
-
-    template <typename... T>
-    void describe(TObject* const object, std::string const& first,
-                  T const&... items) {
-        describe(object, first);
-        describe(object, items...);
+    void describe(TObject* const object, T const&... adjectives) {
+        (void) (int [sizeof...(T)]) { (describe(object, adjectives), 0)... };
     }
 
     void set_binary(std::string const& label) {
@@ -63,6 +39,24 @@ class pencil {
     }
 
   private:
+    void category(std::string const& label, std::string const& item) {
+        if (categories.find(label) == categories.end())
+            categories[label] = { static_cast<int>(categories.size()) - 1, 0 };
+
+        if (attributes.find(item) == attributes.end()) {
+            attributes[item] = categories[label];
+            ++categories[label][1];
+        }
+    }
+
+    void describe(TObject* const object, std::string const& adjective) {
+        if (objects.find(object) == objects.end())
+            objects[object] = std::vector<int64_t>(categories.size());
+
+        auto attr = attributes[adjective];
+        objects[object][attr[0]] = attr[1];
+    }
+
     std::map<TObject* const, std::vector<int64_t>> objects;
 
     std::map<std::string, std::array<int64_t, 2>> categories;

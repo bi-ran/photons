@@ -134,10 +134,8 @@ void normalise(std::unique_ptr<differential_histograms>& norm,
 
 template <typename... T>
 void normalise(std::unique_ptr<differential_histograms>& norm,
-               std::unique_ptr<differential_histograms>& first,
-               std::unique_ptr<T>&... others) {
-    normalise(norm, first);
-    normalise(norm, others...);
+               std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (normalise(norm, args), 0)... };
 }
 
 int flatten(char const* config, char const* output) {

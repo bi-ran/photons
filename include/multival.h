@@ -1,6 +1,7 @@
 #ifndef MULTIVAL_H
 #define MULTIVAL_H
 
+#include <iterator>
 #include <vector>
 
 #include "interval.h"
@@ -40,17 +41,10 @@ class multival {
     std::vector<int64_t> const& shape() const { return _shape; }
 
   private:
-    template <typename T>
-    void extract(T const& last) {
-        _intervals.emplace_back(interval(last));
-        _shape.emplace_back(_intervals.back().size());
-    }
-
-    template <typename T, typename... U>
-    void extract(T const& first, U const&... rest) {
-        _intervals.emplace_back(interval(first));
-        _shape.emplace_back(_intervals.back().size());
-        extract(rest...);
+    template <typename... T>
+    void extract(T const&... args) {
+        (void) (int [sizeof...(T)]) { (_intervals.emplace_back(args), 0)... };
+        for (auto const& i : _intervals) { _shape.push_back(i.size()); }
     }
 
     int64_t _dims;

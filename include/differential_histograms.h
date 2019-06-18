@@ -2,6 +2,7 @@
 #define DIFFERENTIAL_HISTOGRAMS_H
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -50,8 +51,8 @@ class differential_histograms {
               _dims(sizeof...(T)),
               _size(size_of(dimensions...)),
               bins(bins) {
-        auto array = shape_of(dimensions...);
-        _shape = std::vector<int64_t>(std::begin(array), std::end(array));
+        auto shape = std::array<int64_t, sizeof...(T)>(dimensions...);
+        _shape = std::vector<int64_t>(std::begin(shape), std::end(shape));
 
         allocate_histograms();
     }
@@ -270,10 +271,6 @@ class differential_histograms {
             );
         }
     }
-
-    template <typename... T, int64_t N = sizeof...(T)>
-    std::array<int64_t, N> shape_of(T const&... dimensions) {
-        return std::array<int64_t, N>(dimensions...); }
 
     template <typename T>
     int64_t size_of(T const& last) {

@@ -1,6 +1,8 @@
 #ifndef INTERVAL_H
 #define INTERVAL_H
 
+#include <iterator>
+#include <numeric>
 #include <vector>
 
 class interval {
@@ -13,12 +15,9 @@ class interval {
     interval(int64_t number, double min, double max)
             : _size(number),
               _edges(std::vector<double>(number + 1)) {
-        double accumulator = min;
+        std::iota(std::begin(_edges), std::end(_edges), 0);
         double interval = (max - min) / number;
-        for (auto& edge : _edges) {
-            edge = accumulator;
-            accumulator = accumulator + interval;
-        }
+        for (auto& edge : _edges) { edge = min + edge * interval; }
     }
 
     template <typename... T>
