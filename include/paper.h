@@ -1,6 +1,7 @@
 #ifndef PAPER_H
 #define PAPER_H
 
+#include <array>
 #include <cmath>
 #include <functional>
 #include <string>
@@ -10,6 +11,7 @@
 #include "TObject.h"
 #include "TGraph.h"
 #include "TH1.h"
+#include "TLegend.h"
 
 class paper {
   public:
@@ -18,6 +20,7 @@ class paper {
           _size(size),
           _cols(cols),
           _rows(rows),
+          _desc(nullptr),
           canvas(nullptr) { }
 
     paper(std::string const& tag)
@@ -54,6 +57,12 @@ class paper {
 
     void format(std::function<void(TGraph*)> g) { _g = g; }
 
+    void legend(std::function<std::array<float, 4>()> l) { _l = l; }
+
+    void style(std::function<void(TLegend*)> s) { _s = s; }
+
+    void describe(auto& desc) { _desc = &desc; }
+
     void draw(char const* ext) {
         using namespace std::literals::string_literals;
 
@@ -72,6 +81,8 @@ class paper {
                 objects[i]->Draw("same p e");
                 apply(_d);
             }
+
+            legends();
         }
 
         save(ext);
@@ -95,6 +106,35 @@ class paper {
         _rows = rows;
     }
 
+    void legends() {
+        if (_desc == nullptr) { return; }
+
+        for (int64_t i = 1; i <= _size; ++i) {
+            canvas->cd(i);
+
+            std::vector<TObject*> associates;
+            int64_t count = static_cast<int64_t>(objects.size());
+            for (int64_t j = 0; j < count; ++j)
+                if (indices[j] == i)
+                    associates.push_back(objects[j]);
+
+            auto point = _l ? _l() : std::array<float, 4>{
+                0.5, 0.9, 0.87, 0.04 };
+            point[3] = point[2] - associates.size() * point[3];
+
+            TLegend* l = new TLegend(point[0], point[3], point[1], point[2]);
+            apply(l, _s);
+
+            for (auto const& obj : associates) {
+                auto desc = _desc->find(obj) != std::end(*_desc) ?
+                    (*_desc)[obj] : std::string(obj->GetName());
+                l->AddEntry(obj, desc.data(), "pl");
+            }
+
+            l->Draw();
+        }
+    }
+
     void save(char const* ext) {
         using namespace std::literals::string_literals;
 
@@ -112,6 +152,10 @@ class paper {
     std::function<void()> _d;
     std::function<void(TH1*)> _f;
     std::function<void(TGraph*)> _g;
+    std::function<std::array<float, 4>()> _l;
+    std::function<void(TLegend*)> _s;
+
+    std::map<TObject* const, std::string>* _desc;
 
     TCanvas* canvas;
 };

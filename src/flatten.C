@@ -2,6 +2,7 @@
 #include "TTree.h"
 #include "TH1.h"
 #include "TLatex.h"
+#include "TLegend.h"
 
 #include <memory>
 #include <string>
@@ -376,6 +377,10 @@ int flatten(char const* config, char const* output) {
     hb->category("dphi", "perp", "near");
     hb->category("type", "raw", "mix");
 
+    hb->alias("perp", "#pi/3 < #||{#Delta#phi^{#gammah}} < 2#pi/3");
+    hb->alias("near", "0 < #||{#Delta#phi^{#gammah}} < #pi/3");
+    hb->alias("raw", "sub.");
+
     for (int64_t i = 0; i < isumpt->size(); ++i) {
         hb->describe((*pjet_f_x_d_perp_sumpt)[i], "perp", "raw");
         hb->describe((*pjet_f_x_d_near_sumpt)[i], "near", "raw");
@@ -423,11 +428,28 @@ int flatten(char const* config, char const* output) {
         info->DrawLatexNDC(0.89, 0.92, system.data());
     };
 
+    auto legend = [](float x0, float x1, float y1, float dy) {
+        return std::array<float, 4>({ x0, x1, y1, dy });
+    };
+
+    auto stylist = [](TLegend* l, int font, float size) {
+        l->SetBorderSize(0);
+        l->SetFillStyle(0);
+        l->SetTextFont(font);
+        l->SetTextSize(size);
+    };
+
+    auto descriptors = hb->description();
+
     auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
 
     auto c1 = new paper("c1");
+    c1->describe(descriptors);
     c1->format(std::bind(formatter, _1, 0., 0.12));
     c1->decorate(std::bind(decorator, system));
+    c1->legend(std::bind(legend, 0.45, 0.9, 0.87, 0.04));
+    c1->style(std::bind(stylist, _1, 43, 12));
+
     for (int64_t i = 0; i < isumpt->size(); ++i) {
         c1->add((*pjet_f_x_d_perp_sumpt)[i]);
         c1->stack((*pjet_f_x_d_near_sumpt)[i]);
@@ -436,17 +458,25 @@ int flatten(char const* config, char const* output) {
     }
 
     auto c2 = new paper("c2");
+    c2->describe(descriptors);
     c2->format(std::bind(formatter, _1, 0., 10.));
     c2->decorate(std::bind(decorator, system));
+    c2->legend(std::bind(legend, 0.45, 0.9, 0.87, 0.04));
+    c2->style(std::bind(stylist, _1, 43, 12));
     c2->divide(2, 1);
+
     c2->add((*ntrk_f_pt)[0]);
     c2->stack((*ntrk_f_pt)[1]);
     c2->add((*sumpt_f_pt)[0]);
     c2->stack((*sumpt_f_pt)[1]);
 
     auto c3 = new paper("c3");
+    c3->describe(descriptors);
     c3->format(std::bind(formatter, _1, 0., 0.25));
     c3->decorate(std::bind(decorator, system));
+    c3->legend(std::bind(legend, 0.45, 0.9, 0.87, 0.04));
+    c3->style(std::bind(stylist, _1, 43, 12));
+
     for (int64_t i = 0; i < ipt->size(); ++i) {
         c3->add((*evt_f_ntrk)[x{i, 0}]);
         c3->stack((*evt_f_ntrk)[x{i, 1}]);

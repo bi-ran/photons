@@ -1,6 +1,7 @@
 #ifndef PENCIL_H
 #define PENCIL_H
 
+#include <array>
 #include <map>
 #include <memory>
 #include <string>
@@ -38,6 +39,39 @@ class pencil {
             (*core)(obj.first, obj.second);
     }
 
+    void alias(std::string const& label, std::string const& formal) {
+        aliases[label] = formal;
+    }
+
+    auto description() {
+        using namespace std::literals::string_literals;
+
+        std::map<TObject* const, std::string> desc;
+
+        /* build reverse map (function intended to be called only once!) */
+        std::map<std::array<int64_t, 2>, std::string> reverse;
+        for (auto const& attr : attributes)
+            reverse[attr.second] = attr.first;
+
+        for (auto const& obj : objects) {
+            std::string descriptive_string;
+            auto const& indices = obj.second;
+            int64_t count = static_cast<int64_t>(indices.size());
+            for (int64_t i = 0; i < count; ++i) {
+                auto attr = reverse[{ i, indices[i] }];
+                if (aliases.find(attr) != std::end(aliases))
+                    attr = aliases[attr];
+                descriptive_string += attr + ", "s;
+            }
+
+            descriptive_string.pop_back();
+            descriptive_string.pop_back();
+            desc[obj.first] = descriptive_string;
+        }
+
+        return desc;
+    }
+
   private:
     void categorise(std::string const& label, std::string const& item) {
         if (categories.find(label) == categories.end())
@@ -61,6 +95,8 @@ class pencil {
 
     std::map<std::string, std::array<int64_t, 2>> categories;
     std::map<std::string, std::array<int64_t, 2>> attributes;
+
+    std::map<std::string, std::string> aliases;
 
     std::unique_ptr<pigment> core;
 };
