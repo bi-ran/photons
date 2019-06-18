@@ -1,7 +1,6 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1.h"
-#include "TCanvas.h"
 
 #include <memory>
 #include <string>
@@ -11,6 +10,10 @@
 #include "../include/integral_angles.h"
 #include "../include/interval.h"
 #include "../include/multival.h"
+
+#include "../include/paper.h"
+#include "../include/pencil.h"
+#include "../include/pigment.h"
 
 #include "../include/pjtree.h"
 
@@ -378,99 +381,58 @@ int flatten(char const* config, char const* output) {
 
     printf("painting..\n");
 
-    TCanvas* c1 = new TCanvas("c1", "", 800, 1200);
-
-    c1->Divide(2, 3);
+    auto hb = new pencil();
+    hb->category("dphi", "perp", "near");
+    hb->category("type", "raw", "mix");
 
     for (int64_t i = 0; i < isumpt->size(); ++i) {
-        c1->cd(i + 1);
-
-        (*pjet_f_x_d_perp_sumpt)[i]->SetStats(0);
-        (*pjet_f_x_d_perp_sumpt)[i]->SetMarkerStyle(21);
-        (*pjet_f_x_d_perp_sumpt)[i]->SetAxisRange(0, 0.12, "Y");
-        (*pjet_f_x_d_perp_sumpt)(i, FP_TH1_DRAW, "p e");
-
-        (*pjet_f_x_d_near_sumpt)[i]->SetStats(0);
-        (*pjet_f_x_d_near_sumpt)[i]->SetLineColor(2);
-        (*pjet_f_x_d_near_sumpt)[i]->SetMarkerColor(2);
-        (*pjet_f_x_d_near_sumpt)[i]->SetMarkerStyle(20);
-        (*pjet_f_x_d_near_sumpt)(i, FP_TH1_DRAW, "same p e");
-
-        (*mix_pjet_f_x_d_perp_sumpt)[i]->SetStats(0);
-        (*mix_pjet_f_x_d_perp_sumpt)[i]->SetMarkerStyle(25);
-        (*mix_pjet_f_x_d_perp_sumpt)(i, FP_TH1_DRAW, "same p e");
-
-        (*mix_pjet_f_x_d_near_sumpt)[i]->SetStats(0);
-        (*mix_pjet_f_x_d_near_sumpt)[i]->SetLineColor(2);
-        (*mix_pjet_f_x_d_near_sumpt)[i]->SetMarkerColor(2);
-        (*mix_pjet_f_x_d_near_sumpt)[i]->SetMarkerStyle(24);
-        (*mix_pjet_f_x_d_near_sumpt)(i, FP_TH1_DRAW, "same p e");
+        hb->describe((*pjet_f_x_d_perp_sumpt)[i], "perp", "raw");
+        hb->describe((*pjet_f_x_d_near_sumpt)[i], "near", "raw");
+        hb->describe((*mix_pjet_f_x_d_perp_sumpt)[i], "perp", "mix");
+        hb->describe((*mix_pjet_f_x_d_near_sumpt)[i], "near", "mix");
     }
 
-    c1->SaveAs("c1.pdf");
-
-    TCanvas* c2 = new TCanvas("c2", "", 800, 400);
-
-    c2->Divide(2, 1);
-
-    c2->cd(1);
-
-    (*ntrk_f_pt)[0]->SetStats(0);
-    (*ntrk_f_pt)[0]->SetMarkerStyle(21);
-    (*ntrk_f_pt)[0]->SetAxisRange(0, 10, "Y");
-    (*ntrk_f_pt)(0, FP_TH1_DRAW, "p e");
-
-    (*ntrk_f_pt)[1]->SetStats(0);
-    (*ntrk_f_pt)[1]->SetLineColor(2);
-    (*ntrk_f_pt)[1]->SetMarkerColor(2);
-    (*ntrk_f_pt)[1]->SetMarkerStyle(21);
-    (*ntrk_f_pt)(1, FP_TH1_DRAW, "same p e");
-
-    c2->cd(2);
-
-    (*sumpt_f_pt)[0]->SetStats(0);
-    (*sumpt_f_pt)[0]->SetMarkerStyle(21);
-    (*sumpt_f_pt)[0]->SetAxisRange(0, 10, "Y");
-    (*sumpt_f_pt)(0, FP_TH1_DRAW, "p e");
-
-    (*sumpt_f_pt)[1]->SetStats(0);
-    (*sumpt_f_pt)[1]->SetLineColor(2);
-    (*sumpt_f_pt)[1]->SetMarkerColor(2);
-    (*sumpt_f_pt)[1]->SetMarkerStyle(21);
-    (*sumpt_f_pt)(1, FP_TH1_DRAW, "same p e");
-
-    c2->SaveAs("c2.pdf");
-
-    TCanvas* c3 = new TCanvas("c3", "", 800, 1200);
-
-    c3->Divide(2, 3);
+    hb->describe((*ntrk_f_pt)[0], "near");
+    hb->describe((*ntrk_f_pt)[1], "perp");
+    hb->describe((*sumpt_f_pt)[0], "near");
+    hb->describe((*sumpt_f_pt)[1], "perp");
 
     for (int64_t i = 0; i < ipt->size(); ++i) {
-        c3->cd(i + 1);
-
-        (*evt_f_ntrk)[x{i, 0}]->SetStats(0);
-        (*evt_f_ntrk)[x{i, 0}]->SetMarkerStyle(21);
-        (*evt_f_ntrk)[x{i, 0}]->SetAxisRange(0, 0.25, "Y");
-        (*evt_f_ntrk)(x{i, 0}, FP_TH1_DRAW, "p e");
-
-        (*evt_f_ntrk)[x{i, 1}]->SetStats(0);
-        (*evt_f_ntrk)[x{i, 1}]->SetLineColor(2);
-        (*evt_f_ntrk)[x{i, 1}]->SetMarkerColor(2);
-        (*evt_f_ntrk)[x{i, 1}]->SetMarkerStyle(20);
-        (*evt_f_ntrk)(x{i, 1}, FP_TH1_DRAW, "same p e");
-
-        (*evt_f_sumpt)[x{i, 0}]->SetStats(0);
-        (*evt_f_sumpt)[x{i, 0}]->SetMarkerStyle(25);
-        (*evt_f_sumpt)(x{i, 0}, FP_TH1_DRAW, "same p e");
-
-        (*evt_f_sumpt)[x{i, 1}]->SetStats(0);
-        (*evt_f_sumpt)[x{i, 1}]->SetLineColor(2);
-        (*evt_f_sumpt)[x{i, 1}]->SetMarkerColor(2);
-        (*evt_f_sumpt)[x{i, 1}]->SetMarkerStyle(24);
-        (*evt_f_sumpt)(x{i, 1}, FP_TH1_DRAW, "same p e");
+        hb->describe((*evt_f_ntrk)[x{i, 0}], "near");
+        hb->describe((*evt_f_ntrk)[x{i, 1}], "perp");
+        hb->describe((*evt_f_sumpt)[x{i, 0}], "near");
+        hb->describe((*evt_f_sumpt)[x{i, 1}], "perp");
     }
 
-    c3->SaveAs("c3.pdf");
+    hb->set_binary("type");
+    hb->sketch();
+
+    auto c1 = new paper("c1");
+    for (int64_t i = 0; i < isumpt->size(); ++i) {
+        c1->add((*pjet_f_x_d_perp_sumpt)[i]);
+        c1->stack((*pjet_f_x_d_near_sumpt)[i]);
+        c1->stack((*mix_pjet_f_x_d_perp_sumpt)[i]);
+        c1->stack((*mix_pjet_f_x_d_near_sumpt)[i]);
+    }
+
+    auto c2 = new paper("c2");
+    c2->divide(2, 1);
+    c2->add((*ntrk_f_pt)[0]);
+    c2->stack((*ntrk_f_pt)[1]);
+    c2->add((*sumpt_f_pt)[0]);
+    c2->stack((*sumpt_f_pt)[1]);
+
+    auto c3 = new paper("c3");
+    for (int64_t i = 0; i < ipt->size(); ++i) {
+        c3->add((*evt_f_ntrk)[x{i, 0}]);
+        c3->stack((*evt_f_ntrk)[x{i, 1}]);
+        c3->stack((*evt_f_sumpt)[x{i, 0}]);
+        c3->stack((*evt_f_sumpt)[x{i, 1}]);
+    }
+
+    c1->draw("pdf");
+    c2->draw("pdf");
+    c3->draw("pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 
