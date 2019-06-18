@@ -31,9 +31,7 @@ class pigment {
     pigment() : binary(-1) { }
 
     pigment(pigment const&) = delete;
-
     pigment& operator=(pigment const&) = delete;
-
     ~pigment() = default;
 
     template <typename T>

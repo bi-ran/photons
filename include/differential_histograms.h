@@ -82,9 +82,7 @@ class differential_histograms {
     }
 
     differential_histograms(differential_histograms const&) = delete;
-
     differential_histograms& operator=(differential_histograms const&) = delete;
-
     ~differential_histograms() = default;
 
     template <template <typename...> class T>
@@ -115,25 +113,19 @@ class differential_histograms {
     }
 
     void operator+=(differential_histograms const& other) {
-        this->add(other, 1);
-    }
+        this->add(other, 1); }
 
     void operator-=(differential_histograms const& other) {
-        this->add(other, -1);
-    }
+        this->add(other, -1); }
 
     void multiply(double c1) {
-        for (int64_t i = 0; i < _size; ++i)
-            histograms[i]->Scale(c1);
+        for (auto const& hist : histograms)
+            hist->Scale(c1);
     }
 
-    void operator*=(double c1) {
-        this->multiply(c1);
-    }
+    void operator*=(double c1) { this->multiply(c1); }
 
-    void operator/=(double c1) {
-        this->multiply(1. / c1);
-    }
+    void operator/=(double c1) { this->multiply(1. / c1); }
 
     void scale(differential_histograms const& other) {
         /* assume self, other have equal shapes */
@@ -153,30 +145,22 @@ class differential_histograms {
     }
 
     void operator*=(differential_histograms const& other) {
-        this->scale(other);
-    }
+        this->scale(other); }
 
     void operator/=(differential_histograms const& other) {
-        this->normalise(other);
-    }
+        this->normalise(other); }
 
-    TH1F*& operator[](int64_t index) {
-        return histograms[index];
-    }
+    TH1F*& operator[](int64_t index) { return histograms[index]; }
 
-    TH1F* const& operator[](int64_t index) const {
-        return histograms[index];
-    }
+    TH1F* const& operator[](int64_t index) const { return histograms[index]; }
 
     template <template <typename...> class T>
     TH1F*& operator[](T<int64_t> const& indices) {
-        return histograms[index_for(indices)];
-    }
+        return histograms[index_for(indices)]; }
 
     template <template <typename...> class T>
     TH1F* const& operator[](T<int64_t> const& indices) const {
-        return histograms[index_for(indices)];
-    }
+        return histograms[index_for(indices)]; }
 
     TH1F* sum(std::vector<int64_t> const& indices, int64_t axis) {
         using namespace std::literals::string_literals;
@@ -246,15 +230,13 @@ class differential_histograms {
     T operator()(U<double> const& values, T (TH1::* function)(V...),
                  V... args) {
         auto indices = intervals->indices_for(values);
-        return forward(index_for(indices), function, args...);
-    }
+        return forward(index_for(indices), function, args...); }
 
     template <typename T, template <typename...> class U, typename... V>
     T operator()(U<double> const& values, T (TH1::* function)(V...) const,
                  V... args) {
         auto indices = intervals->indices_for(values);
-        return forward(index_for(indices), function, args...);
-    }
+        return forward(index_for(indices), function, args...); }
 
     int64_t dims() const { return _dims; }
     int64_t size() const { return _size; }

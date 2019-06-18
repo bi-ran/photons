@@ -33,9 +33,7 @@ class paper {
         : paper(tag, 0, cols, rows) { }
 
     paper(paper const&) = delete;
-
     paper& operator=(paper const&) = delete;
-
     ~paper() = default;
 
     void add() { ++_size; }
@@ -52,13 +50,9 @@ class paper {
     void divide(int64_t cols, int64_t rows) { _cols = cols; _rows = rows; }
 
     void decorate(std::function<void()> d) { _d = d; }
-
     void format(std::function<void(TH1*)> f) { _f = f; }
-
     void format(std::function<void(TGraph*)> g) { _g = g; }
-
     void legend(std::function<std::array<float, 4>()> l) { _l = l; }
-
     void style(std::function<void(TLegend*)> s) { _s = s; }
 
     void describe(auto& desc) { _desc = &desc; }

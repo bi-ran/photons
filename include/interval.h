@@ -26,9 +26,7 @@ class interval {
           _edges({static_cast<double>(edges)...}) { }
 
     interval(interval const& other) = default;
-
     interval& operator=(interval const& other) = default;
-
     ~interval() = default;
 
     int64_t index_for(double value) const {

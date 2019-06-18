@@ -404,7 +404,6 @@ int flatten(char const* config, char const* output) {
     hb->sketch();
 
     auto descriptors = hb->description();
-
     auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
 
     auto c1 = new paper("c1");

@@ -16,9 +16,7 @@ class multival {
     }
 
     multival(multival const& other) = default;
-
     multival& operator=(multival const& other) = default;
-
     ~multival() = default;
 
     std::vector<int64_t> indices_for(std::vector<double> const& values) const {

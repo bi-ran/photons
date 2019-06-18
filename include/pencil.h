@@ -14,24 +14,19 @@ class pencil {
     pencil() : core(std::make_unique<pigment>()) { }
 
     pencil(pencil const&) = delete;
-
     pencil& operator=(pencil const&) = delete;
-
     ~pencil() = default;
 
     template <typename... T>
     void category(std::string const& label, T const&... items) {
-        (void) (int [sizeof...(T)]) { (categorise(label, items), 0)... };
-    }
+        (void) (int [sizeof...(T)]) { (categorise(label, items), 0)... }; }
 
     template <typename... T>
     void describe(TObject* const object, T const&... adjectives) {
-        (void) (int [sizeof...(T)]) { (mark(object, adjectives), 0)... };
-    }
+        (void) (int [sizeof...(T)]) { (mark(object, adjectives), 0)... }; }
 
     void set_binary(std::string const& label) {
-        core->set_binary(categories[label][0]);
-    }
+        core->set_binary(categories[label][0]); }
 
     void sketch() {
         core->set_features(categories.size());
@@ -40,8 +35,7 @@ class pencil {
     }
 
     void alias(std::string const& label, std::string const& formal) {
-        aliases[label] = formal;
-    }
+        aliases[label] = formal; }
 
     auto description() {
         using namespace std::literals::string_literals;
