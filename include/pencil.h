@@ -20,12 +20,12 @@ class pencil {
 
     template <typename... T>
     void category(std::string const& label, T const&... items) {
-        (void) (int [sizeof...(T)]) { (category(label, items), 0)... };
+        (void) (int [sizeof...(T)]) { (categorise(label, items), 0)... };
     }
 
     template <typename... T>
     void describe(TObject* const object, T const&... adjectives) {
-        (void) (int [sizeof...(T)]) { (describe(object, adjectives), 0)... };
+        (void) (int [sizeof...(T)]) { (mark(object, adjectives), 0)... };
     }
 
     void set_binary(std::string const& label) {
@@ -39,7 +39,7 @@ class pencil {
     }
 
   private:
-    void category(std::string const& label, std::string const& item) {
+    void categorise(std::string const& label, std::string const& item) {
         if (categories.find(label) == categories.end())
             categories[label] = { static_cast<int>(categories.size()) - 1, 0 };
 
@@ -49,7 +49,7 @@ class pencil {
         }
     }
 
-    void describe(TObject* const object, std::string const& adjective) {
+    void mark(TObject* const object, std::string const& adjective) {
         if (objects.find(object) == objects.end())
             objects[object] = std::vector<int64_t>(categories.size());
 

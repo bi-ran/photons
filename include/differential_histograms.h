@@ -135,6 +135,31 @@ class differential_histograms {
         this->multiply(1. / c1);
     }
 
+    void scale(differential_histograms const& other) {
+        /* assume self, other have equal shapes */
+        for (int64_t j = 0; j < _size; ++j) {
+            auto count = other[j]->GetBinContent(1);
+            histograms[j]->Scale(count);
+        }
+    }
+
+    void normalise(differential_histograms const& other) {
+        /* assume self, other have equal shapes */
+        for (int64_t j = 0; j < _size; ++j) {
+            auto count = other[j]->GetBinContent(1);
+            auto scale = count != 0 ? 1. / count : 0;
+            histograms[j]->Scale(scale);
+        }
+    }
+
+    void operator*=(differential_histograms const& other) {
+        this->scale(other);
+    }
+
+    void operator/=(differential_histograms const& other) {
+        this->normalise(other);
+    }
+
     TH1F*& operator[](int64_t index) {
         return histograms[index];
     }

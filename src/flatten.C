@@ -123,19 +123,10 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
     }
 }
 
-void normalise(std::unique_ptr<differential_histograms>& norm,
-               std::unique_ptr<differential_histograms>& last) {
-    /* assume object, normalisation have equal shapes */
-    for (int64_t j = 0; j < norm->size(); ++j) {
-        auto count = (*norm)[j]->GetBinContent(1);
-        if (count != 0) { (*last)[j]->Scale(1. / count); }
-    }
-}
-
 template <typename... T>
 void normalise(std::unique_ptr<differential_histograms>& norm,
                std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (normalise(norm, args), 0)... };
+    (void)(int [sizeof...(T)]) { (args->normalise(*norm), 0)... };
 }
 
 int flatten(char const* config, char const* output) {
