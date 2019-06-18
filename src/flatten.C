@@ -1,6 +1,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1.h"
+#include "TLatex.h"
 
 #include <memory>
 #include <string>
@@ -413,8 +414,31 @@ int flatten(char const* config, char const* output) {
         obj->SetAxisRange(min, max, "Y");
     };
 
+    auto decorator = [](std::string const& system) {
+        TLatex* cms = new TLatex();
+        cms->SetTextFont(62);
+        cms->SetTextSize(0.048);
+        cms->SetTextAlign(13);
+        cms->DrawLatexNDC(0.135, 0.87, "CMS");
+
+        TLatex* prelim = new TLatex();
+        prelim->SetTextFont(52);
+        prelim->SetTextSize(0.032);
+        prelim->SetTextAlign(13);
+        prelim->DrawLatexNDC(0.135, 0.83, "Preliminary");
+
+        TLatex* info = new TLatex();
+        info->SetTextFont(42);
+        info->SetTextSize(0.032);
+        info->SetTextAlign(31);
+        info->DrawLatexNDC(0.89, 0.92, system.data());
+    };
+
+    auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
+
     auto c1 = new paper("c1");
     c1->format(std::bind(formatter, _1, 0., 0.12));
+    c1->decorate(std::bind(decorator, system));
     for (int64_t i = 0; i < isumpt->size(); ++i) {
         c1->add((*pjet_f_x_d_perp_sumpt)[i]);
         c1->stack((*pjet_f_x_d_near_sumpt)[i]);
@@ -424,6 +448,7 @@ int flatten(char const* config, char const* output) {
 
     auto c2 = new paper("c2");
     c2->format(std::bind(formatter, _1, 0., 10.));
+    c2->decorate(std::bind(decorator, system));
     c2->divide(2, 1);
     c2->add((*ntrk_f_pt)[0]);
     c2->stack((*ntrk_f_pt)[1]);
@@ -432,6 +457,7 @@ int flatten(char const* config, char const* output) {
 
     auto c3 = new paper("c3");
     c3->format(std::bind(formatter, _1, 0., 0.25));
+    c3->decorate(std::bind(decorator, system));
     for (int64_t i = 0; i < ipt->size(); ++i) {
         c3->add((*evt_f_ntrk)[x{i, 0}]);
         c3->stack((*evt_f_ntrk)[x{i, 1}]);

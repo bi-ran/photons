@@ -48,6 +48,8 @@ class paper {
 
     void divide(int64_t cols, int64_t rows) { _cols = cols; _rows = rows; }
 
+    void decorate(std::function<void()> d) { _d = d; }
+
     void format(std::function<void(TH1*)> f) { _f = f; }
 
     void format(std::function<void(TGraph*)> g) { _g = g; }
@@ -68,6 +70,7 @@ class paper {
                 apply(objects[i], _f);
                 apply(objects[i], _g);
                 objects[i]->Draw("same p e");
+                apply(_d);
             }
         }
 
@@ -80,6 +83,9 @@ class paper {
         if (f && obj->InheritsFrom(T::Class()))
             f(static_cast<T*>(obj));
     }
+
+    template <typename T>
+    void apply(std::function<T> f) { if (f) { f(); } }
 
     void split() {
         float rows = std::ceil(std::sqrt(_size));
@@ -103,6 +109,7 @@ class paper {
     std::vector<TObject*> objects;
     std::vector<int64_t> indices;
 
+    std::function<void()> _d;
     std::function<void(TH1*)> _f;
     std::function<void(TGraph*)> _g;
 
