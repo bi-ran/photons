@@ -183,44 +183,63 @@ int flatten(char const* config, char const* output) {
     auto mptntrk2sumpt2 = std::make_shared<multival>(
         dpt, dntrk, dntrk, dsumpt, dsumpt);
 
-    auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s, rpt, mincl);
+    auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s,
+        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, mincl);
 
-    auto ntrk = std::make_unique<dhist>("ntrk"s, incl, mdphi);
-    auto sumpt = std::make_unique<dhist>("sumpt"s, incl, mdphi);
-    auto mix_ntrk = std::make_unique<dhist>("mix_ntrk"s, incl, mdphi);
-    auto mix_sumpt = std::make_unique<dhist>("mix_sumpt"s, incl, mdphi);
+    auto ntrk = std::make_unique<dhist>("ntrk"s,
+        "N^{h^{#pm}}", incl, mdphi);
+    auto sumpt = std::make_unique<dhist>("sumpt"s,
+        "#sump_{T}^{h^{#pm}}", incl, mdphi);
+    auto mix_ntrk = std::make_unique<dhist>("mix_ntrk"s,
+        "N^{h^{#pm}}", incl, mdphi);
+    auto mix_sumpt = std::make_unique<dhist>("mix_sumpt"s,
+        "#sump_{T}^{h^{#pm}}", incl, mdphi);
 
-    auto ntrk_f_pt = std::make_unique<dhist>("ntrk_f_pt"s, rpt, mdphi);
-    auto sumpt_f_pt = std::make_unique<dhist>("sumpt_f_pt"s, rpt, mdphi);
-    auto mix_ntrk_f_pt = std::make_unique<dhist>("mix_ntrk_f_pt"s, rpt, mdphi);
-    auto mix_sumpt_f_pt = std::make_unique<dhist>("mix_sumpt_f_pt"s, rpt, mdphi);
+    auto ntrk_f_pt = std::make_unique<dhist>("ntrk_f_pt"s,
+        "dN_{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
+    auto sumpt_f_pt = std::make_unique<dhist>("sumpt_f_pt"s,
+        "d#Sigmap_{T}^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
+    auto mix_ntrk_f_pt = std::make_unique<dhist>("mix_ntrk_f_pt"s,
+        "dN_{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
+    auto mix_sumpt_f_pt = std::make_unique<dhist>("mix_sumpt_f_pt"s,
+        "d#Sigmap_{T}^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
 
-    auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s, rntrk, mptdphi);
-    auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s, rsumpt, mptdphi);
-    auto mix_evt_f_ntrk = std::make_unique<dhist>("mix_evt_f_ntrk"s, rntrk, mptdphi);
-    auto mix_evt_f_sumpt = std::make_unique<dhist>("mix_evt_f_sumpt"s, rsumpt, mptdphi);
+    auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s,
+        "dN/dN_{h^{#pm}}", "N_{h^{#pm}}", rntrk, mptdphi);
+    auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s,
+        "dN/d#Sigmap_{T}^{h^{#pm}}", "#Sigmap_{T}^{h^{#pm}}", rsumpt, mptdphi);
+    auto mix_evt_f_ntrk = std::make_unique<dhist>("mix_evt_f_ntrk"s,
+        "dN/dN_{h^{#pm}}", "N_{h^{#pm}}", rntrk, mptdphi);
+    auto mix_evt_f_sumpt = std::make_unique<dhist>("mix_evt_f_sumpt"s,
+        "dN/d#Sigmap_{T}^{h^{#pm}}", "#Sigmap_{T}^{h^{#pm}}", rsumpt, mptdphi);
 
-    auto trk_f_dphi = std::make_unique<dhist>("trk_f_dphi"s, rdphi, mpt);
-    auto trk_f_pt = std::make_unique<dhist>("trk_f_pt"s, rtrkpt, mptdphi);
-    auto mix_trk_f_dphi = std::make_unique<dhist>("mix_trk_f_dphi"s, rdphi, mpt);
-    auto mix_trk_f_pt = std::make_unique<dhist>("mix_trk_f_pt"s, rtrkpt, mptdphi);
+    auto trk_f_dphi = std::make_unique<dhist>("trk_f_dphi"s,
+        "dN/d#Delta#phi^{#gammah}", "#Delta#phi^{#gammah}", rdphi, mpt);
+    auto trk_f_pt = std::make_unique<dhist>("trk_f_pt"s,
+        "dN/dp_{T}^{h^{#pm}}", "p_{T}^{h^{#pm}}", rtrkpt, mptdphi);
+    auto mix_trk_f_dphi = std::make_unique<dhist>("mix_trk_f_dphi"s,
+        "dN/d#Delta#phi^{#gammah}", "#Delta#phi^{#gammah}", rdphi, mpt);
+    auto mix_trk_f_pt = std::make_unique<dhist>("mix_trk_f_pt"s,
+        "dN/dp_{T}^{h^{#pm}}", "p_{T}^{h^{#pm}}", rtrkpt, mptdphi);
 
-    auto nevt = std::make_unique<dhist>("nevt"s, incl, mptntrk2sumpt2);
-    auto nmix = std::make_unique<dhist>("nmix"s, incl, mptntrk2sumpt2);
+    auto nevt = std::make_unique<dhist>("nevt"s, "", incl, mptntrk2sumpt2);
+    auto nmix = std::make_unique<dhist>("nmix"s, "", incl, mptntrk2sumpt2);
 
-    auto pjet_f_dphi = std::make_unique<dhist>(
-        "pjet_f_dphi"s, rdphi, mptntrk2sumpt2);
-    auto pjet_f_jetpt = std::make_unique<dhist>(
-        "pjet_f_jetpt"s, rpt, mptntrk2sumpt2);
-    auto pjet_f_x = std::make_unique<dhist>(
-        "pjet_f_x"s, rx, mptntrk2sumpt2);
+    auto pjet_f_dphi = std::make_unique<dhist>("pjet_f_dphi"s,
+        "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}",
+        rdphi, mptntrk2sumpt2);
+    auto pjet_f_jetpt = std::make_unique<dhist>("pjet_f_jetpt"s,
+        "dN/dp_{T}^{j}", "p_{T}^{j}", rpt, mptntrk2sumpt2);
+    auto pjet_f_x = std::make_unique<dhist>("pjet_f_x"s,
+        "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mptntrk2sumpt2);
 
-    auto mix_pjet_f_dphi = std::make_unique<dhist>(
-        "mix_pjet_f_dphi"s, rdphi, mptntrk2sumpt2);
-    auto mix_pjet_f_jetpt = std::make_unique<dhist>(
-        "mix_pjet_f_jetpt"s, rpt, mptntrk2sumpt2);
-    auto mix_pjet_f_x = std::make_unique<dhist>(
-        "mix_pjet_f_x"s, rx, mptntrk2sumpt2);
+    auto mix_pjet_f_dphi = std::make_unique<dhist>("mix_pjet_f_dphi"s,
+        "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}",
+        rdphi, mptntrk2sumpt2);
+    auto mix_pjet_f_jetpt = std::make_unique<dhist>("mix_pjet_f_jetpt"s,
+        "dN/dp_{T}^{j}", "p_{T}^{j}", rpt, mptntrk2sumpt2);
+    auto mix_pjet_f_x = std::make_unique<dhist>("mix_pjet_f_x"s,
+        "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mptntrk2sumpt2);
 
     printf("iterate..\n");
 

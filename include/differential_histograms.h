@@ -19,9 +19,11 @@ using v = std::initializer_list<double>;
 class differential_histograms {
   public:
     differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
                             std::shared_ptr<interval> const& bins,
                             std::shared_ptr<multival> const& intervals)
             : _tag(tag),
+              _ordinate(ordinate),
               _dims(intervals->dims()),
               _size(intervals->size()),
               _shape(intervals->shape()),
@@ -32,9 +34,11 @@ class differential_histograms {
 
     template <template <typename...> class T>
     differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
                             std::shared_ptr<interval> const& bins,
                             T<int64_t> const& shape)
             : _tag(tag),
+              _ordinate(ordinate),
               _dims(shape.size()),
               _size(std::accumulate(std::begin(shape), std::end(shape), 1,
                                     std::multiplies<int64_t>())),
@@ -45,9 +49,11 @@ class differential_histograms {
 
     template <typename... T>
     differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
                             std::shared_ptr<interval> const& bins,
                             T const&... dimensions)
             : _tag(tag),
+              _ordinate(ordinate),
               _dims(sizeof...(T)),
               _size(size_of(dimensions...)),
               bins(bins) {
@@ -59,25 +65,64 @@ class differential_histograms {
 
     template <template <typename...> class T>
     differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
                             T<float> const& edges,
                             std::shared_ptr<multival> const& intervals)
-        : differential_histograms(tag, std::make_shared<interval>(edges),
+        : differential_histograms(tag, ordinate,
+                                  std::make_shared<interval>(edges),
                                   intervals) {
     }
 
     template <template <typename...> class T, template <typename...> class U>
     differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
                             T<float> const& edges,
                             U<int64_t> const& shape)
-        : differential_histograms(tag, std::make_shared<interval>(edges),
+        : differential_histograms(tag, ordinate,
+                                  std::make_shared<interval>(edges),
                                   shape) {
     }
 
     template <template <typename...> class T, typename... U>
     differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
                             T<float> const& edges,
                             U const&... dimensions)
-        : differential_histograms(tag, std::make_shared<interval>(edges),
+        : differential_histograms(tag, ordinate,
+                                  std::make_shared<interval>(edges),
+                                  dimensions...) {
+    }
+
+    template <template <typename...> class T>
+    differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
+                            std::string const& abscissa,
+                            T<float> const& edges,
+                            std::shared_ptr<multival> const& intervals)
+        : differential_histograms(tag, ordinate,
+                                  std::make_shared<interval>(edges, abscissa),
+                                  intervals) {
+    }
+
+    template <template <typename...> class T, template <typename...> class U>
+    differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
+                            std::string const& abscissa,
+                            T<float> const& edges,
+                            U<int64_t> const& shape)
+        : differential_histograms(tag, ordinate,
+                                  std::make_shared<interval>(edges, abscissa),
+                                  shape) {
+    }
+
+    template <template <typename...> class T, typename... U>
+    differential_histograms(std::string const& tag,
+                            std::string const& ordinate,
+                            std::string const& abscissa,
+                            T<float> const& edges,
+                            U const&... dimensions)
+        : differential_histograms(tag, ordinate,
+                                  std::make_shared<interval>(edges, abscissa),
                                   dimensions...) {
     }
 
@@ -197,7 +242,7 @@ class differential_histograms {
         output.erase(std::next(std::begin(output), axis));
 
         auto result = std::make_unique<differential_histograms>(
-            _tag + "_sum"s + std::to_string(axis), bins, output);
+            _tag + "_sum"s + std::to_string(axis), _ordinate, bins, output);
 
         for (int64_t i = 0; i < result->size(); ++i) {
             auto indices = result->indices_for(i);
@@ -238,6 +283,9 @@ class differential_histograms {
         auto indices = intervals->indices_for(values);
         return forward(index_for(indices), function, args...); }
 
+    void apply(std::function<void(TH1*)> f) {
+        for (auto hist : histograms) { f(hist); } }
+
     int64_t dims() const { return _dims; }
     int64_t size() const { return _size; }
     std::vector<int64_t> const& shape() const { return _shape; }
@@ -273,7 +321,8 @@ class differential_histograms {
                 index_string = index_string + "_"s + std::to_string(index);
 
             histograms[i] = new TH1F(
-                (_tag + index_string).data(), "",
+                (_tag + index_string).data(),
+                (";"s + bins->abscissa() + ";"s + _ordinate).data(),
                 bins->size(), bins->raw()
             );
         }
@@ -288,6 +337,7 @@ class differential_histograms {
         return first * size_of(rest...); }
 
     std::string _tag;
+    std::string _ordinate;
 
     int64_t _dims;
     int64_t _size;

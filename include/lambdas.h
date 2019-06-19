@@ -14,6 +14,8 @@ auto histogram_formatter = [](TH1* obj, double min, double max) {
     obj->SetStats(0);
     obj->SetMarkerSize(0.84);
     obj->SetAxisRange(min, max, "Y");
+    obj->GetXaxis()->CenterTitle();
+    obj->GetYaxis()->CenterTitle();
 };
 
 auto default_decorator = [](std::string const& system) {

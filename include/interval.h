@@ -9,8 +9,13 @@ class interval {
   public:
     template <template <typename...> class T>
     interval(T<float> const& edges)
+        : interval(edges, std::string()) { }
+
+    template <template <typename...> class T>
+    interval(T<float> const& edges, std::string const& abscissa)
         : _size(edges.size() - 1),
-          _edges(std::begin(edges), std::end(edges)) { }
+          _edges(std::begin(edges), std::end(edges)),
+          _abscissa(abscissa) { }
 
     interval(int64_t number, double min, double max)
             : _size(number),
@@ -20,10 +25,26 @@ class interval {
         for (auto& edge : _edges) { edge = min + edge * interval; }
     }
 
+    interval(int64_t number, double min, double max,
+             std::string const& abscissa)
+            : _size(number),
+              _edges(std::vector<double>(number + 1)),
+              _abscissa(abscissa) {
+        std::iota(std::begin(_edges), std::end(_edges), 0);
+        double interval = (max - min) / number;
+        for (auto& edge : _edges) { edge = min + edge * interval; }
+    }
+
     template <typename... T>
     interval(T const&... edges)
         : _size(sizeof...(T) - 1),
           _edges({static_cast<double>(edges)...}) { }
+
+    template <typename... T>
+    interval(T const&... edges, std::string const& abscissa)
+        : _size(sizeof...(T) - 1),
+          _edges({static_cast<double>(edges)...}),
+          _abscissa(abscissa) { }
 
     interval(interval const& other) = default;
     interval& operator=(interval const& other) = default;
@@ -42,10 +63,13 @@ class interval {
 
     int64_t size() const { return _size; }
     double const* raw() const { return _edges.data(); }
+    std::string const abscissa() const { return _abscissa; }
 
   private:
     int64_t _size;
     std::vector<double> _edges;
+
+    std::string const _abscissa;
 };
 
 #endif /* INTERVAL_H */
