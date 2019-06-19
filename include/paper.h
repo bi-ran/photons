@@ -69,6 +69,8 @@ class paper {
     void legend(std::function<std::array<float, 4>()> l) { _l = l; }
     void style(std::function<void(TLegend*)> s) { _s = s; }
 
+    void accessory(std::function<void(int64_t)> a) { _a.push_back(a); }
+
     void describe(pencil* pencil) { _pencil = pencil; }
 
     void draw(char const* ext) {
@@ -88,6 +90,9 @@ class paper {
                 apply(objects[i], _g);
                 objects[i]->Draw("same p e");
                 apply(_d);
+
+                for (auto const& a : _a)
+                    apply(a, indices[i]);
             }
 
             legends();
@@ -105,6 +110,9 @@ class paper {
 
     template <typename T>
     void apply(std::function<T> f) { if (f) { f(); } }
+
+    template <typename T>
+    void apply(std::function<T> f, int64_t index) { if (f) { f(index); } }
 
     void split() {
         float rows = std::ceil(std::sqrt(_size));
@@ -166,6 +174,8 @@ class paper {
     std::function<void(TGraph*)> _g;
     std::function<std::array<float, 4>()> _l;
     std::function<void(TLegend*)> _s;
+
+    std::vector<std::function<void(int64_t)>> _a;
 
     pencil* _pencil;
 

@@ -1,6 +1,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1.h"
+#include "TLatex.h"
 
 #include <memory>
 #include <string>
@@ -392,6 +393,29 @@ int flatten(char const* config, char const* output) {
 
     printf("painting..\n");
 
+    auto sumpt_selection = [&](int64_t index) {
+        auto text = "#Sigmap_{T}^{h^{#pm}}"s;
+        if (index != 1)
+            text = std::to_string((*isumpt)[index - 1]) + " < "s + text;
+        if (index != isumpt->size())
+            text = text + " < "s + std::to_string((*isumpt)[index]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, 0.75, text.data());
+    };
+
+    auto photon_pt_selection = [&](int64_t index) {
+        auto text = std::to_string((*ipt)[index - 1]) + " < p_{T}^{#gamma} < "s
+            + std::to_string((*ipt)[index]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, 0.75, text.data());
+    };
+
     auto hb = new pencil();
     hb->category("dphi", "perp", "near");
     hb->category("type", "raw", "mix");
@@ -405,6 +429,7 @@ int flatten(char const* config, char const* output) {
     auto c1 = new paper("c1", hb);
     apply_default_style(c1, system);
     c1->format(std::bind(histogram_formatter, _1, 0., 0.12));
+    c1->accessory(sumpt_selection);
 
     for (int64_t i = 0; i < isumpt->size(); ++i) {
         c1->add((*pjet_f_x_d_perp_sumpt)[i], "perp", "raw");
@@ -426,8 +451,9 @@ int flatten(char const* config, char const* output) {
     auto c3 = new paper("c3", hb);
     apply_default_style(c3, system);
     c3->format(std::bind(histogram_formatter, _1, 0., 0.25));
+    c3->accessory(photon_pt_selection);
 
-    for (int64_t i = 0; i < ipt->size(); ++i) {
+    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
         c3->add((*evt_f_ntrk)[x{i, 0}], "near");
         c3->stack((*evt_f_ntrk)[x{i, 1}], "perp");
     }
@@ -435,8 +461,9 @@ int flatten(char const* config, char const* output) {
     auto c4 = new paper("c4", hb);
     apply_default_style(c4, system);
     c4->format(std::bind(histogram_formatter, _1, 0., 0.25));
+    c4->accessory(photon_pt_selection);
 
-    for (int64_t i = 0; i < ipt->size(); ++i) {
+    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
         c4->add((*evt_f_sumpt)[x{i, 0}], "near");
         c4->stack((*evt_f_sumpt)[x{i, 1}], "perp");
     }
