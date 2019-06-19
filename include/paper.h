@@ -13,21 +13,23 @@
 #include "TH1.h"
 #include "TLegend.h"
 
+#include "pencil.h"
+
 class paper {
   public:
-    paper(std::string const& tag, int64_t size, int64_t cols, int64_t rows)
+    paper(std::string const& tag, pencil* p, int64_t cols, int64_t rows)
         : _tag(tag),
-          _size(size),
+          _size(0),
           _cols(cols),
           _rows(rows),
-          _desc(nullptr),
+          _pencil(p),
           canvas(nullptr) { }
 
     paper(std::string const& tag)
         : paper(tag, 0, 0, 0) { }
 
-    paper(std::string const& tag, int64_t size)
-        : paper(tag, size, 0, 0) { }
+    paper(std::string const& tag, pencil* p)
+        : paper(tag, p, 0, 0) { }
 
     paper(std::string const& tag, int64_t cols, int64_t rows)
         : paper(tag, 0, cols, rows) { }
@@ -43,9 +45,21 @@ class paper {
         indices.push_back(index);
     }
 
+    template <typename... T>
+    void stack(int64_t index, TObject* const object, T const&... adjectives) {
+        stack(index, object); _pencil->describe(object, adjectives...); }
+
     void add(TObject* const object) { add(); stack(_size, object); }
 
+    template <typename... T>
+    void add(TObject* const object, T const&... adjectives) {
+        add(object); _pencil->describe(object, adjectives...); }
+
     void stack(TObject* const object) { stack(_size, object); }
+
+    template <typename... T>
+    void stack(TObject* const object, T const&... adjectives) {
+        stack(object); _pencil->describe(object, adjectives...); }
 
     void divide(int64_t cols, int64_t rows) { _cols = cols; _rows = rows; }
 
@@ -55,7 +69,7 @@ class paper {
     void legend(std::function<std::array<float, 4>()> l) { _l = l; }
     void style(std::function<void(TLegend*)> s) { _s = s; }
 
-    void describe(auto& desc) { _desc = &desc; }
+    void describe(pencil* pencil) { _pencil = pencil; }
 
     void draw(char const* ext) {
         using namespace std::literals::string_literals;
@@ -101,27 +115,31 @@ class paper {
     }
 
     void legends() {
-        if (_desc == nullptr) { return; }
+        if (_pencil == nullptr) { return; }
 
-        for (int64_t i = 1; i <= _size; ++i) {
-            canvas->cd(i);
+        auto description = _pencil->description();
+
+        for (int64_t i = 0; i < _size; ++i) {
+            int64_t index = i + 1;
 
             std::vector<TObject*> associates;
             int64_t count = static_cast<int64_t>(objects.size());
             for (int64_t j = 0; j < count; ++j)
-                if (indices[j] == i)
+                if (indices[j] == index)
                     associates.push_back(objects[j]);
 
             auto point = _l ? _l() : std::array<float, 4>{
                 0.5, 0.9, 0.87, 0.04 };
             point[3] = point[2] - associates.size() * point[3];
 
+            canvas->cd(index);
+
             TLegend* l = new TLegend(point[0], point[3], point[1], point[2]);
             apply(l, _s);
 
             for (auto const& obj : associates) {
-                auto desc = _desc->find(obj) != std::end(*_desc) ?
-                    (*_desc)[obj] : std::string(obj->GetName());
+                auto desc = description.find(obj) != std::end(description) ?
+                    description[obj] : std::string(obj->GetName());
                 l->AddEntry(obj, desc.data(), "pl");
             }
 
@@ -149,7 +167,7 @@ class paper {
     std::function<std::array<float, 4>()> _l;
     std::function<void(TLegend*)> _s;
 
-    std::map<TObject* const, std::string>* _desc;
+    pencil* _pencil;
 
     TCanvas* canvas;
 };

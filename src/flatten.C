@@ -381,65 +381,42 @@ int flatten(char const* config, char const* output) {
     hb->alias("near", "0 < #||{#Delta#phi^{#gammah}} < #pi/3");
     hb->alias("raw", "sub.");
 
-    for (int64_t i = 0; i < isumpt->size(); ++i) {
-        hb->describe((*pjet_f_x_d_perp_sumpt)[i], "perp", "raw");
-        hb->describe((*pjet_f_x_d_near_sumpt)[i], "near", "raw");
-        hb->describe((*mix_pjet_f_x_d_perp_sumpt)[i], "perp", "mix");
-        hb->describe((*mix_pjet_f_x_d_near_sumpt)[i], "near", "mix");
-    }
-
-    hb->describe((*ntrk_f_pt)[0], "near");
-    hb->describe((*ntrk_f_pt)[1], "perp");
-    hb->describe((*sumpt_f_pt)[0], "near");
-    hb->describe((*sumpt_f_pt)[1], "perp");
-
-    for (int64_t i = 0; i < ipt->size(); ++i) {
-        hb->describe((*evt_f_ntrk)[x{i, 0}], "near");
-        hb->describe((*evt_f_ntrk)[x{i, 1}], "perp");
-        hb->describe((*evt_f_sumpt)[x{i, 0}], "near");
-        hb->describe((*evt_f_sumpt)[x{i, 1}], "perp");
-    }
-
-    hb->set_binary("type");
-    hb->sketch();
-
-    auto descriptors = hb->description();
     auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
 
-    auto c1 = new paper("c1");
-    c1->describe(descriptors);
+    auto c1 = new paper("c1", hb);
     apply_default_style(c1, system);
     c1->format(std::bind(histogram_formatter, _1, 0., 0.12));
 
     for (int64_t i = 0; i < isumpt->size(); ++i) {
-        c1->add((*pjet_f_x_d_perp_sumpt)[i]);
-        c1->stack((*pjet_f_x_d_near_sumpt)[i]);
-        c1->stack((*mix_pjet_f_x_d_perp_sumpt)[i]);
-        c1->stack((*mix_pjet_f_x_d_near_sumpt)[i]);
+        c1->add((*pjet_f_x_d_perp_sumpt)[i], "perp", "raw");
+        c1->stack((*pjet_f_x_d_near_sumpt)[i], "near", "raw");
+        c1->stack((*mix_pjet_f_x_d_perp_sumpt)[i], "perp", "mix");
+        c1->stack((*mix_pjet_f_x_d_near_sumpt)[i], "near", "mix");
     }
 
-    auto c2 = new paper("c2");
-    c2->describe(descriptors);
+    auto c2 = new paper("c2", hb);
     apply_default_style(c2, system);
     c2->format(std::bind(histogram_formatter, _1, 0., 10.));
     c2->divide(2, 1);
 
-    c2->add((*ntrk_f_pt)[0]);
-    c2->stack((*ntrk_f_pt)[1]);
-    c2->add((*sumpt_f_pt)[0]);
-    c2->stack((*sumpt_f_pt)[1]);
+    c2->add((*ntrk_f_pt)[0], "near");
+    c2->stack((*ntrk_f_pt)[1], "perp");
+    c2->add((*sumpt_f_pt)[0], "near");
+    c2->stack((*sumpt_f_pt)[1], "perp");
 
-    auto c3 = new paper("c3");
-    c3->describe(descriptors);
+    auto c3 = new paper("c3", hb);
     apply_default_style(c3, system);
     c3->format(std::bind(histogram_formatter, _1, 0., 0.25));
 
     for (int64_t i = 0; i < ipt->size(); ++i) {
-        c3->add((*evt_f_ntrk)[x{i, 0}]);
-        c3->stack((*evt_f_ntrk)[x{i, 1}]);
-        c3->stack((*evt_f_sumpt)[x{i, 0}]);
-        c3->stack((*evt_f_sumpt)[x{i, 1}]);
+        c3->add((*evt_f_ntrk)[x{i, 0}], "near");
+        c3->stack((*evt_f_ntrk)[x{i, 1}], "perp");
+        c3->stack((*evt_f_sumpt)[x{i, 0}], "near");
+        c3->stack((*evt_f_sumpt)[x{i, 1}], "perp");
     }
+
+    hb->set_binary("type");
+    hb->sketch();
 
     c1->draw("pdf");
     c2->draw("pdf");
