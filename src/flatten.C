@@ -131,6 +131,12 @@ void normalise(std::unique_ptr<differential_histograms>& norm,
     (void)(int [sizeof...(T)]) { (args->normalise(*norm), 0)... };
 }
 
+template <typename... T>
+void scale_bin_width(std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
+        obj->Scale(1., "width"); }), 0)... };
+}
+
 int flatten(char const* config, char const* output) {
     printf("load config options..\n");
 
@@ -337,6 +343,11 @@ int flatten(char const* config, char const* output) {
     /* normalise histograms */
     normalise(nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
 
+    mix_ntrk_f_pt->multiply(0.01);
+    mix_sumpt_f_pt->multiply(0.01);
+    mix_evt_f_ntrk->multiply(0.01);
+    mix_evt_f_sumpt->multiply(0.01);
+
     /* integrate histograms */
     /* photon (event) count */
     auto nevt_d_photon_pt = nevt->sum(1)->sum(1)->sum(1)->sum(1);
@@ -378,9 +389,16 @@ int flatten(char const* config, char const* output) {
     normalise(nevt_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt);
     normalise(nevt_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
 
+    /* scale by bin width */
+    scale_bin_width(pjet_f_x_d_perp_sumpt, pjet_f_x_d_near_sumpt,
+        mix_pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_near_sumpt,
+        evt_f_ntrk, evt_f_sumpt, mix_evt_f_ntrk, mix_evt_f_sumpt);
+
     for (int64_t i = 0; i < idphi->size(); ++i) {
         (*ntrk_f_pt)[i]->Divide((*photon_f_pt)[0]);
         (*sumpt_f_pt)[i]->Divide((*photon_f_pt)[0]);
+        (*mix_ntrk_f_pt)[i]->Divide((*photon_f_pt)[0]);
+        (*mix_sumpt_f_pt)[i]->Divide((*photon_f_pt)[0]);
     }
 
     for (int64_t i = 0; i < ipt->size(); ++i) {
@@ -388,6 +406,8 @@ int flatten(char const* config, char const* output) {
         for (int64_t j = 0; j < idphi->size(); ++j) {
             (*evt_f_ntrk)[x{i, j}]->Scale(norm_d_photon_pt);
             (*evt_f_sumpt)[x{i, j}]->Scale(norm_d_photon_pt);
+            (*mix_evt_f_ntrk)[x{i, j}]->Scale(norm_d_photon_pt);
+            (*mix_evt_f_sumpt)[x{i, j}]->Scale(norm_d_photon_pt);
         }
     }
 
@@ -428,7 +448,7 @@ int flatten(char const* config, char const* output) {
 
     auto c1 = new paper("c1", hb);
     apply_default_style(c1, system);
-    c1->format(std::bind(histogram_formatter, _1, 0., 0.12));
+    c1->format(std::bind(histogram_formatter, _1, 0., 1.2));
     c1->accessory(sumpt_selection);
 
     for (int64_t i = 0; i < isumpt->size(); ++i) {
@@ -443,29 +463,38 @@ int flatten(char const* config, char const* output) {
     c2->format(std::bind(histogram_formatter, _1, 0., 10.));
     c2->divide(2, 1);
 
-    c2->add((*ntrk_f_pt)[0], "near");
-    c2->stack((*ntrk_f_pt)[1], "perp");
-    c2->add((*sumpt_f_pt)[0], "near");
-    c2->stack((*sumpt_f_pt)[1], "perp");
+    c2->add((*ntrk_f_pt)[0], "near", "raw");
+    c2->stack((*ntrk_f_pt)[1], "perp", "raw");
+    c2->stack((*mix_ntrk_f_pt)[0], "near", "mix");
+    c2->stack((*mix_ntrk_f_pt)[1], "perp", "mix");
+
+    c2->add((*sumpt_f_pt)[0], "near", "raw");
+    c2->stack((*sumpt_f_pt)[1], "perp", "raw");
+    c2->stack((*mix_sumpt_f_pt)[0], "near", "mix");
+    c2->stack((*mix_sumpt_f_pt)[1], "perp", "mix");
 
     auto c3 = new paper("c3", hb);
     apply_default_style(c3, system);
-    c3->format(std::bind(histogram_formatter, _1, 0., 0.25));
+    c3->format(std::bind(histogram_formatter, _1, 0., 0.4));
     c3->accessory(photon_pt_selection);
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c3->add((*evt_f_ntrk)[x{i, 0}], "near");
-        c3->stack((*evt_f_ntrk)[x{i, 1}], "perp");
+        c3->add((*evt_f_ntrk)[x{i, 0}], "near", "raw");
+        c3->stack((*evt_f_ntrk)[x{i, 1}], "perp", "raw");
+        c3->stack((*mix_evt_f_ntrk)[x{i, 0}], "near", "mix");
+        c3->stack((*mix_evt_f_ntrk)[x{i, 1}], "perp", "mix");
     }
 
     auto c4 = new paper("c4", hb);
     apply_default_style(c4, system);
-    c4->format(std::bind(histogram_formatter, _1, 0., 0.25));
+    c4->format(std::bind(histogram_formatter, _1, 0., 0.4));
     c4->accessory(photon_pt_selection);
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c4->add((*evt_f_sumpt)[x{i, 0}], "near");
-        c4->stack((*evt_f_sumpt)[x{i, 1}], "perp");
+        c4->add((*evt_f_sumpt)[x{i, 0}], "near", "raw");
+        c4->stack((*evt_f_sumpt)[x{i, 1}], "perp", "raw");
+        c4->stack((*mix_evt_f_sumpt)[x{i, 0}], "near", "mix");
+        c4->stack((*mix_evt_f_sumpt)[x{i, 1}], "perp", "mix");
     }
 
     hb->set_binary("type");
