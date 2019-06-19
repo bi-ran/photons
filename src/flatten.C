@@ -430,8 +430,15 @@ int flatten(char const* config, char const* output) {
     for (int64_t i = 0; i < ipt->size(); ++i) {
         c3->add((*evt_f_ntrk)[x{i, 0}], "near");
         c3->stack((*evt_f_ntrk)[x{i, 1}], "perp");
-        c3->stack((*evt_f_sumpt)[x{i, 0}], "near");
-        c3->stack((*evt_f_sumpt)[x{i, 1}], "perp");
+    }
+
+    auto c4 = new paper("c4", hb);
+    apply_default_style(c4, system);
+    c4->format(std::bind(histogram_formatter, _1, 0., 0.25));
+
+    for (int64_t i = 0; i < ipt->size(); ++i) {
+        c4->add((*evt_f_sumpt)[x{i, 0}], "near");
+        c4->stack((*evt_f_sumpt)[x{i, 1}], "perp");
     }
 
     hb->set_binary("type");
@@ -440,6 +447,7 @@ int flatten(char const* config, char const* output) {
     c1->draw("pdf");
     c2->draw("pdf");
     c3->draw("pdf");
+    c4->draw("pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 
