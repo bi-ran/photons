@@ -21,18 +21,26 @@ class multival {
 
     std::vector<int64_t> indices_for(std::vector<double> const& values) const {
         std::vector<int64_t> indices(_shape);
-        for (int64_t i = 0; i < _dims; ++i) {
+        for (int64_t i = 0; i < _dims; ++i)
             indices[i] = _intervals[i].index_for(values[i]);
-#ifdef DEBUG
-            if (indices[i] < 0 || indices[i] == _shape[i]) {
-                printf("value: %f [%i] exceeds boundaries!\n", values[i], i);
-                exit(1);
-            }
-#endif /* DEBUG */
-        }
 
         return indices;
     }
+
+    template <template <typename...> class T>
+    int64_t index_for(T<int64_t> const& indices) const {
+        std::vector<int64_t> vx(std::begin(indices), std::end(indices));
+        int64_t index = 0;
+        for (int64_t i = 0, block = 1; i < _dims; ++i) {
+            index = index + vx[i] * block;
+            block = block * _shape[i];
+        }
+
+        return index;
+    }
+
+    int64_t index_for(std::vector<double> const& values) const {
+        return index_for(indices_for(values)); }
 
     int64_t dims() const { return _dims; }
     int64_t size() const { return _size; }
