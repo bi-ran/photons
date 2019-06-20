@@ -321,11 +321,8 @@ class differential_histograms {
             for (auto const& index : indices_for(i))
                 index_string = index_string + "_"s + std::to_string(index);
 
-            histograms[i] = new TH1F(
-                (_tag + index_string).data(),
-                (";"s + bins->abscissa() + ";"s + _ordinate).data(),
-                bins->size(), bins->raw()
-            );
+            histograms[i] = bins->book<TH1F>(_tag + index_string,
+                ";"s + bins->abscissa() + ";"s + _ordinate);
         }
     }
 

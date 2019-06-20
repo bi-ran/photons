@@ -56,9 +56,12 @@ class interval {
 
     int64_t operator[](int64_t index) const { return _edges[index]; }
 
-    int64_t size() const { return _size; }
-    double const* raw() const { return _edges.data(); }
     std::string const abscissa() const { return _abscissa; }
+    int64_t size() const { return _size; }
+
+    template <typename T>
+    T* book(std::string const& name, std::string const& title) {
+        return new T(name.data(), title.data(), _size, _edges.data()); }
 
   private:
     int64_t _size;
