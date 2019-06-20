@@ -70,6 +70,17 @@ class pencil {
         apply<TGraph>(obj, colour, marker);
     }
 
+    template <typename T, template <typename...> class U>
+    void operator()(T* const obj, U<std::string> const& adjectives) {
+        std::vector<int64_t> attrs(adjectives.size());
+        for (auto const& adj : adjectives) {
+            auto attr = attributes[adjective];
+            attrs[attr[0]] = attr[1];
+        }
+
+        (*this)(obj, attrs);
+    }
+
     void sketch() {
         set_features(categories.size());
         for (auto const& obj : objects)
