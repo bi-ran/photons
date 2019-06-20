@@ -70,8 +70,8 @@ void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
 
     double norm = 2. * trk_eta_abs * 2. * M_PI / 3.;
 
-    ntrk->multiply(1. / norm);
-    sumpt->multiply(1. / norm);
+    ntrk->scale(1. / norm);
+    sumpt->scale(1. / norm);
 
     for (int64_t j = 0; j < mdphi->size(); ++j) {
         double evt_ntrk = (*ntrk)(j, FP_TH1_GETBC, 1);
@@ -128,7 +128,7 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
 template <typename... T>
 void normalise(std::unique_ptr<differential_histograms>& norm,
                std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->normalise(*norm), 0)... };
+    (void)(int [sizeof...(T)]) { (args->divide(*norm), 0)... };
 }
 
 template <typename... T>
@@ -343,10 +343,10 @@ int flatten(char const* config, char const* output) {
     /* normalise histograms */
     normalise(nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
 
-    mix_ntrk_f_pt->multiply(0.01);
-    mix_sumpt_f_pt->multiply(0.01);
-    mix_evt_f_ntrk->multiply(0.01);
-    mix_evt_f_sumpt->multiply(0.01);
+    mix_ntrk_f_pt->scale(0.01);
+    mix_sumpt_f_pt->scale(0.01);
+    mix_evt_f_ntrk->scale(0.01);
+    mix_evt_f_sumpt->scale(0.01);
 
     /* integrate histograms */
     /* photon (event) count */
@@ -394,10 +394,10 @@ int flatten(char const* config, char const* output) {
         mix_pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_near_sumpt,
         evt_f_ntrk, evt_f_sumpt, mix_evt_f_ntrk, mix_evt_f_sumpt);
 
-    ntrk_f_pt->normalise((*photon_f_pt)[0]);
-    sumpt_f_pt->normalise((*photon_f_pt)[0]);
-    mix_ntrk_f_pt->normalise((*photon_f_pt)[0]);
-    mix_sumpt_f_pt->normalise((*photon_f_pt)[0]);
+    ntrk_f_pt->divide((*photon_f_pt)[0]);
+    sumpt_f_pt->divide((*photon_f_pt)[0]);
+    mix_ntrk_f_pt->divide((*photon_f_pt)[0]);
+    mix_sumpt_f_pt->divide((*photon_f_pt)[0]);
 
     for (int64_t i = 0; i < ipt->size(); ++i) {
         auto norm_d_photon_pt = 1. / (*nevt_d_photon_pt)(i, FP_TH1_GETBC, 1);

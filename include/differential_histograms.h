@@ -130,17 +130,23 @@ class differential_histograms {
     differential_histograms& operator=(differential_histograms const&) = delete;
     ~differential_histograms() = default;
 
-    template <template <typename...> class T>
-    int64_t index_for(T<int64_t> const& indices) {
-        std::vector<int64_t> vx(std::begin(indices), std::end(indices));
+    template <template <typename...> class T, typename U>
+    typename std::enable_if<std::is_integral<U>::value, int64_t>::type
+    index_for(T<U> const& indices) {
+        std::vector<int64_t> x(std::begin(indices), std::end(indices));
         int64_t index = 0;
         for (int64_t i = 0, block = 1; i < _dims; ++i) {
-            index = index + vx[i] * block;
+            index = index + x[i] * block;
             block = block * _shape[i];
         }
 
         return index;
     }
+
+    template <template <typename...> class T, typename U>
+    typename std::enable_if<!std::is_integral<U>::value, int64_t>::type
+    index_for(T<U> const& values) {
+        return intervals->index_for(values); }
 
     std::vector<int64_t> indices_for(int64_t index) {
         std::vector<int64_t> indices(_dims);
@@ -163,7 +169,7 @@ class differential_histograms {
     void operator-=(differential_histograms const& other) {
         this->add(other, -1); }
 
-    void multiply(double c1) {
+    void scale(double c1) {
         for (auto const& hist : histograms)
             hist->Scale(c1);
     }
@@ -172,7 +178,7 @@ class differential_histograms {
 
     void operator/=(double c1) { this->multiply(1. / c1); }
 
-    void scale(differential_histograms const& other) {
+    void multiply(differential_histograms const& other) {
         /* assume self, other have equal shapes */
         for (int64_t j = 0; j < _size; ++j) {
             auto count = other[j]->GetBinContent(1);
@@ -180,7 +186,7 @@ class differential_histograms {
         }
     }
 
-    void normalise(differential_histograms const& other) {
+    void divide(differential_histograms const& other) {
         /* assume self, other have equal shapes */
         for (int64_t j = 0; j < _size; ++j) {
             auto count = other[j]->GetBinContent(1);
@@ -189,16 +195,16 @@ class differential_histograms {
         }
     }
 
-    void normalise(TH1* const other) {
+    void operator*=(differential_histograms const& other) {
+        this->multiply(other); }
+
+    void operator/=(differential_histograms const& other) {
+        this->divide(other); }
+
+    void divide(TH1* const other) {
         for (auto const& hist : histograms)
             hist->Divide(other);
     }
-
-    void operator*=(differential_histograms const& other) {
-        this->scale(other); }
-
-    void operator/=(differential_histograms const& other) {
-        this->normalise(other); }
 
     TH1F*& operator[](int64_t index) { return histograms[index]; }
 
@@ -266,26 +272,16 @@ class differential_histograms {
     T operator()(int64_t index, T (TH1::* function)(U...) const, U... args) {
         return forward(index, function, args...); }
 
-    template <typename T, template <typename...> class U, typename... V>
-    T operator()(U<int64_t> const& indices, T (TH1::* function)(V...),
-                 V... args) {
+    template <typename T, template <typename...> class U, typename V,
+              typename... W>
+    T operator()(U<V> const& indices, T (TH1::* function)(W...),
+                 W... args) {
         return forward(index_for(indices), function, args...); }
 
-    template <typename T, template <typename...> class U, typename... V>
-    T operator()(U<int64_t> const& indices, T (TH1::* function)(V...) const,
-                 V... args) {
-        return forward(index_for(indices), function, args...); }
-
-    template <typename T, template <typename...> class U, typename... V>
-    T operator()(U<double> const& values, T (TH1::* function)(V...),
-                 V... args) {
-        auto indices = intervals->indices_for(values);
-        return forward(index_for(indices), function, args...); }
-
-    template <typename T, template <typename...> class U, typename... V>
-    T operator()(U<double> const& values, T (TH1::* function)(V...) const,
-                 V... args) {
-        auto indices = intervals->indices_for(values);
+    template <typename T, template <typename...> class U, typename V,
+              typename... W>
+    T operator()(U<V> const& indices, T (TH1::* function)(W...) const,
+                 W... args) {
         return forward(index_for(indices), function, args...); }
 
     void apply(std::function<void(TH1*)> f) {

@@ -9,7 +9,8 @@
 class multival {
   public:
     template <typename... T>
-    multival(T const&... intervals) : _dims(sizeof...(T)) {
+    multival(T const&... intervals)
+            : _dims(sizeof...(T)) {
         extract(intervals...);
         _size = std::accumulate(std::begin(_shape), std::end(_shape),
                                 1, std::multiplies<int64_t>());
@@ -19,32 +20,37 @@ class multival {
     multival& operator=(multival const& other) = default;
     ~multival() = default;
 
-    std::vector<int64_t> indices_for(std::vector<double> const& values) const {
-        std::vector<int64_t> indices(_shape);
+    template <template <typename...> class T>
+    std::vector<int64_t> indices_for(T<double> const& values) const {
+        std::vector<double> x(std::begin(values), std::end(values));
+        std::vector<int64_t> indices(_dims);
         for (int64_t i = 0; i < _dims; ++i)
-            indices[i] = _intervals[i].index_for(values[i]);
+            indices[i] = _intervals[i].index_for(x[i]);
 
         return indices;
     }
 
-    template <template <typename...> class T>
-    int64_t index_for(T<int64_t> const& indices) const {
-        std::vector<int64_t> vx(std::begin(indices), std::end(indices));
+    template <template <typename...> class T, typename U>
+    typename std::enable_if<std::is_integral<U>::value, int64_t>::type
+    index_for(T<U> const& indices) const {
+        std::vector<int64_t> x(std::begin(indices), std::end(indices));
         int64_t index = 0;
         for (int64_t i = 0, block = 1; i < _dims; ++i) {
-            index = index + vx[i] * block;
+            index = index + x[i] * block;
             block = block * _shape[i];
         }
 
         return index;
     }
 
-    int64_t index_for(std::vector<double> const& values) const {
+    template <template <typename...> class T, typename U>
+    typename std::enable_if<!std::is_integral<U>::value, int64_t>::type
+    index_for(T<U> const& values) const {
         return index_for(indices_for(values)); }
 
+    std::vector<int64_t> const& shape() const { return _shape; }
     int64_t dims() const { return _dims; }
     int64_t size() const { return _size; }
-    std::vector<int64_t> const& shape() const { return _shape; }
 
   private:
     template <typename... T>
@@ -53,9 +59,9 @@ class multival {
         for (auto const& i : _intervals) { _shape.push_back(i.size()); }
     }
 
+    std::vector<int64_t> _shape;
     int64_t _dims;
     int64_t _size;
-    std::vector<int64_t> _shape;
 
     std::vector<interval> _intervals;
 };
