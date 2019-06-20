@@ -189,6 +189,11 @@ class differential_histograms {
         }
     }
 
+    void normalise(TH1* const other) {
+        for (auto const& hist : histograms)
+            hist->Divide(other);
+    }
+
     void operator*=(differential_histograms const& other) {
         this->scale(other); }
 

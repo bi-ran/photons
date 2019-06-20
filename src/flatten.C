@@ -394,12 +394,10 @@ int flatten(char const* config, char const* output) {
         mix_pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_near_sumpt,
         evt_f_ntrk, evt_f_sumpt, mix_evt_f_ntrk, mix_evt_f_sumpt);
 
-    for (int64_t i = 0; i < idphi->size(); ++i) {
-        (*ntrk_f_pt)[i]->Divide((*photon_f_pt)[0]);
-        (*sumpt_f_pt)[i]->Divide((*photon_f_pt)[0]);
-        (*mix_ntrk_f_pt)[i]->Divide((*photon_f_pt)[0]);
-        (*mix_sumpt_f_pt)[i]->Divide((*photon_f_pt)[0]);
-    }
+    ntrk_f_pt->normalise((*photon_f_pt)[0]);
+    sumpt_f_pt->normalise((*photon_f_pt)[0]);
+    mix_ntrk_f_pt->normalise((*photon_f_pt)[0]);
+    mix_sumpt_f_pt->normalise((*photon_f_pt)[0]);
 
     for (int64_t i = 0; i < ipt->size(); ++i) {
         auto norm_d_photon_pt = 1. / (*nevt_d_photon_pt)(i, FP_TH1_GETBC, 1);
