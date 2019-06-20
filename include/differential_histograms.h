@@ -132,7 +132,7 @@ class differential_histograms {
 
     template <template <typename...> class T, typename U>
     typename std::enable_if<std::is_integral<U>::value, int64_t>::type
-    index_for(T<U> const& indices) {
+    index_for(T<U> const& indices) const {
         std::vector<int64_t> x(std::begin(indices), std::end(indices));
         int64_t index = 0;
         for (int64_t i = 0, block = 1; i < _dims; ++i) {
@@ -145,10 +145,10 @@ class differential_histograms {
 
     template <template <typename...> class T, typename U>
     typename std::enable_if<!std::is_integral<U>::value, int64_t>::type
-    index_for(T<U> const& values) {
+    index_for(T<U> const& values) const {
         return intervals->index_for(values); }
 
-    std::vector<int64_t> indices_for(int64_t index) {
+    std::vector<int64_t> indices_for(int64_t index) const {
         std::vector<int64_t> indices(_dims);
         for (int64_t i = 0; i < _dims; ++i) {
             indices[i] = index % _shape[i];
@@ -174,9 +174,9 @@ class differential_histograms {
             hist->Scale(c1);
     }
 
-    void operator*=(double c1) { this->multiply(c1); }
+    void operator*=(double c1) { this->scale(c1); }
 
-    void operator/=(double c1) { this->multiply(1. / c1); }
+    void operator/=(double c1) { this->scale(1. / c1); }
 
     void multiply(differential_histograms const& other) {
         /* assume self, other have equal shapes */
@@ -218,7 +218,7 @@ class differential_histograms {
     TH1F* const& operator[](T<int64_t> const& indices) const {
         return histograms[index_for(indices)]; }
 
-    TH1F* sum(std::vector<int64_t> const& indices, int64_t axis) {
+    TH1F* sum(std::vector<int64_t> const& indices, int64_t axis) const {
         using namespace std::literals::string_literals;
 
         std::vector<int64_t> output = indices;
@@ -232,7 +232,7 @@ class differential_histograms {
     }
 
     TH1F* sum(std::vector<int64_t> const& indices, int64_t axis,
-              int64_t start, int64_t end) {
+              int64_t start, int64_t end) const {
         using namespace std::literals::string_literals;
 
         std::vector<int64_t> output = indices;
@@ -246,7 +246,7 @@ class differential_histograms {
         return sum_impl(full_tag, indices, axis, start, end);
     }
 
-    std::unique_ptr<differential_histograms> sum(int64_t axis) {
+    std::unique_ptr<differential_histograms> sum(int64_t axis) const {
         using namespace std::literals::string_literals;
 
         std::vector<int64_t> output = _shape;
@@ -293,7 +293,7 @@ class differential_histograms {
 
   private:
     TH1F* sum_impl(std::string const& name, std::vector<int64_t> indices,
-                   int64_t axis, int64_t start, int64_t end) {
+                   int64_t axis, int64_t start, int64_t end) const {
         auto sum = static_cast<TH1F*>((*this)[indices]->Clone(name.data()));
         sum->Reset("MICES");
         for (int64_t i = start; i < end; ++i) {
@@ -309,7 +309,7 @@ class differential_histograms {
         return ((*histograms[index]).*function)(std::forward<V>(args)...); }
 
     template <typename T, typename U, typename... V>
-    T forward(int64_t index, T (U::* function)(V...) const, V... args) {
+    T forward(int64_t index, T (U::* function)(V...) const, V... args) const {
         return ((*histograms[index]).*function)(std::forward<V>(args)...); }
 
     void allocate_histograms() {
@@ -327,11 +327,11 @@ class differential_histograms {
     }
 
     template <typename T>
-    int64_t size_of(T const& last) {
+    int64_t size_of(T const& last) const {
         return last; }
 
     template <typename T, typename... U>
-    int64_t size_of(T const& first, U const&... rest) {
+    int64_t size_of(T const& first, U const&... rest) const {
         return first * size_of(rest...); }
 
     std::string _tag;
