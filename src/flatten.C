@@ -15,7 +15,6 @@
 
 #include "../include/paper.h"
 #include "../include/pencil.h"
-#include "../include/pigment.h"
 
 #include "../include/lambdas.h"
 
