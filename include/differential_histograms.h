@@ -195,6 +195,23 @@ class differential_histograms {
         }
     }
 
+    /* divide histograms duplicated along an axis. useful when all histograms
+     * on an axis are filled once per event. */
+    void divide(differential_histograms const& other, int64_t axis) {
+        /* assume self, other have equal shapes after integrating out
+         * duplicated axis */
+        for (int64_t j = 0; j < other.size(); ++j) {
+            auto count = other[j]->GetBinContent(1);
+            auto scale = count != 0 ? 1. / count : 0;
+            auto indices = other.indices_for(j);
+            indices.insert(std::next(std::begin(indices), axis), 0);
+            for (int64_t k = 0; k < _shape[axis]; ++k) {
+                indices[axis] = k;
+                (*this)[indices]->Scale(scale);
+            }
+        }
+    }
+
     void operator*=(differential_histograms const& other) {
         this->multiply(other); }
 

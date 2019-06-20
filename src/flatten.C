@@ -399,15 +399,10 @@ int flatten(char const* config, char const* output) {
     mix_ntrk_f_pt->divide((*photon_f_pt)[0]);
     mix_sumpt_f_pt->divide((*photon_f_pt)[0]);
 
-    for (int64_t i = 0; i < ipt->size(); ++i) {
-        auto norm_d_photon_pt = 1. / (*nevt_d_photon_pt)(i, FP_TH1_GETBC, 1);
-        for (int64_t j = 0; j < idphi->size(); ++j) {
-            (*evt_f_ntrk)[x{i, j}]->Scale(norm_d_photon_pt);
-            (*evt_f_sumpt)[x{i, j}]->Scale(norm_d_photon_pt);
-            (*mix_evt_f_ntrk)[x{i, j}]->Scale(norm_d_photon_pt);
-            (*mix_evt_f_sumpt)[x{i, j}]->Scale(norm_d_photon_pt);
-        }
-    }
+    evt_f_ntrk->divide((*nevt_d_photon_pt), 1);
+    evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
+    mix_evt_f_ntrk->divide((*nevt_d_photon_pt), 1);
+    mix_evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
 
     printf("painting..\n");
 
