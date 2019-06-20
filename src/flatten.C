@@ -133,6 +133,11 @@ void normalise(std::unique_ptr<differential_histograms>& norm,
 }
 
 template <typename... T>
+void scale(double factor, std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->scale(factor), 0)... };
+}
+
+template <typename... T>
 void scale_bin_width(std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
         obj->Scale(1., "width"); }), 0)... };
@@ -345,12 +350,8 @@ int flatten(char const* config, char const* output) {
     }
 
     /* normalise histograms */
-    normalise(nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
-
-    mix_ntrk_f_pt->scale(1. / events_to_mix);
-    mix_sumpt_f_pt->scale(1. / events_to_mix);
-    mix_evt_f_ntrk->scale(1. / events_to_mix);
-    mix_evt_f_sumpt->scale(1. / events_to_mix);
+    scale(1. / events_to_mix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x,
+        mix_ntrk_f_pt, mix_sumpt_f_pt, mix_evt_f_ntrk, mix_evt_f_sumpt);
 
     /* integrate histograms */
     /* photon (event) count */
