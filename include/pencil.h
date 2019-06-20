@@ -48,7 +48,7 @@ class pencil {
         binary = categories[label][0]; }
 
     template <typename T, template <typename...> class U>
-    void operator()(T* const obj, U<int64_t> const& attrs) {
+    void operator()(T* const obj, U<int64_t> const& attrs) const {
         int64_t colour_index = 0;
         int64_t marker_index = 0;
         int64_t marker_type = 0;
@@ -71,10 +71,10 @@ class pencil {
     }
 
     template <typename T, template <typename...> class U>
-    void operator()(T* const obj, U<std::string> const& adjectives) {
+    void operator()(T* const obj, U<std::string> const& adjectives) const {
         std::vector<int64_t> attrs(adjectives.size());
         for (auto const& adj : adjectives) {
-            auto attr = attributes[adjective];
+            auto attr = attributes[adj];
             attrs[attr[0]] = attr[1];
         }
 
@@ -90,7 +90,7 @@ class pencil {
     void alias(std::string const& label, std::string const& formal) {
         aliases[label] = formal; }
 
-    auto description() {
+    auto description() const {
         using namespace std::literals::string_literals;
 
         std::map<TObject* const, std::string> desc;
@@ -106,8 +106,9 @@ class pencil {
             int64_t count = static_cast<int64_t>(indices.size());
             for (int64_t i = 0; i < count; ++i) {
                 auto attr = reverse[{ i, indices[i] }];
-                if (aliases.find(attr) != std::end(aliases))
-                    attr = aliases[attr];
+                auto it = aliases.find(attr);
+                if (it != std::end(aliases))
+                    attr = it->second;
                 descriptive_string += attr + ", "s;
             }
 
@@ -150,7 +151,7 @@ class pencil {
     }
 
     template <typename T>
-    void apply(TObject* const obj, int32_t colour, int32_t marker) {
+    void apply(TObject* const obj, int32_t colour, int32_t marker) const {
         if (obj->InheritsFrom(T::Class())) {
             auto cast = static_cast<T*>(obj);
             cast->SetLineColor(colour);
