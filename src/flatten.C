@@ -169,7 +169,7 @@ int flatten(char const* config, char const* output) {
     auto dsumpt = conf->get<std::vector<float>>("sumpt_diff");
 
     /* convert to integral angle units (cast to double) */
-    for (auto& i : rdphi) { i = convert_degrees(i); }
+    for (auto& i : rdphi) { i = convert_pis(i); }
     for (auto& i : ddphi) { i = convert_degrees(i); }
 
     /* default values for config options */
