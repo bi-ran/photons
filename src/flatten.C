@@ -3,6 +3,7 @@
 #include "TH1.h"
 #include "TLatex.h"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -168,12 +169,15 @@ int flatten(char const* config, char const* output) {
     auto dntrk = conf->get<std::vector<float>>("ntrk_diff");
     auto dsumpt = conf->get<std::vector<float>>("sumpt_diff");
 
+    auto events_to_mix = conf->get<int64_t>("events_to_mix");
+
     /* convert to integral angle units (cast to double) */
     for (auto& i : rdphi) { i = convert_pis(i); }
     for (auto& i : ddphi) { i = convert_degrees(i); }
 
     /* default values for config options */
     freq = freq ? freq : 10000;
+    events_to_mix = std::max(100L, events_to_mix);
 
     printf("prepare histograms..\n");
 
@@ -320,7 +324,7 @@ int flatten(char const* config, char const* output) {
                   nevt, pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
 
         /* mixing events in minimum bias */
-        for (int64_t k = 0; k < 100; ++k) {
+        for (int64_t k = 0; k < events_to_mix; ++k) {
             tm->GetEntry(m);
 
             fill_tracks(pjtm, trk_pt_min, trk_eta_abs,
@@ -343,10 +347,10 @@ int flatten(char const* config, char const* output) {
     /* normalise histograms */
     normalise(nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
 
-    mix_ntrk_f_pt->scale(0.01);
-    mix_sumpt_f_pt->scale(0.01);
-    mix_evt_f_ntrk->scale(0.01);
-    mix_evt_f_sumpt->scale(0.01);
+    mix_ntrk_f_pt->scale(1. / events_to_mix);
+    mix_sumpt_f_pt->scale(1. / events_to_mix);
+    mix_evt_f_ntrk->scale(1. / events_to_mix);
+    mix_evt_f_sumpt->scale(1. / events_to_mix);
 
     /* integrate histograms */
     /* photon (event) count */
