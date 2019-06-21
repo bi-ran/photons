@@ -216,20 +216,20 @@ int flatten(char const* config, char const* output) {
         "#sump_{T}^{h^{#pm}}", incl, mdphi);
 
     auto ntrk_f_pt = std::make_unique<dhist>("ntrk_f_pt"s,
-        "dN_{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
+        "dN^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
     auto sumpt_f_pt = std::make_unique<dhist>("sumpt_f_pt"s,
         "d#Sigmap_{T}^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
     auto mix_ntrk_f_pt = std::make_unique<dhist>("mix_ntrk_f_pt"s,
-        "dN_{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
+        "dN^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
     auto mix_sumpt_f_pt = std::make_unique<dhist>("mix_sumpt_f_pt"s,
         "d#Sigmap_{T}^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
 
     auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s,
-        "dN/dN_{h^{#pm}}", "N_{h^{#pm}}", rntrk, mptdphi);
+        "dN/dN_{h^{#pm}}", "N^{h^{#pm}}", rntrk, mptdphi);
     auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s,
         "dN/d#Sigmap_{T}^{h^{#pm}}", "#Sigmap_{T}^{h^{#pm}}", rsumpt, mptdphi);
     auto mix_evt_f_ntrk = std::make_unique<dhist>("mix_evt_f_ntrk"s,
-        "dN/dN_{h^{#pm}}", "N_{h^{#pm}}", rntrk, mptdphi);
+        "dN/dN_{h^{#pm}}", "N^{h^{#pm}}", rntrk, mptdphi);
     auto mix_evt_f_sumpt = std::make_unique<dhist>("mix_evt_f_sumpt"s,
         "dN/d#Sigmap_{T}^{h^{#pm}}", "#Sigmap_{T}^{h^{#pm}}", rsumpt, mptdphi);
 
