@@ -295,6 +295,10 @@ int flatten(char const* config, char const* output) {
             if ((*pjt->phoSigmaIEtaIEta_2012)[j] > 0.01) { continue; }
 
             /* isolation requirement */
+            float isolation = (*pjt->pho_ecalClusterIsoR4)[j]
+                + (*pjt->pho_hcalRechitIsoR4)[j]
+                + (*pjt->pho_trackIsoR4PtCut20)[j];
+            if (isolation > 1.f) { continue; }
 
             photon_leading = j;
             break;
