@@ -413,10 +413,10 @@ int flatten(char const* config, char const* output) {
     auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_np_sumpt->sum(1);
 
     /* subtract histograms */
-    *pjet_f_x_d_perp_ntrk -= *mix_pjet_f_x_d_perp_ntrk;
-    *pjet_f_x_d_near_ntrk -= *mix_pjet_f_x_d_near_ntrk;
-    *pjet_f_x_d_perp_sumpt -= *mix_pjet_f_x_d_perp_sumpt;
-    *pjet_f_x_d_near_sumpt -= *mix_pjet_f_x_d_near_sumpt;
+    /* *pjet_f_x_d_perp_ntrk -= *mix_pjet_f_x_d_perp_ntrk; */
+    /* *pjet_f_x_d_near_ntrk -= *mix_pjet_f_x_d_near_ntrk; */
+    /* *pjet_f_x_d_perp_sumpt -= *mix_pjet_f_x_d_perp_sumpt; */
+    /* *pjet_f_x_d_near_sumpt -= *mix_pjet_f_x_d_near_sumpt; */
 
     ntrk_f_pt->divide((*photon_f_pt_incl)[0]);
     sumpt_f_pt->divide((*photon_f_pt_incl)[0]);
@@ -493,7 +493,7 @@ int flatten(char const* config, char const* output) {
 
     hb->alias("perp", "#pi/3 < #||{#Delta#phi^{#gammah}} < 2#pi/3");
     hb->alias("near", "0 < #||{#Delta#phi^{#gammah}} < #pi/3");
-    hb->alias("raw", "sub.");
+    /* hb->alias("raw", "sub."); */
 
     auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
 
