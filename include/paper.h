@@ -71,14 +71,14 @@ class paper {
 
     void accessory(std::function<void(int64_t)> a) { _a.push_back(a); }
 
-    void describe(pencil* pencil) { _pencil = pencil; }
+    void link(pencil* pencil) { _pencil = pencil; }
 
-    void draw(char const* ext) {
+    void draw(std::string const& ext) {
         using namespace std::literals::string_literals;
 
-        if (_cols * _rows == 0) { split(); }
+        if (canvas == nullptr) {
+            split();
 
-        if (canvas == NULL) {
             canvas = new TCanvas(("paper_"s + _tag).data(), "",
                              400 * _cols, 400 * _rows);
             canvas->Divide(_cols, _rows);
@@ -98,31 +98,37 @@ class paper {
             legends();
         }
 
-        save(ext);
+        canvas->SaveAs((_tag + "."s + ext).data());
     }
 
   private:
     template <typename T>
-    void apply(TObject* const obj, std::function<void(T*)> f) {
+    void apply(TObject* const obj, std::function<void(T*)> f) const {
         if (f && obj->InheritsFrom(T::Class()))
             f(static_cast<T*>(obj));
     }
 
     template <typename T>
-    void apply(std::function<T> f) { if (f) { f(); } }
+    void apply(std::function<T> f) const { if (f) { f(); } }
 
     template <typename T>
-    void apply(std::function<T> f, int64_t index) { if (f) { f(index); } }
+    void apply(std::function<T> f, int64_t index) const { if (f) f(index); }
 
     void split() {
-        float rows = std::ceil(std::sqrt(_size));
-        float cols = std::ceil(_size / rows);
+        if (!_cols || !_rows) {
+            float rows = std::ceil(std::sqrt(_size));
+            float cols = std::ceil(_size / rows);
 
-        _cols = cols;
-        _rows = rows;
+            _cols = cols;
+            _rows = rows;
+        } else if (_rows < 0) {
+            _rows = std::ceil(_size / _cols);
+        } else if (_cols < 0) {
+            _cols = std::ceil(_size / _rows);
+        }
     }
 
-    void legends() {
+    void legends() const {
         if (_pencil == nullptr) { return; }
 
         auto description = _pencil->description();
@@ -136,13 +142,12 @@ class paper {
                 if (indices[j] == index)
                     associates.push_back(objects[j]);
 
-            auto point = _l ? _l() : std::array<float, 4>{
-                0.5, 0.9, 0.87, 0.04 };
-            point[3] = point[2] - associates.size() * point[3];
+            auto xy = _l ? _l() : std::array<float, 4>{ 0.5, 0.9, 0.87, 0.04 };
+            xy[3] = xy[2] - associates.size() * xy[3];
 
             canvas->cd(index);
 
-            TLegend* l = new TLegend(point[0], point[3], point[1], point[2]);
+            TLegend* l = new TLegend(xy[0], xy[3], xy[1], xy[2]);
             apply(l, _s);
 
             for (auto const& obj : associates) {
@@ -153,12 +158,6 @@ class paper {
 
             l->Draw();
         }
-    }
-
-    void save(char const* ext) {
-        using namespace std::literals::string_literals;
-
-        canvas->SaveAs((_tag + "."s + ext).data());
     }
 
     std::string const _tag;
