@@ -264,22 +264,12 @@ class differential_histograms {
     }
 
     std::unique_ptr<differential_histograms> sum(int64_t axis) const {
-        using namespace std::literals::string_literals;
+        return sum_impl(axis); }
 
-        std::vector<int64_t> output = _shape;
-        output.erase(std::next(std::begin(output), axis));
-
-        auto result = std::make_unique<differential_histograms>(
-            _tag + "_sum"s + std::to_string(axis), _ordinate, bins, output);
-
-        for (int64_t i = 0; i < result->size(); ++i) {
-            auto indices = result->indices_for(i);
-            indices.insert(std::next(std::begin(indices), axis), 0);
-            (*result)[i] = this->sum(indices, axis);
-        }
-
-        return result;
-    }
+    template <typename... T>
+    std::unique_ptr<differential_histograms> sum(int64_t axis,
+                                                 T... axes) const {
+        return sum_impl(axis)->sum(axes...); }
 
     template <typename T, typename... U>
     T operator()(int64_t index, T (TH1::* function)(U...), U... args) {
@@ -319,6 +309,24 @@ class differential_histograms {
         }
 
         return sum;
+    }
+
+    std::unique_ptr<differential_histograms> sum_impl(int64_t axis) const {
+        using namespace std::literals::string_literals;
+
+        std::vector<int64_t> output = _shape;
+        output.erase(std::next(std::begin(output), axis));
+
+        auto result = std::make_unique<differential_histograms>(
+            _tag + "_sum"s + std::to_string(axis), _ordinate, bins, output);
+
+        for (int64_t i = 0; i < result->size(); ++i) {
+            auto indices = result->indices_for(i);
+            indices.insert(std::next(std::begin(indices), axis), 0);
+            (*result)[i] = this->sum(indices, axis);
+        }
+
+        return result;
     }
 
     template <typename T, typename U, typename... V>

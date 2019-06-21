@@ -278,28 +278,16 @@ int diffaxis(char const* config, char const* output) {
         mix_pjet_f_ddr, mix_pjet_f_x);
 
     /* integrate histograms */
-    auto nevt_d_ppt = nevt->sum(1)->sum(1);
+    auto nevt_d_ppt = nevt->sum(1, 1);
 
-    auto pjet_es_f_dphi_d_ppt = pjet_es_f_dphi
-        ->sum(1)    /* jet pt */
-        ->sum(1);   /* photon-jet x */
-    auto pjet_wta_f_dphi_d_ppt = pjet_wta_f_dphi
-        ->sum(1)    /* jet pt */
-        ->sum(1);   /* photon-jet x */
-    auto pjet_f_ddr_d_ppt = pjet_f_ddr
-        ->sum(1)    /* jet pt */
-        ->sum(1);   /* photon-jet x */
+    auto pjet_es_f_dphi_d_ppt = pjet_es_f_dphi->sum(1, 1);
+    auto pjet_wta_f_dphi_d_ppt = pjet_wta_f_dphi->sum(1, 1);
+    auto pjet_f_ddr_d_ppt = pjet_f_ddr->sum(1, 1);
 
     /* mixed events */
-    auto mix_pjet_es_f_dphi_d_ppt = mix_pjet_es_f_dphi
-        ->sum(1)    /* jet pt */
-        ->sum(1);   /* photon-jet x */
-    auto mix_pjet_wta_f_dphi_d_ppt = mix_pjet_wta_f_dphi
-        ->sum(1)    /* jet pt */
-        ->sum(1);   /* photon-jet x */
-    auto mix_pjet_f_ddr_d_ppt = mix_pjet_f_ddr
-        ->sum(1)    /* jet pt */
-        ->sum(1);   /* photon-jet x */
+    auto mix_pjet_es_f_dphi_d_ppt = mix_pjet_es_f_dphi->sum(1, 1);
+    auto mix_pjet_wta_f_dphi_d_ppt = mix_pjet_wta_f_dphi->sum(1, 1);
+    auto mix_pjet_f_ddr_d_ppt = mix_pjet_f_ddr->sum(1, 1);
 
     /* subtract histograms */
     /* *pjet_f_x -= *mix_pjet_f_x; */

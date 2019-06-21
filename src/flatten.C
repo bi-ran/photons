@@ -364,14 +364,14 @@ int flatten(char const* config, char const* output) {
 
     /* integrate histograms */
     /* photon (event) count */
-    auto nevt_d_photon_pt = nevt->sum(1)->sum(1)->sum(1)->sum(1);
+    auto nevt_d_photon_pt = nevt->sum(1, 1, 1, 1);
     auto nevt_d_np_ntrk_np_sumpt = nevt->sum(0);
 
-    auto nevt_d_np_ntrk = nevt_d_np_ntrk_np_sumpt->sum(2)->sum(2);
+    auto nevt_d_np_ntrk = nevt_d_np_ntrk_np_sumpt->sum(2, 2);
     auto nevt_d_perp_ntrk = nevt_d_np_ntrk->sum(0);
     auto nevt_d_near_ntrk = nevt_d_np_ntrk->sum(1);
 
-    auto nevt_d_np_sumpt = nevt_d_np_ntrk_np_sumpt->sum(0)->sum(0);
+    auto nevt_d_np_sumpt = nevt_d_np_ntrk_np_sumpt->sum(0, 0);
     auto nevt_d_perp_sumpt = nevt_d_np_sumpt->sum(0);
     auto nevt_d_near_sumpt = nevt_d_np_sumpt->sum(1);
 
@@ -379,28 +379,28 @@ int flatten(char const* config, char const* output) {
     auto photon_f_pt_d_near_sumpt = photon_f_pt->sum(0);
     auto photon_f_pt_d_perp_sumpt = photon_f_pt->sum(1);
 
-    auto photon_f_pt_incl = photon_f_pt->sum(0)->sum(0);
+    auto photon_f_pt_incl = photon_f_pt->sum(0, 0);
 
     /* photon-jet momentum imbalance as function of ntrk */
-    auto pjet_f_x_d_np_ntrk = pjet_f_x->sum(0)->sum(2)->sum(2);
+    auto pjet_f_x_d_np_ntrk = pjet_f_x->sum(0, 2, 2);
 
     auto pjet_f_x_d_perp_ntrk = pjet_f_x_d_np_ntrk->sum(0);
     auto pjet_f_x_d_near_ntrk = pjet_f_x_d_np_ntrk->sum(1);
 
     /* mixed events */
-    auto mix_pjet_f_x_d_np_ntrk = mix_pjet_f_x->sum(0)->sum(2)->sum(2);
+    auto mix_pjet_f_x_d_np_ntrk = mix_pjet_f_x->sum(0, 2, 2);
 
     auto mix_pjet_f_x_d_perp_ntrk = mix_pjet_f_x_d_np_ntrk->sum(0);
     auto mix_pjet_f_x_d_near_ntrk = mix_pjet_f_x_d_np_ntrk->sum(1);
 
     /* photon-jet momentum imbalance as function of sumpt */
-    auto pjet_f_x_d_np_sumpt = pjet_f_x->sum(0)->sum(0)->sum(0);
+    auto pjet_f_x_d_np_sumpt = pjet_f_x->sum(0, 0, 0);
 
     auto pjet_f_x_d_perp_sumpt = pjet_f_x_d_np_sumpt->sum(0);
     auto pjet_f_x_d_near_sumpt = pjet_f_x_d_np_sumpt->sum(1);
 
     /* mixed events */
-    auto mix_pjet_f_x_d_np_sumpt = mix_pjet_f_x->sum(0)->sum(0)->sum(0);
+    auto mix_pjet_f_x_d_np_sumpt = mix_pjet_f_x->sum(0, 0, 0);
 
     auto mix_pjet_f_x_d_perp_sumpt = mix_pjet_f_x_d_np_sumpt->sum(0);
     auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_np_sumpt->sum(1);
