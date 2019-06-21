@@ -444,8 +444,7 @@ int flatten(char const* config, char const* output) {
     auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
 
     auto c1 = new paper("c1", hb);
-    apply_default_style(c1, system);
-    c1->format(std::bind(histogram_formatter, _1, 0., 1.2));
+    apply_default_style(c1, system, 0., 1.2);
     c1->accessory(sumpt_selection);
 
     for (int64_t i = 0; i < isumpt->size(); ++i) {
@@ -456,8 +455,7 @@ int flatten(char const* config, char const* output) {
     }
 
     auto c2 = new paper("c2", hb);
-    apply_default_style(c2, system);
-    c2->format(std::bind(histogram_formatter, _1, 0., 10.));
+    apply_default_style(c2, system, 0., 10.);
     c2->divide(2, 1);
 
     c2->add((*ntrk_f_pt)[0], "near", "raw");
@@ -471,8 +469,7 @@ int flatten(char const* config, char const* output) {
     c2->stack((*mix_sumpt_f_pt)[1], "perp", "mix");
 
     auto c3 = new paper("c3", hb);
-    apply_default_style(c3, system);
-    c3->format(std::bind(histogram_formatter, _1, 0., 0.4));
+    apply_default_style(c3, system, 0., 0.4);
     c3->accessory(photon_pt_selection);
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i) {
@@ -483,8 +480,7 @@ int flatten(char const* config, char const* output) {
     }
 
     auto c4 = new paper("c4", hb);
-    apply_default_style(c4, system);
-    c4->format(std::bind(histogram_formatter, _1, 0., 0.4));
+    apply_default_style(c4, system, 0., 0.4);
     c4->accessory(photon_pt_selection);
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i) {

@@ -49,9 +49,11 @@ auto default_legend_style = [](TLegend* l, int font, float size) {
     l->SetTextSize(size);
 };
 
-void apply_default_style(paper* p, std::string const& system) {
+void apply_default_style(paper* p, std::string const& system,
+                         double min, double max) {
     using namespace std::placeholders;
 
+    p->format(std::bind(histogram_formatter, _1, min, max));
     p->decorate(std::bind(default_decorator, system));
     p->legend(std::bind(coordinates, 0.45, 0.9, 0.87, 0.04));
     p->style(std::bind(default_legend_style, _1, 43, 12));
