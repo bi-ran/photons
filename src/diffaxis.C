@@ -354,7 +354,7 @@ int diffaxis(char const* config, char const* output) {
 
     auto system = "PbPb #sqrt{s_{NN}} = 5.02 TeV"s;
 
-    auto c1 = new paper("p1", hb);
+    auto c1 = new paper("dphi_d_ppt", hb);
     apply_default_style(c1, system, 0., 0.8);
     c1->accessory(photon_pt_selection);
 
@@ -365,7 +365,7 @@ int diffaxis(char const* config, char const* output) {
         c1->stack((*mix_pjet_wta_f_dphi_d_ppt)[i], "wta", "mix");
     }
 
-    auto c2 = new paper("p2", hb);
+    auto c2 = new paper("ddr_d_ppt", hb);
     apply_default_style(c2, system, 0., 12.);
     c2->accessory(photon_pt_selection);
 
@@ -374,7 +374,7 @@ int diffaxis(char const* config, char const* output) {
         c2->stack((*mix_pjet_f_ddr_d_ppt)[i], "mix");
     }
 
-    auto c3 = new paper("p3", hb);
+    auto c3 = new paper("x_d_ppt", hb);
     apply_default_style(c3, system, 0., 1.2);
     c3->accessory(photon_pt_selection);
 
@@ -383,7 +383,7 @@ int diffaxis(char const* config, char const* output) {
         c3->stack((*mix_pjet_f_x)[i], "mix");
     }
 
-    auto c4 = new paper("p4", hb);
+    auto c4 = new paper("ddr_d_x", hb);
     apply_default_style(c4, system, 0., 20.);
     c4->accessory(x_selection);
 

@@ -497,7 +497,7 @@ int flatten(char const* config, char const* output) {
 
     auto system = "pPb #sqrt{s_{NN}} = 8.16 TeV"s;
 
-    auto c1 = new paper("c1", hb);
+    auto c1 = new paper("pjet_x_d_sumpt", hb);
     apply_default_style(c1, system, 0., 1.2);
     c1->accessory(sumpt_selection);
 
@@ -508,7 +508,7 @@ int flatten(char const* config, char const* output) {
         c1->stack((*mix_pjet_f_x_d_near_sumpt)[i], "near", "mix");
     }
 
-    auto c2 = new paper("c2", hb);
+    auto c2 = new paper("pjet_x_d_ntrk", hb);
     apply_default_style(c2, system, 0., 1.2);
     c2->accessory(ntrk_selection);
 
@@ -519,7 +519,7 @@ int flatten(char const* config, char const* output) {
         c2->stack((*mix_pjet_f_x_d_near_ntrk)[i], "near", "mix");
     }
 
-    auto c3 = new paper("c3", hb);
+    auto c3 = new paper("density_f_pt", hb);
     apply_default_style(c3, system, 0., 10.);
     c3->divide(2, 1);
 
@@ -533,7 +533,7 @@ int flatten(char const* config, char const* output) {
     c3->stack((*mix_sumpt_f_pt)[0], "near", "mix");
     c3->stack((*mix_sumpt_f_pt)[1], "perp", "mix");
 
-    auto c4 = new paper("c4", hb);
+    auto c4 = new paper("ntrk_d_pt", hb);
     apply_default_style(c4, system, 0., 0.4);
     c4->accessory(photon_pt_selection);
 
@@ -544,7 +544,7 @@ int flatten(char const* config, char const* output) {
         c4->stack((*mix_evt_f_ntrk)[x{i, 1}], "perp", "mix");
     }
 
-    auto c5 = new paper("c5", hb);
+    auto c5 = new paper("sumpt_d_pt", hb);
     apply_default_style(c5, system, 0., 0.4);
     c5->accessory(photon_pt_selection);
 
@@ -555,7 +555,7 @@ int flatten(char const* config, char const* output) {
         c5->stack((*mix_evt_f_sumpt)[x{i, 1}], "perp", "mix");
     }
 
-    auto c6 = new paper("c6", hb);
+    auto c6 = new paper("pt_d_sumpt", hb);
     apply_default_style(c6, system, 0., 0.12);
     c6->accessory(sumpt_selection);
 
@@ -564,7 +564,7 @@ int flatten(char const* config, char const* output) {
         c6->stack((*photon_f_pt_d_near_sumpt)[i], "near");
     }
 
-    auto c7 = new paper("c7", hb);
+    auto c7 = new paper("pt_d_ntrk", hb);
     apply_default_style(c7, system, 0., 0.12);
     c7->accessory(ntrk_selection);
 
