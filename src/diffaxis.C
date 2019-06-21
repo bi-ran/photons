@@ -302,11 +302,11 @@ int diffaxis(char const* config, char const* output) {
         ->sum(1);   /* photon-jet x */
 
     /* subtract histograms */
-    *pjet_f_x -= *mix_pjet_f_x;
+    /* *pjet_f_x -= *mix_pjet_f_x; */
 
-    *pjet_es_f_dphi_d_ppt -= *mix_pjet_es_f_dphi_d_ppt;
-    *pjet_wta_f_dphi_d_ppt -= *mix_pjet_wta_f_dphi_d_ppt;
-    *pjet_f_ddr_d_ppt -= *mix_pjet_f_ddr_d_ppt;
+    /* *pjet_es_f_dphi_d_ppt -= *mix_pjet_es_f_dphi_d_ppt; */
+    /* *pjet_wta_f_dphi_d_ppt -= *mix_pjet_wta_f_dphi_d_ppt; */
+    /* *pjet_f_ddr_d_ppt -= *mix_pjet_f_ddr_d_ppt; */
 
     /* normalise to number of photons (events) */
     normalise(
@@ -338,7 +338,7 @@ int diffaxis(char const* config, char const* output) {
     hb->category("axis", "escheme", "wta");
     hb->category("type", "raw", "mix");
 
-    hb->alias("raw", "sub.");
+    /* hb->alias("raw", "sub."); */
 
     auto system = "PbPb #sqrt{s_{NN}} = 5.02 TeV"s;
 
