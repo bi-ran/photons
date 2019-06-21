@@ -365,11 +365,15 @@ int flatten(char const* config, char const* output) {
     /* integrate histograms */
     /* photon (event) count */
     auto nevt_d_photon_pt = nevt->sum(1)->sum(1)->sum(1)->sum(1);
+    auto nevt_d_np_ntrk_np_sumpt = nevt->sum(0);
 
-    auto nevt_d_near_perp_sumpt = nevt->sum(0)->sum(0)->sum(0);
+    auto nevt_d_np_ntrk = nevt_d_np_ntrk_np_sumpt->sum(2)->sum(2);
+    auto nevt_d_perp_ntrk = nevt_d_np_ntrk->sum(0);
+    auto nevt_d_near_ntrk = nevt_d_np_ntrk->sum(1);
 
-    auto nevt_d_perp_sumpt = nevt_d_near_perp_sumpt->sum(0);
-    auto nevt_d_near_sumpt = nevt_d_near_perp_sumpt->sum(1);
+    auto nevt_d_np_sumpt = nevt_d_np_ntrk_np_sumpt->sum(0)->sum(0);
+    auto nevt_d_perp_sumpt = nevt_d_np_sumpt->sum(0);
+    auto nevt_d_near_sumpt = nevt_d_np_sumpt->sum(1);
 
     /* photon pt spectra */
     auto photon_f_pt_d_near_sumpt = photon_f_pt->sum(0);
@@ -377,40 +381,50 @@ int flatten(char const* config, char const* output) {
 
     auto photon_f_pt_incl = photon_f_pt->sum(0)->sum(0);
 
-    /* photon-jet momentum imbalance as function of perp sumpt */
-    auto pjet_f_x_d_near_perp_sumpt = pjet_f_x
-        ->sum(0)    /* photon pt */
-        ->sum(0)    /* near_ntrk */
-        ->sum(0);   /* perp_ntrk */
+    /* photon-jet momentum imbalance as function of ntrk */
+    auto pjet_f_x_d_np_ntrk = pjet_f_x->sum(0)->sum(2)->sum(2);
 
-    auto pjet_f_x_d_perp_sumpt = pjet_f_x_d_near_perp_sumpt
-        ->sum(0);   /* near_sumpt */
-    auto pjet_f_x_d_near_sumpt = pjet_f_x_d_near_perp_sumpt
-        ->sum(1);   /* perp_sumpt */
+    auto pjet_f_x_d_perp_ntrk = pjet_f_x_d_np_ntrk->sum(0);
+    auto pjet_f_x_d_near_ntrk = pjet_f_x_d_np_ntrk->sum(1);
 
     /* mixed events */
-    auto mix_pjet_f_x_d_near_perp_sumpt = mix_pjet_f_x
-        ->sum(0)    /* photon pt */
-        ->sum(0)    /* near_ntrk */
-        ->sum(0);   /* perp_ntrk */
+    auto mix_pjet_f_x_d_np_ntrk = mix_pjet_f_x->sum(0)->sum(2)->sum(2);
 
-    auto mix_pjet_f_x_d_perp_sumpt = mix_pjet_f_x_d_near_perp_sumpt
-        ->sum(0);   /* near_sumpt */
-    auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_near_perp_sumpt
-        ->sum(1);   /* perp_sumpt */
+    auto mix_pjet_f_x_d_perp_ntrk = mix_pjet_f_x_d_np_ntrk->sum(0);
+    auto mix_pjet_f_x_d_near_ntrk = mix_pjet_f_x_d_np_ntrk->sum(1);
+
+    /* photon-jet momentum imbalance as function of sumpt */
+    auto pjet_f_x_d_np_sumpt = pjet_f_x->sum(0)->sum(0)->sum(0);
+
+    auto pjet_f_x_d_perp_sumpt = pjet_f_x_d_np_sumpt->sum(0);
+    auto pjet_f_x_d_near_sumpt = pjet_f_x_d_np_sumpt->sum(1);
+
+    /* mixed events */
+    auto mix_pjet_f_x_d_np_sumpt = mix_pjet_f_x->sum(0)->sum(0)->sum(0);
+
+    auto mix_pjet_f_x_d_perp_sumpt = mix_pjet_f_x_d_np_sumpt->sum(0);
+    auto mix_pjet_f_x_d_near_sumpt = mix_pjet_f_x_d_np_sumpt->sum(1);
 
     /* subtract histograms */
+    *pjet_f_x_d_perp_ntrk -= *mix_pjet_f_x_d_perp_ntrk;
+    *pjet_f_x_d_near_ntrk -= *mix_pjet_f_x_d_near_ntrk;
     *pjet_f_x_d_perp_sumpt -= *mix_pjet_f_x_d_perp_sumpt;
     *pjet_f_x_d_near_sumpt -= *mix_pjet_f_x_d_near_sumpt;
 
     /* normalise to number of photons (events) */
+    normalise(nevt_d_perp_ntrk, pjet_f_x_d_perp_ntrk);
+    normalise(nevt_d_perp_ntrk, mix_pjet_f_x_d_perp_ntrk);
+    normalise(nevt_d_near_ntrk, pjet_f_x_d_near_ntrk);
+    normalise(nevt_d_near_ntrk, mix_pjet_f_x_d_near_ntrk);
     normalise(nevt_d_perp_sumpt, pjet_f_x_d_perp_sumpt);
-    normalise(nevt_d_near_sumpt, pjet_f_x_d_near_sumpt);
     normalise(nevt_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt);
+    normalise(nevt_d_near_sumpt, pjet_f_x_d_near_sumpt);
     normalise(nevt_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
 
     /* scale by bin width */
     scale_bin_width(
+        pjet_f_x_d_perp_ntrk, mix_pjet_f_x_d_perp_ntrk,
+        pjet_f_x_d_near_ntrk, mix_pjet_f_x_d_near_ntrk,
         pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt,
         pjet_f_x_d_near_sumpt, mix_pjet_f_x_d_near_sumpt,
         evt_f_ntrk, evt_f_sumpt,
@@ -427,6 +441,19 @@ int flatten(char const* config, char const* output) {
     mix_evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
 
     printf("painting..\n");
+
+    auto ntrk_selection = [&](int64_t index) {
+        auto text = "N^{h^{#pm}}"s;
+        if (index != 1)
+            text = std::to_string((*intrk)[index - 1]) + " < "s + text;
+        if (index != intrk->size())
+            text = text + " < "s + std::to_string((*intrk)[index]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, 0.75, text.data());
+    };
 
     auto sumpt_selection = [&](int64_t index) {
         auto text = "#Sigmap_{T}^{h^{#pm}}"s;
@@ -473,39 +500,50 @@ int flatten(char const* config, char const* output) {
     }
 
     auto c2 = new paper("c2", hb);
-    apply_default_style(c2, system, 0., 10.);
-    c2->divide(2, 1);
+    apply_default_style(c2, system, 0., 1.2);
+    c2->accessory(ntrk_selection);
 
-    c2->add((*ntrk_f_pt)[0], "near", "raw");
-    c2->stack((*ntrk_f_pt)[1], "perp", "raw");
-    c2->stack((*mix_ntrk_f_pt)[0], "near", "mix");
-    c2->stack((*mix_ntrk_f_pt)[1], "perp", "mix");
-
-    c2->add((*sumpt_f_pt)[0], "near", "raw");
-    c2->stack((*sumpt_f_pt)[1], "perp", "raw");
-    c2->stack((*mix_sumpt_f_pt)[0], "near", "mix");
-    c2->stack((*mix_sumpt_f_pt)[1], "perp", "mix");
+    for (int64_t i = 0; i < intrk->size(); ++i) {
+        c2->add((*pjet_f_x_d_perp_ntrk)[i], "perp", "raw");
+        c2->stack((*pjet_f_x_d_near_ntrk)[i], "near", "raw");
+        c2->stack((*mix_pjet_f_x_d_perp_ntrk)[i], "perp", "mix");
+        c2->stack((*mix_pjet_f_x_d_near_ntrk)[i], "near", "mix");
+    }
 
     auto c3 = new paper("c3", hb);
-    apply_default_style(c3, system, 0., 0.4);
-    c3->accessory(photon_pt_selection);
+    apply_default_style(c3, system, 0., 10.);
+    c3->divide(2, 1);
 
-    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c3->add((*evt_f_ntrk)[x{i, 0}], "near", "raw");
-        c3->stack((*evt_f_ntrk)[x{i, 1}], "perp", "raw");
-        c3->stack((*mix_evt_f_ntrk)[x{i, 0}], "near", "mix");
-        c3->stack((*mix_evt_f_ntrk)[x{i, 1}], "perp", "mix");
-    }
+    c3->add((*ntrk_f_pt)[0], "near", "raw");
+    c3->stack((*ntrk_f_pt)[1], "perp", "raw");
+    c3->stack((*mix_ntrk_f_pt)[0], "near", "mix");
+    c3->stack((*mix_ntrk_f_pt)[1], "perp", "mix");
+
+    c3->add((*sumpt_f_pt)[0], "near", "raw");
+    c3->stack((*sumpt_f_pt)[1], "perp", "raw");
+    c3->stack((*mix_sumpt_f_pt)[0], "near", "mix");
+    c3->stack((*mix_sumpt_f_pt)[1], "perp", "mix");
 
     auto c4 = new paper("c4", hb);
     apply_default_style(c4, system, 0., 0.4);
     c4->accessory(photon_pt_selection);
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c4->add((*evt_f_sumpt)[x{i, 0}], "near", "raw");
-        c4->stack((*evt_f_sumpt)[x{i, 1}], "perp", "raw");
-        c4->stack((*mix_evt_f_sumpt)[x{i, 0}], "near", "mix");
-        c4->stack((*mix_evt_f_sumpt)[x{i, 1}], "perp", "mix");
+        c4->add((*evt_f_ntrk)[x{i, 0}], "near", "raw");
+        c4->stack((*evt_f_ntrk)[x{i, 1}], "perp", "raw");
+        c4->stack((*mix_evt_f_ntrk)[x{i, 0}], "near", "mix");
+        c4->stack((*mix_evt_f_ntrk)[x{i, 1}], "perp", "mix");
+    }
+
+    auto c5 = new paper("c5", hb);
+    apply_default_style(c5, system, 0., 0.4);
+    c5->accessory(photon_pt_selection);
+
+    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
+        c5->add((*evt_f_sumpt)[x{i, 0}], "near", "raw");
+        c5->stack((*evt_f_sumpt)[x{i, 1}], "perp", "raw");
+        c5->stack((*mix_evt_f_sumpt)[x{i, 0}], "near", "mix");
+        c5->stack((*mix_evt_f_sumpt)[x{i, 1}], "perp", "mix");
     }
 
     hb->set_binary("type");
@@ -515,6 +553,7 @@ int flatten(char const* config, char const* output) {
     c2->draw("pdf");
     c3->draw("pdf");
     c4->draw("pdf");
+    c5->draw("pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 
