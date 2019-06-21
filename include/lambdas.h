@@ -8,7 +8,7 @@
 #include "TLatex.h"
 #include "TLegend.h"
 
-class paper;
+#include "../git/paper-and-pencil/include/paper.h"
 
 auto histogram_formatter = [](TH1* obj, double min, double max) {
     obj->SetStats(0);

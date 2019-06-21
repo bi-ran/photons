@@ -13,14 +13,14 @@
 #include "../include/interval.h"
 #include "../include/multival.h"
 
-#include "../include/paper.h"
-#include "../include/pencil.h"
-
 #include "../include/lambdas.h"
 
 #include "../include/pjtree.h"
 
 #include "../git/config/include/configurer.h"
+
+#include "../git/paper-and-pencil/include/paper.h"
+#include "../git/paper-and-pencil/include/pencil.h"
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 #define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill

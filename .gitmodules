@@ -1,3 +1,6 @@
 [submodule "git/config"]
 	path = git/config
 	url = git@github.com:bi-ran/config.git
+[submodule "git/paper-and-pencil"]
+	path = git/paper-and-pencil
+	url = git@github.com:bi-ran/paper-and-pencil.git
