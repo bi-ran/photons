@@ -45,6 +45,10 @@ int64_t leading_track_index(pjtree* pjt, float jet_eta, int64_t jet_phi) {
         if (std::abs(track_eta) > 2.f) { continue; }
 
         /* track quality selections */
+        if (!(*pjt->highPurity)[j]) { continue; }
+        if ((*pjt->trkPtError)[j] / (*pjt->trkPt)[j] > 0.1) { continue; }
+        if ((*pjt->trkDxy1)[j] / (*pjt->trkDxyError1)[j] > 3.) { continue; }
+        if ((*pjt->trkDz1)[j] / (*pjt->trkDzError1)[j] > 3.) { continue; }
 
         auto track_phi = convert_radians((*pjt->trkPhi)[j]);
 
@@ -235,6 +239,10 @@ int diffaxis(char const* config, char const* output) {
             if ((*pjt->phoSigmaIEtaIEta_2012)[j] > 0.01) { continue; }
 
             /* isolation requirement */
+            float isolation = (*pjt->pho_ecalClusterIsoR4)[j]
+                + (*pjt->pho_hcalRechitIsoR4)[j]
+                + (*pjt->pho_trackIsoR4PtCut20)[j];
+            if (isolation > 1.f) { continue; }
 
             photon_leading = j;
             break;
