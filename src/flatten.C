@@ -92,6 +92,7 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                std::shared_ptr<interval>& intrk,
                std::shared_ptr<interval>& isumpt,
                std::unique_ptr<differential_histograms>& nevt,
+               std::unique_ptr<differential_histograms>& photon_f_pt,
                std::unique_ptr<differential_histograms>& pjet_f_dphi,
                std::unique_ptr<differential_histograms>& pjet_f_jetpt,
                std::unique_ptr<differential_histograms>& pjet_f_x) {
@@ -105,6 +106,7 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         x{photon_pt_x, near_ntrk_x, perp_ntrk_x, near_sumpt_x, perp_sumpt_x});
 
     (*nevt)(index, FP_TH1_FILL, 1.);
+    (*photon_f_pt)[x{near_sumpt_x, perp_sumpt_x}]->Fill(photon_leading_pt);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
         if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
@@ -195,11 +197,14 @@ int flatten(char const* config, char const* output) {
     auto mpt = std::make_shared<multival>(dpt);
     auto mdphi = std::make_shared<multival>(ddphi);
     auto mptdphi = std::make_shared<multival>(dpt, ddphi);
+    auto msumpt2 = std::make_shared<multival>(dsumpt, dsumpt);
     auto mptntrk2sumpt2 = std::make_shared<multival>(
         dpt, dntrk, dntrk, dsumpt, dsumpt);
 
     auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s,
-        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, mincl);
+        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, msumpt2);
+    auto mix_photon_f_pt = std::make_unique<dhist>("mix_photon_f_pt"s,
+        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, msumpt2);
 
     auto ntrk = std::make_unique<dhist>("ntrk"s,
         "N^{h^{#pm}}", incl, mdphi);
@@ -301,8 +306,6 @@ int flatten(char const* config, char const* output) {
         double photon_leading_pt = (*pjt->phoEt)[photon_leading];
         int64_t photon_pt_x = ipt->index_for(photon_leading_pt);
 
-        (*photon_f_pt)(0, FP_TH1_FILL, photon_leading_pt);
-
         /* set (phi) axis of leading photon */
         auto photon_phi = convert_radians((*pjt->phoPhi)[photon_leading]);
 
@@ -325,7 +328,8 @@ int flatten(char const* config, char const* output) {
         fill_jets(pjt, jet_pt_min, jet_eta_abs,
                   photon_leading_pt, photon_phi, photon_pt_x,
                   ntrk, sumpt, intrk, isumpt,
-                  nevt, pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
+                  nevt, photon_f_pt,
+                  pjet_f_dphi, pjet_f_jetpt, pjet_f_x);
 
         /* mixing events in minimum bias */
         for (int64_t k = 0; k < events_to_mix; ++k) {
@@ -342,7 +346,8 @@ int flatten(char const* config, char const* output) {
             fill_jets(pjtm, jet_pt_min, jet_eta_abs,
                       photon_leading_pt, photon_phi, photon_pt_x,
                       mix_ntrk, mix_sumpt, intrk, isumpt,
-                      nmix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
+                      nmix, mix_photon_f_pt,
+                      mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x);
 
             m = (m + 1) % mentries;
         }
@@ -350,7 +355,8 @@ int flatten(char const* config, char const* output) {
 
     /* normalise histograms */
     scale(1. / events_to_mix, mix_pjet_f_dphi, mix_pjet_f_jetpt, mix_pjet_f_x,
-        mix_ntrk_f_pt, mix_sumpt_f_pt, mix_evt_f_ntrk, mix_evt_f_sumpt);
+        mix_ntrk_f_pt, mix_sumpt_f_pt, mix_evt_f_ntrk, mix_evt_f_sumpt,
+        mix_photon_f_pt);
 
     /* integrate histograms */
     /* photon (event) count */
@@ -360,6 +366,12 @@ int flatten(char const* config, char const* output) {
 
     auto nevt_d_perp_sumpt = nevt_d_near_perp_sumpt->sum(0);
     auto nevt_d_near_sumpt = nevt_d_near_perp_sumpt->sum(1);
+
+    /* photon pt spectra */
+    auto photon_f_pt_d_near_sumpt = photon_f_pt->sum(0);
+    auto photon_f_pt_d_perp_sumpt = photon_f_pt->sum(1);
+
+    auto photon_f_pt_incl = photon_f_pt->sum(0)->sum(0);
 
     /* photon-jet momentum imbalance as function of perp sumpt */
     auto pjet_f_x_d_near_perp_sumpt = pjet_f_x
@@ -394,14 +406,16 @@ int flatten(char const* config, char const* output) {
     normalise(nevt_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
 
     /* scale by bin width */
-    scale_bin_width(pjet_f_x_d_perp_sumpt, pjet_f_x_d_near_sumpt,
-        mix_pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_near_sumpt,
-        evt_f_ntrk, evt_f_sumpt, mix_evt_f_ntrk, mix_evt_f_sumpt);
+    scale_bin_width(
+        pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt,
+        pjet_f_x_d_near_sumpt, mix_pjet_f_x_d_near_sumpt,
+        evt_f_ntrk, evt_f_sumpt,
+        mix_evt_f_ntrk, mix_evt_f_sumpt);
 
-    ntrk_f_pt->divide((*photon_f_pt)[0]);
-    sumpt_f_pt->divide((*photon_f_pt)[0]);
-    mix_ntrk_f_pt->divide((*photon_f_pt)[0]);
-    mix_sumpt_f_pt->divide((*photon_f_pt)[0]);
+    ntrk_f_pt->divide((*photon_f_pt_incl)[0]);
+    sumpt_f_pt->divide((*photon_f_pt_incl)[0]);
+    mix_ntrk_f_pt->divide((*photon_f_pt_incl)[0]);
+    mix_sumpt_f_pt->divide((*photon_f_pt_incl)[0]);
 
     evt_f_ntrk->divide((*nevt_d_photon_pt), 1);
     evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
