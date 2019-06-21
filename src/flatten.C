@@ -102,11 +102,12 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
     int64_t near_sumpt_x = isumpt->index_for((*sumpt)(0, FP_TH1_GETBC, 1));
     int64_t perp_sumpt_x = isumpt->index_for((*sumpt)(1, FP_TH1_GETBC, 1));
 
-    auto index = nevt->index_for(
-        x{photon_pt_x, near_ntrk_x, perp_ntrk_x, near_sumpt_x, perp_sumpt_x});
+    auto index = nevt->index_for(x{photon_pt_x, near_ntrk_x, perp_ntrk_x,
+                                   near_sumpt_x, perp_sumpt_x});
 
     (*nevt)(index, FP_TH1_FILL, 1.);
-    (*photon_f_pt)[x{near_sumpt_x, perp_sumpt_x}]->Fill(photon_leading_pt);
+    (*photon_f_pt)[x{near_ntrk_x, perp_ntrk_x,
+                     near_sumpt_x, perp_sumpt_x}]->Fill(photon_leading_pt);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
         if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
@@ -197,14 +198,15 @@ int flatten(char const* config, char const* output) {
     auto mpt = std::make_shared<multival>(dpt);
     auto mdphi = std::make_shared<multival>(ddphi);
     auto mptdphi = std::make_shared<multival>(dpt, ddphi);
-    auto msumpt2 = std::make_shared<multival>(dsumpt, dsumpt);
+    auto mntrk2sumpt2 = std::make_shared<multival>(
+        dntrk, dntrk, dsumpt, dsumpt);
     auto mptntrk2sumpt2 = std::make_shared<multival>(
         dpt, dntrk, dntrk, dsumpt, dsumpt);
 
     auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s,
-        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, msumpt2);
+        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, mntrk2sumpt2);
     auto mix_photon_f_pt = std::make_unique<dhist>("mix_photon_f_pt"s,
-        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, msumpt2);
+        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, mntrk2sumpt2);
 
     auto ntrk = std::make_unique<dhist>("ntrk"s,
         "N^{h^{#pm}}", incl, mdphi);
@@ -376,10 +378,15 @@ int flatten(char const* config, char const* output) {
     auto nevt_d_near_sumpt = nevt_d_np_sumpt->sum(1);
 
     /* photon pt spectra */
-    auto photon_f_pt_d_near_sumpt = photon_f_pt->sum(0);
-    auto photon_f_pt_d_perp_sumpt = photon_f_pt->sum(1);
+    auto photon_f_pt_incl = photon_f_pt->sum(0, 0, 0, 0);
 
-    auto photon_f_pt_incl = photon_f_pt->sum(0, 0);
+    auto photon_f_pt_d_np_ntrk = photon_f_pt->sum(2, 2);
+    auto photon_f_pt_d_perp_ntrk = photon_f_pt_d_np_ntrk->sum(0);
+    auto photon_f_pt_d_near_ntrk = photon_f_pt_d_np_ntrk->sum(1);
+
+    auto photon_f_pt_d_np_sumpt = photon_f_pt->sum(0, 0);
+    auto photon_f_pt_d_perp_sumpt = photon_f_pt_d_np_sumpt->sum(0);
+    auto photon_f_pt_d_near_sumpt = photon_f_pt_d_np_sumpt->sum(1);
 
     /* photon-jet momentum imbalance as function of ntrk */
     auto pjet_f_x_d_np_ntrk = pjet_f_x->sum(0, 2, 2);
@@ -411,25 +418,6 @@ int flatten(char const* config, char const* output) {
     *pjet_f_x_d_perp_sumpt -= *mix_pjet_f_x_d_perp_sumpt;
     *pjet_f_x_d_near_sumpt -= *mix_pjet_f_x_d_near_sumpt;
 
-    /* normalise to number of photons (events) */
-    normalise(nevt_d_perp_ntrk, pjet_f_x_d_perp_ntrk);
-    normalise(nevt_d_perp_ntrk, mix_pjet_f_x_d_perp_ntrk);
-    normalise(nevt_d_near_ntrk, pjet_f_x_d_near_ntrk);
-    normalise(nevt_d_near_ntrk, mix_pjet_f_x_d_near_ntrk);
-    normalise(nevt_d_perp_sumpt, pjet_f_x_d_perp_sumpt);
-    normalise(nevt_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt);
-    normalise(nevt_d_near_sumpt, pjet_f_x_d_near_sumpt);
-    normalise(nevt_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
-
-    /* scale by bin width */
-    scale_bin_width(
-        pjet_f_x_d_perp_ntrk, mix_pjet_f_x_d_perp_ntrk,
-        pjet_f_x_d_near_ntrk, mix_pjet_f_x_d_near_ntrk,
-        pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt,
-        pjet_f_x_d_near_sumpt, mix_pjet_f_x_d_near_sumpt,
-        evt_f_ntrk, evt_f_sumpt,
-        mix_evt_f_ntrk, mix_evt_f_sumpt);
-
     ntrk_f_pt->divide((*photon_f_pt_incl)[0]);
     sumpt_f_pt->divide((*photon_f_pt_incl)[0]);
     mix_ntrk_f_pt->divide((*photon_f_pt_incl)[0]);
@@ -439,6 +427,27 @@ int flatten(char const* config, char const* output) {
     evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
     mix_evt_f_ntrk->divide((*nevt_d_photon_pt), 1);
     mix_evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
+
+    /* normalise to number of photons (events) */
+    normalise(nevt_d_perp_ntrk, photon_f_pt_d_perp_ntrk,
+        pjet_f_x_d_perp_ntrk, mix_pjet_f_x_d_perp_ntrk);
+    normalise(nevt_d_near_ntrk, photon_f_pt_d_near_ntrk,
+        pjet_f_x_d_near_ntrk, mix_pjet_f_x_d_near_ntrk);
+    normalise(nevt_d_perp_sumpt, photon_f_pt_d_perp_sumpt,
+        pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt);
+    normalise(nevt_d_near_sumpt, photon_f_pt_d_near_sumpt,
+        pjet_f_x_d_near_sumpt, mix_pjet_f_x_d_near_sumpt);
+
+    /* scale by bin width */
+    scale_bin_width(
+        photon_f_pt_d_near_ntrk, photon_f_pt_d_perp_ntrk,
+        photon_f_pt_d_near_sumpt, photon_f_pt_d_perp_sumpt,
+        pjet_f_x_d_near_ntrk, mix_pjet_f_x_d_near_ntrk,
+        pjet_f_x_d_perp_ntrk, mix_pjet_f_x_d_perp_ntrk,
+        pjet_f_x_d_near_sumpt, mix_pjet_f_x_d_near_sumpt,
+        pjet_f_x_d_perp_sumpt, mix_pjet_f_x_d_perp_sumpt,
+        evt_f_ntrk, evt_f_sumpt, mix_evt_f_ntrk, mix_evt_f_sumpt,
+        photon_f_pt_incl);
 
     printf("painting..\n");
 
@@ -546,6 +555,24 @@ int flatten(char const* config, char const* output) {
         c5->stack((*mix_evt_f_sumpt)[x{i, 1}], "perp", "mix");
     }
 
+    auto c6 = new paper("c6", hb);
+    apply_default_style(c6, system, 0., 0.12);
+    c6->accessory(sumpt_selection);
+
+    for (int64_t i = 0; i < isumpt->size(); ++i) {
+        c6->add((*photon_f_pt_d_perp_sumpt)[i], "perp");
+        c6->stack((*photon_f_pt_d_near_sumpt)[i], "near");
+    }
+
+    auto c7 = new paper("c7", hb);
+    apply_default_style(c7, system, 0., 0.12);
+    c7->accessory(ntrk_selection);
+
+    for (int64_t i = 0; i < intrk->size(); ++i) {
+        c7->add((*photon_f_pt_d_perp_ntrk)[i], "perp");
+        c7->stack((*photon_f_pt_d_near_ntrk)[i], "near");
+    }
+
     hb->set_binary("type");
     hb->sketch();
 
@@ -554,6 +581,8 @@ int flatten(char const* config, char const* output) {
     c3->draw("pdf");
     c4->draw("pdf");
     c5->draw("pdf");
+    c6->draw("pdf");
+    c7->draw("pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 
