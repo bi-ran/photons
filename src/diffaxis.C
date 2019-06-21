@@ -133,6 +133,12 @@ void scale_bin_width(std::unique_ptr<T>&... args) {
         obj->Scale(1., "width"); }), 0)... };
 }
 
+template <typename... T>
+void normalise_to_unity(std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
+        obj->Scale(1. / obj->Integral(), "width"); }), 0)... };
+}
+
 int diffaxis(char const* config, char const* output) {
     printf("load config options..\n");
 
@@ -180,8 +186,8 @@ int diffaxis(char const* config, char const* output) {
     auto mppt = std::make_shared<multival>(dppt);
     auto mdiff = std::make_shared<multival>(dppt, djpt, dx);
 
-    auto nevt = std::make_unique<dhist>("nevt"s, "", incl, mdiff);
-    auto nmix = std::make_unique<dhist>("nmix"s, "", incl, mdiff);
+    auto nevt = std::make_unique<dhist>("nevt"s, "", incl, mppt);
+    auto nmix = std::make_unique<dhist>("nmix"s, "", incl, mppt);
 
     auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s,
         "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rppt, mincl);
@@ -286,16 +292,16 @@ int diffaxis(char const* config, char const* output) {
         mix_pjet_f_ddr, mix_pjet_f_x);
 
     /* integrate histograms */
-    auto nevt_d_ppt = nevt->sum(1, 1);
-
     auto pjet_es_f_dphi_d_ppt = pjet_es_f_dphi->sum(1, 1);
     auto pjet_wta_f_dphi_d_ppt = pjet_wta_f_dphi->sum(1, 1);
     auto pjet_f_ddr_d_ppt = pjet_f_ddr->sum(1, 1);
+    auto pjet_f_ddr_d_x = pjet_f_ddr->sum(0, 0);
 
     /* mixed events */
     auto mix_pjet_es_f_dphi_d_ppt = mix_pjet_es_f_dphi->sum(1, 1);
     auto mix_pjet_wta_f_dphi_d_ppt = mix_pjet_wta_f_dphi->sum(1, 1);
     auto mix_pjet_f_ddr_d_ppt = mix_pjet_f_ddr->sum(1, 1);
+    auto mix_pjet_f_ddr_d_x = mix_pjet_f_ddr->sum(0, 0);
 
     /* subtract histograms */
     /* *pjet_f_x -= *mix_pjet_f_x; */
@@ -305,24 +311,34 @@ int diffaxis(char const* config, char const* output) {
     /* *pjet_f_ddr_d_ppt -= *mix_pjet_f_ddr_d_ppt; */
 
     /* normalise to number of photons (events) */
-    normalise(
-        nevt_d_ppt,
+    normalise(nevt,
         pjet_es_f_dphi_d_ppt, pjet_wta_f_dphi_d_ppt,
         mix_pjet_es_f_dphi_d_ppt, mix_pjet_wta_f_dphi_d_ppt,
         pjet_f_ddr_d_ppt, mix_pjet_f_ddr_d_ppt,
         pjet_f_x, mix_pjet_f_x);
 
     /* scale by bin width */
-    scale_bin_width(
-        nevt_d_ppt,
-        pjet_f_ddr_d_ppt, mix_pjet_f_ddr_d_ppt,
-        pjet_f_x, mix_pjet_f_x);
+    scale_bin_width(pjet_f_ddr_d_ppt, mix_pjet_f_ddr_d_ppt,
+        pjet_f_ddr_d_x, mix_pjet_f_ddr_d_x, pjet_f_x, mix_pjet_f_x);
+
+    /* normalise to unity */
+    normalise_to_unity(pjet_f_ddr_d_x, mix_pjet_f_ddr_d_x);
 
     printf("painting..\n");
 
     auto photon_pt_selection = [&](int64_t index) {
         auto text = std::to_string((*ippt)[index - 1])
             + " < p_{T}^{#gamma} < "s + std::to_string((*ippt)[index]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, 0.75, text.data());
+    };
+
+    auto x_selection = [&](int64_t index) {
+        auto text = std::to_string((*ix)[index - 1])
+            + " < x^{#gammaj} < "s + std::to_string((*ix)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
@@ -367,12 +383,22 @@ int diffaxis(char const* config, char const* output) {
         c3->stack((*mix_pjet_f_x)[i], "mix");
     }
 
+    auto c4 = new paper("p4", hb);
+    apply_default_style(c4, system, 0., 20.);
+    c4->accessory(x_selection);
+
+    for (int64_t i = 0; i < ix->size() - 1; ++i) {
+        c4->add((*pjet_f_ddr_d_x)[i], "raw");
+        c4->stack((*mix_pjet_f_ddr_d_x)[i], "mix");
+    }
+
     hb->set_binary("type");
     hb->sketch();
 
     c1->draw("pdf");
     c2->draw("pdf");
     c3->draw("pdf");
+    c4->draw("pdf");
 
     /* fout->Write("", TObject::kOverwrite); */
 
