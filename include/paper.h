@@ -77,28 +77,38 @@ class paper {
         using namespace std::literals::string_literals;
 
         if (canvas == nullptr) {
-            split();
+            auto description = _pencil->description();
+
+            layout();
 
             canvas = new TCanvas(("paper_"s + _tag).data(), "",
-                             400 * _cols, 400 * _rows);
+                                 400 * _cols, 400 * _rows);
             canvas->Divide(_cols, _rows);
 
-            int64_t count = static_cast<int64_t>(objects.size());
-            for (int64_t i = 0; i < count; ++i) {
-                canvas->cd(indices[i]);
-                apply(objects[i], _f);
-                apply(objects[i], _g);
-                objects[i]->Draw("same p e");
-                apply(_d);
-
-                for (auto const& a : _a)
-                    apply(a, indices[i]);
+            /* loop pads */
+            for (int64_t i = 1; i <= _size; ++i) {
+                canvas->cd(i);
+                draw_pad(description, i);
             }
-
-            legends();
         }
 
         canvas->SaveAs((_tag + "."s + ext).data());
+    }
+
+    void split(std::string const& ext) const {
+        using namespace std::literals::string_literals;
+
+        auto description = _pencil->description();
+
+        for (int64_t i = 1; i <= _size; ++i) {
+            TCanvas* c = new TCanvas(("tmp_"s + std::to_string(i)).data(), "",
+                                     400, 400);
+
+            draw_pad(description, i);
+
+            c->SaveAs((_tag + "_p"s + std::to_string(i) + "."s + ext).data());
+            c->Delete();
+        }
     }
 
   private:
@@ -114,7 +124,7 @@ class paper {
     template <typename T>
     void apply(std::function<T> f, int64_t index) const { if (f) f(index); }
 
-    void split() {
+    void layout() {
         if (!_cols || !_rows) {
             float rows = std::ceil(std::sqrt(_size));
             float cols = std::ceil(_size / rows);
@@ -128,36 +138,46 @@ class paper {
         }
     }
 
-    void legends() const {
-        if (_pencil == nullptr) { return; }
+    std::vector<TObject*> associated(int64_t index) const {
+        std::vector<TObject*> associates;
+        int64_t count = static_cast<int64_t>(objects.size());
+        for (int64_t j = 0; j < count; ++j)
+            if (indices[j] == index)
+                associates.push_back(objects[j]);
 
-        auto description = _pencil->description();
+        return associates;
+    }
 
-        for (int64_t i = 0; i < _size; ++i) {
-            int64_t index = i + 1;
+    void draw_pad(auto const& description, int64_t index) const {
+        auto associates = associated(index);
+        for (auto const& obj : associates) {
+            apply(obj, _f);
+            apply(obj, _g);
+            obj->Draw("same p e");
+            apply(_d);
 
-            std::vector<TObject*> associates;
-            int64_t count = static_cast<int64_t>(objects.size());
-            for (int64_t j = 0; j < count; ++j)
-                if (indices[j] == index)
-                    associates.push_back(objects[j]);
-
-            auto xy = _l ? _l() : std::array<float, 4>{ 0.5, 0.9, 0.87, 0.04 };
-            xy[3] = xy[2] - associates.size() * xy[3];
-
-            canvas->cd(index);
-
-            TLegend* l = new TLegend(xy[0], xy[3], xy[1], xy[2]);
-            apply(l, _s);
-
-            for (auto const& obj : associates) {
-                auto desc = description.find(obj) != std::end(description) ?
-                    description[obj] : std::string(obj->GetName());
-                l->AddEntry(obj, desc.data(), "pl");
-            }
-
-            l->Draw();
+            for (auto const& a : _a)
+                apply(a, index);
         }
+
+        draw_legend(description, associates);
+    }
+
+    void draw_legend(auto const& description, auto const& associates) const {
+        auto xy = _l ? _l() : std::array<float, 4>{ 0.5, 0.9, 0.87, 0.04 };
+        xy[3] = xy[2] - associates.size() * xy[3];
+
+        TLegend* l = new TLegend(xy[0], xy[3], xy[1], xy[2]);
+        apply(l, _s);
+
+        for (auto const& obj : associates) {
+            auto it = description.find(obj);
+            auto desc = it != std::end(description) ? it->second
+                : std::string(obj->GetName());
+            l->AddEntry(obj, desc.data(), "pl");
+        }
+
+        l->Draw();
     }
 
     std::string const _tag;
