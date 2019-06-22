@@ -425,10 +425,10 @@ int flatten(char const* config, char const* output) {
     mix_ntrk_f_pt->divide((*photon_f_pt_incl)[0]);
     mix_sumpt_f_pt->divide((*photon_f_pt_incl)[0]);
 
-    evt_f_ntrk->divide((*nevt_d_photon_pt), 1);
-    evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
-    mix_evt_f_ntrk->divide((*nevt_d_photon_pt), 1);
-    mix_evt_f_sumpt->divide((*nevt_d_photon_pt), 1);
+    evt_f_ntrk->divide((*nevt_d_photon_pt), x{1});
+    evt_f_sumpt->divide((*nevt_d_photon_pt), x{1});
+    mix_evt_f_ntrk->divide((*nevt_d_photon_pt), x{1});
+    mix_evt_f_sumpt->divide((*nevt_d_photon_pt), x{1});
 
     /* normalise to number of photons (events) */
     normalise(nevt_d_perp_ntrk, photon_f_pt_d_perp_ntrk,
