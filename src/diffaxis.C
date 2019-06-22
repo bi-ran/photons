@@ -8,19 +8,20 @@
 #include <string>
 #include <vector>
 
-#include "../include/differential_histograms.h"
-#include "../include/integral_angles.h"
-#include "../include/interval.h"
-#include "../include/multival.h"
-
-#include "../include/lambdas.h"
-
 #include "../include/pjtree.h"
+
+#include "../include/integral_angles.h"
 
 #include "../git/config/include/configurer.h"
 
+#include "../git/history/include/interval.h"
+#include "../git/history/include/multival.h"
+#include "../git/history/include/history.h"
+
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
+
+#include "../include/lambdas.h"
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 #define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill
@@ -30,8 +31,6 @@
 
 using namespace std::literals::string_literals;
 using namespace std::placeholders;
-
-using dhist = differential_histograms;
 
 int64_t leading_track_index(pjtree* pjt, float jet_eta, int64_t jet_phi) {
     int64_t index = -1;
@@ -69,11 +68,11 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_leading_pt, int64_t photon_phi,
                int64_t photon_pt_x,
                std::shared_ptr<multival>& mdiff,
-               std::unique_ptr<differential_histograms>& nevt,
-               std::unique_ptr<differential_histograms>& pjet_f_x,
-               std::unique_ptr<differential_histograms>& pjet_es_f_dphi,
-               std::unique_ptr<differential_histograms>& pjet_wta_f_dphi,
-               std::unique_ptr<differential_histograms>& pjet_f_ddr) {
+               std::unique_ptr<history>& nevt,
+               std::unique_ptr<history>& pjet_f_x,
+               std::unique_ptr<history>& pjet_es_f_dphi,
+               std::unique_ptr<history>& pjet_wta_f_dphi,
+               std::unique_ptr<history>& pjet_f_ddr) {
     (*nevt)[photon_pt_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
@@ -117,7 +116,7 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
 }
 
 template <typename... T>
-void normalise(std::unique_ptr<differential_histograms>& norm,
+void normalise(std::unique_ptr<history>& norm,
                std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->divide(*norm), 0)... };
 }
@@ -186,29 +185,29 @@ int diffaxis(char const* config, char const* output) {
     auto mppt = std::make_shared<multival>(dppt);
     auto mdiff = std::make_shared<multival>(dppt, djpt, dx);
 
-    auto nevt = std::make_unique<dhist>("nevt"s, "", incl, mppt);
-    auto nmix = std::make_unique<dhist>("nmix"s, "", incl, mppt);
+    auto nevt = std::make_unique<history>("nevt"s, "", incl, mppt);
+    auto nmix = std::make_unique<history>("nmix"s, "", incl, mppt);
 
-    auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s,
+    auto photon_f_pt = std::make_unique<history>("photon_f_pt"s,
         "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rppt, mincl);
 
-    auto pjet_f_x = std::make_unique<dhist>("pjet_f_x"s,
+    auto pjet_f_x = std::make_unique<history>("pjet_f_x"s,
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mppt);
-    auto mix_pjet_f_x = std::make_unique<dhist>("mix_pjet_f_x"s,
+    auto mix_pjet_f_x = std::make_unique<history>("mix_pjet_f_x"s,
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mppt);
 
-    auto pjet_es_f_dphi = std::make_unique<dhist>("pjet_es_f_dphi"s,
+    auto pjet_es_f_dphi = std::make_unique<history>("pjet_es_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mdiff);
-    auto pjet_wta_f_dphi = std::make_unique<dhist>("pjet_wta_f_dphi"s,
+    auto pjet_wta_f_dphi = std::make_unique<history>("pjet_wta_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mdiff);
-    auto pjet_f_ddr = std::make_unique<dhist>("pjet_f_ddr"s,
+    auto pjet_f_ddr = std::make_unique<history>("pjet_f_ddr"s,
         "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mdiff);
 
-    auto mix_pjet_es_f_dphi = std::make_unique<dhist>("mix_pjet_es_f_dphi"s,
+    auto mix_pjet_es_f_dphi = std::make_unique<history>("mix_pjet_es_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mdiff);
-    auto mix_pjet_wta_f_dphi = std::make_unique<dhist>("mix_pjet_wta_f_dphi"s,
+    auto mix_pjet_wta_f_dphi = std::make_unique<history>("mix_pjet_wta_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mdiff);
-    auto mix_pjet_f_ddr = std::make_unique<dhist>("mix_pjet_f_ddr",
+    auto mix_pjet_f_ddr = std::make_unique<history>("mix_pjet_f_ddr",
         "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mdiff);
 
     printf("iterate..\n");

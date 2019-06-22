@@ -4,3 +4,6 @@
 [submodule "git/paper-and-pencil"]
 	path = git/paper-and-pencil
 	url = git@github.com:bi-ran/paper-and-pencil.git
+[submodule "git/history"]
+	path = git/history
+	url = git@github.com:bi-ran/history.git

@@ -8,19 +8,20 @@
 #include <string>
 #include <vector>
 
-#include "../include/differential_histograms.h"
-#include "../include/integral_angles.h"
-#include "../include/interval.h"
-#include "../include/multival.h"
-
-#include "../include/lambdas.h"
-
 #include "../include/pjtree.h"
+
+#include "../include/integral_angles.h"
 
 #include "../git/config/include/configurer.h"
 
+#include "../git/history/include/interval.h"
+#include "../git/history/include/multival.h"
+#include "../git/history/include/history.h"
+
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
+
+#include "../include/lambdas.h"
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 #define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill
@@ -31,20 +32,21 @@
 using namespace std::literals::string_literals;
 using namespace std::placeholders;
 
-using dhist = differential_histograms;
+using x = std::initializer_list<int64_t>;
+using v = std::initializer_list<double>;
 
 void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
                  double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
                  std::shared_ptr<interval>& idphi,
                  std::shared_ptr<multival>& mdphi,
-                 std::unique_ptr<differential_histograms>& ntrk,
-                 std::unique_ptr<differential_histograms>& sumpt,
-                 std::unique_ptr<differential_histograms>& ntrk_f_pt,
-                 std::unique_ptr<differential_histograms>& sumpt_f_pt,
-                 std::unique_ptr<differential_histograms>& trk_f_dphi,
-                 std::unique_ptr<differential_histograms>& trk_f_pt,
-                 std::unique_ptr<differential_histograms>& evt_f_ntrk,
-                 std::unique_ptr<differential_histograms>& evt_f_sumpt) {
+                 std::unique_ptr<history>& ntrk,
+                 std::unique_ptr<history>& sumpt,
+                 std::unique_ptr<history>& ntrk_f_pt,
+                 std::unique_ptr<history>& sumpt_f_pt,
+                 std::unique_ptr<history>& trk_f_dphi,
+                 std::unique_ptr<history>& trk_f_pt,
+                 std::unique_ptr<history>& evt_f_ntrk,
+                 std::unique_ptr<history>& evt_f_sumpt) {
     for (int64_t j = 0; j < pjt->nTrk; ++j) {
         if ((*pjt->trkPt)[j] < trk_pt_min) { continue; }
         if (std::abs((*pjt->trkEta)[j]) > trk_eta_abs) { continue; }
@@ -87,15 +89,15 @@ void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
 
 void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_leading_pt, int64_t photon_phi, int64_t photon_pt_x,
-               std::unique_ptr<differential_histograms>& ntrk,
-               std::unique_ptr<differential_histograms>& sumpt,
+               std::unique_ptr<history>& ntrk,
+               std::unique_ptr<history>& sumpt,
                std::shared_ptr<interval>& intrk,
                std::shared_ptr<interval>& isumpt,
-               std::unique_ptr<differential_histograms>& nevt,
-               std::unique_ptr<differential_histograms>& photon_f_pt,
-               std::unique_ptr<differential_histograms>& pjet_f_dphi,
-               std::unique_ptr<differential_histograms>& pjet_f_jetpt,
-               std::unique_ptr<differential_histograms>& pjet_f_x) {
+               std::unique_ptr<history>& nevt,
+               std::unique_ptr<history>& photon_f_pt,
+               std::unique_ptr<history>& pjet_f_dphi,
+               std::unique_ptr<history>& pjet_f_jetpt,
+               std::unique_ptr<history>& pjet_f_x) {
     int64_t near_ntrk_x = intrk->index_for((*ntrk)(0, FP_TH1_GETBC, 1));
     int64_t perp_ntrk_x = intrk->index_for((*ntrk)(1, FP_TH1_GETBC, 1));
 
@@ -129,7 +131,7 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
 }
 
 template <typename... T>
-void normalise(std::unique_ptr<differential_histograms>& norm,
+void normalise(std::unique_ptr<history>& norm,
                std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->divide(*norm), 0)... };
 }
@@ -203,64 +205,64 @@ int flatten(char const* config, char const* output) {
     auto mptntrk2sumpt2 = std::make_shared<multival>(
         dpt, dntrk, dntrk, dsumpt, dsumpt);
 
-    auto photon_f_pt = std::make_unique<dhist>("photon_f_pt"s,
+    auto photon_f_pt = std::make_unique<history>("photon_f_pt"s,
         "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, mntrk2sumpt2);
-    auto mix_photon_f_pt = std::make_unique<dhist>("mix_photon_f_pt"s,
+    auto mix_photon_f_pt = std::make_unique<history>("mix_photon_f_pt"s,
         "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rpt, mntrk2sumpt2);
 
-    auto ntrk = std::make_unique<dhist>("ntrk"s,
+    auto ntrk = std::make_unique<history>("ntrk"s,
         "N^{h^{#pm}}", incl, mdphi);
-    auto sumpt = std::make_unique<dhist>("sumpt"s,
+    auto sumpt = std::make_unique<history>("sumpt"s,
         "#sump_{T}^{h^{#pm}}", incl, mdphi);
-    auto mix_ntrk = std::make_unique<dhist>("mix_ntrk"s,
+    auto mix_ntrk = std::make_unique<history>("mix_ntrk"s,
         "N^{h^{#pm}}", incl, mdphi);
-    auto mix_sumpt = std::make_unique<dhist>("mix_sumpt"s,
+    auto mix_sumpt = std::make_unique<history>("mix_sumpt"s,
         "#sump_{T}^{h^{#pm}}", incl, mdphi);
 
-    auto ntrk_f_pt = std::make_unique<dhist>("ntrk_f_pt"s,
+    auto ntrk_f_pt = std::make_unique<history>("ntrk_f_pt"s,
         "dN^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
-    auto sumpt_f_pt = std::make_unique<dhist>("sumpt_f_pt"s,
+    auto sumpt_f_pt = std::make_unique<history>("sumpt_f_pt"s,
         "d#Sigmap_{T}^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
-    auto mix_ntrk_f_pt = std::make_unique<dhist>("mix_ntrk_f_pt"s,
+    auto mix_ntrk_f_pt = std::make_unique<history>("mix_ntrk_f_pt"s,
         "dN^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
-    auto mix_sumpt_f_pt = std::make_unique<dhist>("mix_sumpt_f_pt"s,
+    auto mix_sumpt_f_pt = std::make_unique<history>("mix_sumpt_f_pt"s,
         "d#Sigmap_{T}^{h^{#pm}}/d#etad#phi", "p_{T}^{#gamma}", rpt, mdphi);
 
-    auto evt_f_ntrk = std::make_unique<dhist>("evt_f_ntrk"s,
+    auto evt_f_ntrk = std::make_unique<history>("evt_f_ntrk"s,
         "dN/dN_{h^{#pm}}", "N^{h^{#pm}}", rntrk, mptdphi);
-    auto evt_f_sumpt = std::make_unique<dhist>("evt_f_sumpt"s,
+    auto evt_f_sumpt = std::make_unique<history>("evt_f_sumpt"s,
         "dN/d#Sigmap_{T}^{h^{#pm}}", "#Sigmap_{T}^{h^{#pm}}", rsumpt, mptdphi);
-    auto mix_evt_f_ntrk = std::make_unique<dhist>("mix_evt_f_ntrk"s,
+    auto mix_evt_f_ntrk = std::make_unique<history>("mix_evt_f_ntrk"s,
         "dN/dN_{h^{#pm}}", "N^{h^{#pm}}", rntrk, mptdphi);
-    auto mix_evt_f_sumpt = std::make_unique<dhist>("mix_evt_f_sumpt"s,
+    auto mix_evt_f_sumpt = std::make_unique<history>("mix_evt_f_sumpt"s,
         "dN/d#Sigmap_{T}^{h^{#pm}}", "#Sigmap_{T}^{h^{#pm}}", rsumpt, mptdphi);
 
-    auto trk_f_dphi = std::make_unique<dhist>("trk_f_dphi"s,
+    auto trk_f_dphi = std::make_unique<history>("trk_f_dphi"s,
         "dN/d#Delta#phi^{#gammah}", "#Delta#phi^{#gammah}", rdphi, mpt);
-    auto trk_f_pt = std::make_unique<dhist>("trk_f_pt"s,
+    auto trk_f_pt = std::make_unique<history>("trk_f_pt"s,
         "dN/dp_{T}^{h^{#pm}}", "p_{T}^{h^{#pm}}", rtrkpt, mptdphi);
-    auto mix_trk_f_dphi = std::make_unique<dhist>("mix_trk_f_dphi"s,
+    auto mix_trk_f_dphi = std::make_unique<history>("mix_trk_f_dphi"s,
         "dN/d#Delta#phi^{#gammah}", "#Delta#phi^{#gammah}", rdphi, mpt);
-    auto mix_trk_f_pt = std::make_unique<dhist>("mix_trk_f_pt"s,
+    auto mix_trk_f_pt = std::make_unique<history>("mix_trk_f_pt"s,
         "dN/dp_{T}^{h^{#pm}}", "p_{T}^{h^{#pm}}", rtrkpt, mptdphi);
 
-    auto nevt = std::make_unique<dhist>("nevt"s, "", incl, mptntrk2sumpt2);
-    auto nmix = std::make_unique<dhist>("nmix"s, "", incl, mptntrk2sumpt2);
+    auto nevt = std::make_unique<history>("nevt"s, "", incl, mptntrk2sumpt2);
+    auto nmix = std::make_unique<history>("nmix"s, "", incl, mptntrk2sumpt2);
 
-    auto pjet_f_dphi = std::make_unique<dhist>("pjet_f_dphi"s,
+    auto pjet_f_dphi = std::make_unique<history>("pjet_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}",
         rdphi, mptntrk2sumpt2);
-    auto pjet_f_jetpt = std::make_unique<dhist>("pjet_f_jetpt"s,
+    auto pjet_f_jetpt = std::make_unique<history>("pjet_f_jetpt"s,
         "dN/dp_{T}^{j}", "p_{T}^{j}", rpt, mptntrk2sumpt2);
-    auto pjet_f_x = std::make_unique<dhist>("pjet_f_x"s,
+    auto pjet_f_x = std::make_unique<history>("pjet_f_x"s,
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mptntrk2sumpt2);
 
-    auto mix_pjet_f_dphi = std::make_unique<dhist>("mix_pjet_f_dphi"s,
+    auto mix_pjet_f_dphi = std::make_unique<history>("mix_pjet_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}",
         rdphi, mptntrk2sumpt2);
-    auto mix_pjet_f_jetpt = std::make_unique<dhist>("mix_pjet_f_jetpt"s,
+    auto mix_pjet_f_jetpt = std::make_unique<history>("mix_pjet_f_jetpt"s,
         "dN/dp_{T}^{j}", "p_{T}^{j}", rpt, mptntrk2sumpt2);
-    auto mix_pjet_f_x = std::make_unique<dhist>("mix_pjet_f_x"s,
+    auto mix_pjet_f_x = std::make_unique<history>("mix_pjet_f_x"s,
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mptntrk2sumpt2);
 
     printf("iterate..\n");
