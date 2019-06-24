@@ -8,10 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "../include/pjtree.h"
-
-#include "../include/integral_angles.h"
-
 #include "../git/config/include/configurer.h"
 
 #include "../git/history/include/interval.h"
@@ -21,7 +17,10 @@
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
 
+#include "../git/tricks-and-treats/include/overflow_angles.h"
+
 #include "../include/lambdas.h"
+#include "../include/pjtree.h"
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 #define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill
@@ -58,7 +57,7 @@ void fill_tracks(pjtree* pjt, float trk_pt_min, float trk_eta_abs,
         if ((*pjt->trkDz1)[j] / (*pjt->trkDzError1)[j] > 3.) { continue; }
 
         double trk_pt = (*pjt->trkPt)[j];
-        auto trk_phi = convert_radians((*pjt->trkPhi)[j]);
+        auto trk_phi = convert_radian((*pjt->trkPhi)[j]);
         auto photon_trk_dphi = std::abs(photon_phi - trk_phi);
         int64_t dphi_x = idphi->index_for(photon_trk_dphi);
 
@@ -115,7 +114,7 @@ void fill_jets(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
         if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
 
-        auto jet_phi = convert_radians((*pjt->jtphi)[j]);
+        auto jet_phi = convert_radian((*pjt->jtphi)[j]);
         auto photon_jet_dphi = std::abs(photon_phi - jet_phi);
 
         (*pjet_f_dphi)(index, FP_TH1_FILL, static_cast<double>(photon_jet_dphi));
@@ -181,8 +180,8 @@ int flatten(char const* config, char const* output) {
     auto events_to_mix = conf->get<int64_t>("events_to_mix");
 
     /* convert to integral angle units (cast to double) */
-    for (auto& i : rdphi) { i = convert_pis(i); }
-    for (auto& i : ddphi) { i = convert_degrees(i); }
+    convert_in_place_pi(rdphi);
+    convert_in_place_degree(ddphi);
 
     /* default values for config options */
     freq = freq ? freq : 10000;
@@ -315,7 +314,7 @@ int flatten(char const* config, char const* output) {
         int64_t photon_pt_x = ipt->index_for(photon_leading_pt);
 
         /* set (phi) axis of leading photon */
-        auto photon_phi = convert_radians((*pjt->phoPhi)[photon_leading]);
+        auto photon_phi = convert_radian((*pjt->phoPhi)[photon_leading]);
 
         /* clear counts (sums) */
         for (int64_t j = 0; j < mdphi->size(); ++j) {

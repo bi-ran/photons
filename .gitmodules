@@ -10,3 +10,6 @@
 [submodule "git/foliage"]
 	path = git/foliage
 	url = git@github.com:bi-ran/foliage.git
+[submodule "git/tricks-and-treats"]
+	path = git/tricks-and-treats
+	url = git@github.com:bi-ran/tricks-and-treats.git

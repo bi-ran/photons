@@ -8,10 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "../include/pjtree.h"
-
-#include "../include/integral_angles.h"
-
 #include "../git/config/include/configurer.h"
 
 #include "../git/history/include/interval.h"
@@ -21,7 +17,10 @@
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
 
+#include "../git/tricks-and-treats/include/overflow_angles.h"
+
 #include "../include/lambdas.h"
+#include "../include/pjtree.h"
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 #define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill
@@ -49,10 +48,10 @@ int64_t leading_track_index(pjtree* pjt, float jet_eta, int64_t jet_phi) {
         if ((*pjt->trkDxy1)[j] / (*pjt->trkDxyError1)[j] > 3.) { continue; }
         if ((*pjt->trkDz1)[j] / (*pjt->trkDzError1)[j] > 3.) { continue; }
 
-        auto track_phi = convert_radians((*pjt->trkPhi)[j]);
+        auto track_phi = convert_radian((*pjt->trkPhi)[j]);
 
         float deta = jet_eta - track_eta;
-        float dphi = revert_radians(jet_phi - track_phi);
+        float dphi = revert_radian(jet_phi - track_phi);
         float dr2 = deta * deta + dphi * dphi;
 
         if (track_pt > max_track_pt && dr2 < 0.16) {
@@ -80,7 +79,7 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
 
         auto jet_eta = (*pjt->jteta)[j];
-        auto jet_phi = convert_radians((*pjt->jtphi)[j]);
+        auto jet_phi = convert_radian((*pjt->jtphi)[j]);
 
         /* find leading track */
         auto track_index = leading_track_index(pjt, jet_eta, jet_phi);
@@ -88,7 +87,7 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         if (track_index < 0) { return; }
 
         auto track_eta = (*pjt->trkEta)[track_index];
-        auto track_phi = convert_radians((*pjt->trkPhi)[track_index]);
+        auto track_phi = convert_radian((*pjt->trkPhi)[track_index]);
 
         double jet_pt = (*pjt->jtpt)[j];
         double pjet_x = jet_pt / photon_leading_pt;
@@ -108,7 +107,7 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         (*pjet_f_x)[photon_pt_x]->Fill(pjet_x);
 
         double jt_deta = jet_eta - track_eta;
-        double jt_dphi = revert_radians(jet_phi - track_phi);
+        double jt_dphi = revert_radian(jet_phi - track_phi);
         double jt_dr = jt_deta * jt_deta + jt_dphi * jt_dphi;
 
         (*pjet_f_ddr)[index]->Fill(std::sqrt(jt_dr));
@@ -168,7 +167,7 @@ int diffaxis(char const* config, char const* output) {
     auto events_to_mix = conf->get<int64_t>("events_to_mix");
 
     /* convert to integral angle units (cast to double) */
-    for (auto& i : rdphi) { i = convert_pis(i); }
+    convert_in_place_pi(rdphi);
 
     /* default values for config options */
     freq = freq ? freq : 10000;
@@ -262,7 +261,7 @@ int diffaxis(char const* config, char const* output) {
         (*photon_f_pt)(0, FP_TH1_FILL, photon_leading_pt);
 
         /* set (phi) axis of leading photon */
-        auto photon_phi = convert_radians((*pjt->phoPhi)[photon_leading]);
+        auto photon_phi = convert_radian((*pjt->phoPhi)[photon_leading]);
 
         fill_axes(pjt, jet_pt_min, jet_eta_abs,
                   photon_leading_pt, photon_phi,
