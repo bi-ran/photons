@@ -7,3 +7,6 @@
 [submodule "git/history"]
 	path = git/history
 	url = git@github.com:bi-ran/history.git
+[submodule "git/foliage"]
+	path = git/foliage
+	url = git@github.com:bi-ran/foliage.git

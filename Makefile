@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS  += -O2 -Wall -Werror -Wextra
 RCXXFLAGS := `root-config --cflags --libs`
 LDFLAGS   += -lconf -L./git/config/lib -lpp -L./git/paper-and-pencil/lib \
-	     -lhist -L./git/history/lib
+	     -lhist -L./git/history/lib -lfoliage -L./git/foliage/lib
 RLDFLAGS  := -lEG
 
 BINDIR = ./bin
