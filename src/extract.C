@@ -22,6 +22,8 @@ int extract(char const* config, char const* output) {
     auto files = conf->get<std::vector<std::string>>("files");
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
+    auto hlt_branches = conf->get<bool>("hlt_branches");
+    auto paths = conf->get<std::vector<std::string>>("paths");
 
     auto array_size = conf->get<int64_t>("array_size");
     if (!array_size) { array_size = 2000; }
@@ -30,18 +32,20 @@ int extract(char const* config, char const* output) {
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
     auto chain_jet = forest->attach("ak4PFJetAnalyzer/t", true);
     auto chain_trk = forest->attach("ppTrack/trackTree", true);
+    auto chain_hlt = forest->attach("hltanalysis/HltTree", hlt_branches);
 
     (*forest)();
 
     auto tree_eg = new photons(chain_eg, mc_branches);
     auto tree_jet = new jets(chain_jet, mc_branches, array_size);
     auto tree_trk = new tracks(chain_trk, array_size);
+    auto tree_hlt = new triggers(chain_hlt, paths);
 
     TTree::SetMaxTreeSize(1000000000000LL);
 
     TFile* fout = new TFile(output, "recreate");
     TTree* tout = new TTree("pj", "photon-jet");
-    auto tree_pj = new pjtree(tout, mc_branches);
+    auto tree_pj = new pjtree(tout, mc_branches, hlt_branches);
 
     int64_t nentries = forest->count();
     if (max_entries) nentries = std::min(nentries, max_entries);
@@ -56,6 +60,7 @@ int extract(char const* config, char const* output) {
         tree_pj->copy(tree_eg);
         tree_pj->copy(tree_jet);
         tree_pj->copy(tree_trk);
+        tree_pj->copy(tree_hlt);
 
         tout->Fill();
     }
