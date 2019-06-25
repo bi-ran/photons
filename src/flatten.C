@@ -453,39 +453,44 @@ int flatten(char const* config, char const* output) {
     printf("painting..\n");
 
     auto ntrk_selection = [&](int64_t index) {
-        auto text = "N^{h^{#pm}}"s;
+        char buffer[128] = { '\0' };
         if (index != 1)
-            text = std::to_string((*intrk)[index - 1]) + " < "s + text;
+            sprintf(buffer, "%.0f < ", (*intrk)[index - 1]);
+        strcat(buffer, "N^{h^{#pm}}");
+        auto len = strlen(buffer);
         if (index != intrk->size())
-            text = text + " < "s + std::to_string((*intrk)[index]);
+            sprintf(buffer + len, " < %.0f", (*intrk)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, text.data());
+        l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
     auto sumpt_selection = [&](int64_t index) {
-        auto text = "#Sigmap_{T}^{h^{#pm}}"s;
+        char buffer[128] = { '\0' };
         if (index != 1)
-            text = std::to_string((*isumpt)[index - 1]) + " < "s + text;
+            sprintf(buffer, "%.1f < ", (*isumpt)[index - 1]);
+        strcat(buffer, "#Sigmap_{T}^{h^{#pm}}");
+        auto len = strlen(buffer);
         if (index != isumpt->size())
-            text = text + " < "s + std::to_string((*isumpt)[index]);
+            sprintf(buffer + len, " < %.1f", (*isumpt)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, text.data());
+        l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
     auto photon_pt_selection = [&](int64_t index) {
-        auto text = std::to_string((*ipt)[index - 1]) + " < p_{T}^{#gamma} < "s
-            + std::to_string((*ipt)[index]);
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
+            (*ipt)[index - 1], (*ipt)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, text.data());
+        l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
     auto hb = new pencil();

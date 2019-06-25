@@ -325,23 +325,25 @@ int diffaxis(char const* config, char const* output) {
     printf("painting..\n");
 
     auto photon_pt_selection = [&](int64_t index) {
-        auto text = std::to_string((*ippt)[index - 1])
-            + " < p_{T}^{#gamma} < "s + std::to_string((*ippt)[index]);
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
+            (*ijpt)[index - 1], (*ijpt)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, text.data());
+        l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
     auto x_selection = [&](int64_t index) {
-        auto text = std::to_string((*ix)[index - 1])
-            + " < x^{#gammaj} < "s + std::to_string((*ix)[index]);
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%.1f < x^{#gammaj} < %.1f",
+            (*ix)[index - 1], (*ix)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, text.data());
+        l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
     auto hb = new pencil();
