@@ -25,11 +25,11 @@ auto default_decorator = [](std::string const& system) {
     cms->SetTextAlign(13);
     cms->DrawLatexNDC(0.135, 0.87, "CMS");
 
-    TLatex* prelim = new TLatex();
-    prelim->SetTextFont(52);
-    prelim->SetTextSize(0.032);
-    prelim->SetTextAlign(13);
-    prelim->DrawLatexNDC(0.135, 0.83, "Preliminary");
+    TLatex* lwip = new TLatex();
+    lwip->SetTextFont(52);
+    lwip->SetTextSize(0.032);
+    lwip->SetTextAlign(13);
+    lwip->DrawLatexNDC(0.135, 0.83, "Work-in-progress");
 
     TLatex* info = new TLatex();
     info->SetTextFont(42);
