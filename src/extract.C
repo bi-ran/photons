@@ -24,12 +24,8 @@ int extract(char const* config, char const* output) {
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
     auto paths = conf->get<std::vector<std::string>>("paths");
-
     auto jet_algo = conf->get<std::string>("jet_algo");
-    if (jet_algo.empty()) { jet_algo = "ak4PFJetAnalyzer"; }
-
     auto array_size = conf->get<int64_t>("array_size");
-    if (!array_size) { array_size = 2000; }
 
     auto forest = new train(files);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
