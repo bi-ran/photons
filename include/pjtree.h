@@ -37,11 +37,6 @@
     ACTION(sv<float>,       trkDxyError1,               ## __VA_ARGS__)     \
     ACTION(sv<float>,       trkDz1,                     ## __VA_ARGS__)     \
     ACTION(sv<float>,       trkDzError1,                ## __VA_ARGS__)     \
-    ACTION(sv<bool>,        trkFake,                    ## __VA_ARGS__)     \
-    ACTION(sv<int32_t>,     pfType,                     ## __VA_ARGS__)     \
-    ACTION(sv<float>,       pfCandPt,                   ## __VA_ARGS__)     \
-    ACTION(sv<float>,       pfEcal,                     ## __VA_ARGS__)     \
-    ACTION(sv<float>,       pfHcal,                     ## __VA_ARGS__)     \
 
 #define B_VEC_TRG(ACTION, ...)                                              \
     ACTION(sv<int32_t>,     accepts,                    ## __VA_ARGS__)     \
