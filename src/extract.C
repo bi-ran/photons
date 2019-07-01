@@ -24,8 +24,15 @@ int extract(char const* config, char const* output) {
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
     auto paths = conf->get<std::vector<std::string>>("paths");
+    auto skim = conf->get<std::vector<std::string>>("skim");
     auto jet_algo = conf->get<std::string>("jet_algo");
     auto array_size = conf->get<int64_t>("array_size");
+
+    std::unordered_map<std::string, int64_t> path_map;
+
+    int64_t index = 0;
+    for (auto const& path : paths)
+        path_map[path] = index++;
 
     auto forest = new train(files);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
@@ -52,9 +59,20 @@ int extract(char const* config, char const* output) {
         tree_pj->clear();
 
         if (i % 10000 == 0)
-            printf("entry: %li\n", i);
+            printf("entry: %li/%li\n", i, nentries);
 
         forest->get(i);
+
+        if (!skim.empty()) {
+            if (tree_eg->nPho < 1) { continue; }
+
+            bool pass_skim = false;
+            for (auto const& path : skim)
+                if (tree_hlt->accepts[path_map[path]])
+                    pass_skim = true;
+
+            if (!pass_skim) { continue; }
+        }
 
         tree_pj->copy(tree_eg);
         tree_pj->copy(tree_jet);
