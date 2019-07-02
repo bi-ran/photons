@@ -13,6 +13,7 @@
 #include "../git/foliage/include/jets.h"
 #include "../git/foliage/include/photons.h"
 #include "../git/foliage/include/tracks.h"
+#include "../git/foliage/include/triggers.h"
 
 #include "../git/tricks-and-treats/include/train.h"
 
@@ -27,12 +28,6 @@ int extract(char const* config, char const* output) {
     auto skim = conf->get<std::vector<std::string>>("skim");
     auto jet_algo = conf->get<std::string>("jet_algo");
     auto array_size = conf->get<int64_t>("array_size");
-
-    std::unordered_map<std::string, int64_t> path_map;
-
-    int64_t index = 0;
-    for (auto const& path : paths)
-        path_map[path] = index++;
 
     auto forest = new train(files);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
@@ -68,7 +63,7 @@ int extract(char const* config, char const* output) {
 
             bool pass_skim = false;
             for (auto const& path : skim)
-                if (tree_hlt->accepts[path_map[path]])
+                if (tree_hlt->accept(path) == 1)
                     pass_skim = true;
 
             if (!pass_skim) { continue; }
