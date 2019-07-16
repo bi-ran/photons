@@ -189,7 +189,7 @@ int flatten(char const* config, char const* output) {
 
     printf("prepare histograms..\n");
 
-    auto incl = std::make_shared<interval>(0.f, 9999.f);
+    auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
     auto ipt = std::make_shared<interval>(dpt);
     auto idphi = std::make_shared<interval>(ddphi);
     auto intrk = std::make_shared<interval>(dntrk);

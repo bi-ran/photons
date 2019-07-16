@@ -175,7 +175,7 @@ int diffaxis(char const* config, char const* output) {
 
     printf("prepare histograms..\n");
 
-    auto incl = std::make_shared<interval>(0.f, 9999.f);
+    auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
     auto ippt = std::make_shared<interval>(dppt);
     auto ijpt = std::make_shared<interval>(djpt);
     auto ix = std::make_shared<interval>(dx);
