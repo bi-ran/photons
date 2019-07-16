@@ -43,6 +43,9 @@
 #define B_VEC_TRG(ACTION, ...)                                              \
     ACTION(sv<int32_t>,     accepts,                    ## __VA_ARGS__)     \
 
+#define B_VAL_EXT(ACTION, ...)                                              \
+    ACTION(float,           weight,                     ## __VA_ARGS__)     \
+
 class pjtree {
   public:
     pjtree(TTree* t, bool gen, bool hlt)
@@ -67,6 +70,8 @@ class pjtree {
         if (_hlt) {
             B_VEC_TRG(ALLOCOBJ)
         }
+
+        B_VAL_EXT(SETMONE)
 
         branch(t);
     }
@@ -96,6 +101,8 @@ class pjtree {
         if (_hlt) {
             B_VEC_TRG(SETZERO)
         }
+
+        B_VAL_EXT(SETZERO)
 
         read(t);
     }
@@ -171,6 +178,7 @@ class pjtree {
     B_VEC_PHO_GEN(DECLPTR)
     B_VAL_JET_GEN(DECLVAL)
     B_VEC_JET_GEN(DECLPTR)
+    B_VAL_EXT(DECLVAL)
     B_VEC_TRG(DECLPTR)
 
   private:
@@ -194,6 +202,8 @@ class pjtree {
         if (_hlt) {
             B_VEC_TRG(BRANCHPTR, t)
         }
+
+        B_VAL_EXT(BRANCHVAL, t)
     }
 
     void read(TTree* t) {
@@ -216,6 +226,8 @@ class pjtree {
         if (_hlt) {
             B_VEC_TRG(SETVALADDR, t)
         }
+
+        B_VAL_EXT(SETVALADDR, t)
     }
 
     bool _gen;

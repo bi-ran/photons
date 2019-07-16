@@ -77,6 +77,8 @@ int extract(char const* config, char const* output) {
         tree_pj->copy(tree_trk);
         tree_pj->copy(tree_hlt);
 
+        tree_pj->weight = mc_branches ? tree_pj->Ncoll : 1.f;
+
         tout->Fill();
     }
 
