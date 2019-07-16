@@ -21,6 +21,7 @@ int extract(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto files = conf->get<std::vector<std::string>>("files");
+    auto centrality = conf->get<bool>("centrality");
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
@@ -76,6 +77,11 @@ int extract(char const* config, char const* output) {
         tree_pj->copy(tree_jet);
         tree_pj->copy(tree_trk);
         tree_pj->copy(tree_hlt);
+
+        if (!centrality) {
+            tree_pj->hiBin = 0;
+            tree_pj->hiHF = 0;
+        }
 
         tree_pj->weight = mc_branches ? tree_pj->Ncoll : 1.f;
 
