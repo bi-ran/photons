@@ -1,21 +1,19 @@
-#include "TFile.h"
-#include "TChain.h"
-#include "TTree.h"
-
-#include <string>
-#include <vector>
-
 #include "../include/pjtree.h"
 
 #include "../git/config/include/configurer.h"
 
-#include "../git/foliage/include/foliage.h"
+#include "../git/foliage/include/event.h"
 #include "../git/foliage/include/jets.h"
 #include "../git/foliage/include/photons.h"
-#include "../git/foliage/include/tracks.h"
 #include "../git/foliage/include/triggers.h"
 
 #include "../git/tricks-and-treats/include/train.h"
+
+#include "TFile.h"
+#include "TTree.h"
+
+#include <string>
+#include <vector>
 
 int extract(char const* config, char const* output) {
     auto conf = new configurer(config);
@@ -34,7 +32,6 @@ int extract(char const* config, char const* output) {
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
     auto chain_jet = forest->attach((jet_algo + "/t").data(), true);
-    auto chain_trk = forest->attach("ppTrack/trackTree", true);
     auto chain_hlt = forest->attach("hltanalysis/HltTree", hlt_branches);
 
     (*forest)();
@@ -42,7 +39,6 @@ int extract(char const* config, char const* output) {
     auto tree_evt = new event(chain_evt, mc_branches);
     auto tree_eg = new photons(chain_eg, mc_branches);
     auto tree_jet = new jets(chain_jet, mc_branches, array_size);
-    auto tree_trk = new tracks(chain_trk, array_size);
     auto tree_hlt = new triggers(chain_hlt, paths);
 
     TTree::SetMaxTreeSize(1000000000000LL);
@@ -75,7 +71,6 @@ int extract(char const* config, char const* output) {
         tree_pj->copy(tree_evt);
         tree_pj->copy(tree_eg);
         tree_pj->copy(tree_jet);
-        tree_pj->copy(tree_trk);
         tree_pj->copy(tree_hlt);
 
         if (!centrality) {
