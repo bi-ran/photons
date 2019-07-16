@@ -2,6 +2,8 @@
 #define PJTREE_H
 
 #include "../git/foliage/include/foliage.h"
+
+#include "../git/foliage/include/event.h"
 #include "../git/foliage/include/photons.h"
 #include "../git/foliage/include/jets.h"
 #include "../git/foliage/include/tracks.h"
@@ -46,6 +48,7 @@ class pjtree {
     pjtree(TTree* t, bool gen, bool hlt)
             : _gen(gen),
               _hlt(hlt) {
+        B_VAL_EVT_RECO(SETMONE)
         B_VAL_PHO_RECO(SETMONE)
         B_VAL_JET_RECO(SETMONE)
         B_VAL_TRK_RECO(SETMONE)
@@ -54,6 +57,7 @@ class pjtree {
         B_VEC_TRK_RECO(ALLOCOBJ)
 
         if (_gen) {
+            B_VAL_EVT_GEN(SETMONE)
             B_VAL_PHO_GEN(SETMONE)
             B_VAL_JET_GEN(SETMONE)
             B_VEC_PHO_GEN(ALLOCOBJ)
@@ -73,6 +77,7 @@ class pjtree {
     pjtree(bool gen, bool hlt, TTree* t)
             : _gen(gen),
               _hlt(hlt) {
+        B_VAL_EVT_RECO(SETZERO)
         B_VAL_PHO_RECO(SETZERO)
         B_VAL_JET_RECO(SETZERO)
         B_VAL_TRK_RECO(SETZERO)
@@ -81,6 +86,7 @@ class pjtree {
         B_VEC_TRK_RECO(SETZERO)
 
         if (_gen) {
+            B_VAL_EVT_GEN(SETZERO)
             B_VAL_PHO_GEN(SETZERO)
             B_VAL_JET_GEN(SETZERO)
             B_VEC_PHO_GEN(SETZERO)
@@ -111,6 +117,14 @@ class pjtree {
 
         if (_hlt) {
             B_VEC_TRG(CLEAROBJ)
+        }
+    }
+
+    void copy(event* t) {
+        B_VAL_EVT_RECO(COPYVAL, t)
+
+        if (_gen) {
+            B_VAL_EVT_GEN(COPYVAL,t )
         }
     }
 
@@ -145,12 +159,14 @@ class pjtree {
         }
     }
 
+    B_VAL_EVT_RECO(DECLVAL)
     B_VAL_PHO_RECO(DECLVAL)
     B_VEC_PHO_RECO(DECLPTR)
     B_VAL_JET_RECO(DECLVAL)
     B_VEC_JET_RECO(DECLPTR)
     B_VAL_TRK_RECO(DECLVAL)
     B_VEC_TRK_RECO(DECLPTR)
+    B_VAL_EVT_GEN(DECLVAL)
     B_VAL_PHO_GEN(DECLVAL)
     B_VEC_PHO_GEN(DECLPTR)
     B_VAL_JET_GEN(DECLVAL)
@@ -159,6 +175,7 @@ class pjtree {
 
   private:
     void branch(TTree* t) {
+        B_VAL_EVT_RECO(BRANCHVAL, t)
         B_VAL_PHO_RECO(BRANCHVAL, t)
         B_VAL_JET_RECO(BRANCHVAL, t)
         B_VAL_TRK_RECO(BRANCHVAL, t)
@@ -167,6 +184,7 @@ class pjtree {
         B_VEC_TRK_RECO(BRANCHPTR, t)
 
         if (_gen) {
+            B_VAL_EVT_GEN(BRANCHVAL, t)
             B_VAL_PHO_GEN(BRANCHVAL, t)
             B_VAL_JET_GEN(BRANCHVAL, t)
             B_VEC_PHO_GEN(BRANCHPTR, t)
@@ -179,6 +197,7 @@ class pjtree {
     }
 
     void read(TTree* t) {
+        B_VAL_EVT_RECO(SETVALADDR, t)
         B_VAL_PHO_RECO(SETVALADDR, t)
         B_VAL_JET_RECO(SETVALADDR, t)
         B_VAL_TRK_RECO(SETVALADDR, t)
@@ -187,6 +206,7 @@ class pjtree {
         B_VEC_TRK_RECO(SETVALADDR, t)
 
         if (_gen) {
+            B_VAL_EVT_GEN(SETVALADDR, t)
             B_VAL_PHO_GEN(SETVALADDR, t)
             B_VAL_JET_GEN(SETVALADDR, t)
             B_VEC_PHO_GEN(SETVALADDR, t)

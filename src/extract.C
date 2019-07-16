@@ -30,6 +30,7 @@ int extract(char const* config, char const* output) {
     auto array_size = conf->get<int64_t>("array_size");
 
     auto forest = new train(files);
+    auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
     auto chain_jet = forest->attach((jet_algo + "/t").data(), true);
     auto chain_trk = forest->attach("ppTrack/trackTree", true);
@@ -37,6 +38,7 @@ int extract(char const* config, char const* output) {
 
     (*forest)();
 
+    auto tree_evt = new event(chain_evt, mc_branches);
     auto tree_eg = new photons(chain_eg, mc_branches);
     auto tree_jet = new jets(chain_jet, mc_branches, array_size);
     auto tree_trk = new tracks(chain_trk, array_size);
@@ -69,6 +71,7 @@ int extract(char const* config, char const* output) {
             if (!pass_skim) { continue; }
         }
 
+        tree_pj->copy(tree_evt);
         tree_pj->copy(tree_eg);
         tree_pj->copy(tree_jet);
         tree_pj->copy(tree_trk);
