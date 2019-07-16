@@ -17,11 +17,15 @@
     ACTION(sv<float>,       jtpt,                       ## __VA_ARGS__)     \
     ACTION(sv<float>,       jteta,                      ## __VA_ARGS__)     \
     ACTION(sv<float>,       jtphi,                      ## __VA_ARGS__)     \
+    ACTION(sv<float>,       WTAeta,                     ## __VA_ARGS__)     \
+    ACTION(sv<float>,       WTAphi,                     ## __VA_ARGS__)     \
 
 #define B_VEC_JET_GEN(ACTION, ...)                                          \
     ACTION(sv<float>,       genpt,                      ## __VA_ARGS__)     \
     ACTION(sv<float>,       geneta,                     ## __VA_ARGS__)     \
     ACTION(sv<float>,       genphi,                     ## __VA_ARGS__)     \
+    ACTION(sv<float>,       WTAgeneta,                  ## __VA_ARGS__)     \
+    ACTION(sv<float>,       WTAgenphi,                  ## __VA_ARGS__)     \
 
 #define B_VEC_TRG(ACTION, ...)                                              \
     ACTION(sv<int32_t>,     accepts,                    ## __VA_ARGS__)     \
