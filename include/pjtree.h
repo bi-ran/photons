@@ -4,6 +4,8 @@
 #include "../git/foliage/include/foliage.h"
 
 #include "../git/foliage/include/event.h"
+#include "../git/foliage/include/eggen.h"
+#include "../git/foliage/include/electrons.h"
 #include "../git/foliage/include/photons.h"
 #include "../git/foliage/include/jets.h"
 #include "../git/foliage/include/triggers.h"
@@ -40,15 +42,17 @@ class pjtree {
               _hlt(hlt) {
         B_VAL_EVT_RECO(SETMONE)
         B_VAL_PHO_RECO(SETMONE)
+        B_VAL_ELE_RECO(SETMONE)
         B_VAL_JET_RECO(SETMONE)
         B_VEC_PHO_RECO(ALLOCOBJ)
+        B_VEC_ELE_RECO(ALLOCOBJ)
         B_VEC_JET_RECO(ALLOCOBJ)
 
         if (_gen) {
             B_VAL_EVT_GEN(SETMONE)
-            B_VAL_PHO_GEN(SETMONE)
+            B_VAL_EGM_GEN(SETMONE)
             B_VAL_JET_GEN(SETMONE)
-            B_VEC_PHO_GEN(ALLOCOBJ)
+            B_VEC_EGM_GEN(ALLOCOBJ)
             B_VEC_JET_GEN(ALLOCOBJ)
         }
 
@@ -69,15 +73,17 @@ class pjtree {
               _hlt(hlt) {
         B_VAL_EVT_RECO(SETZERO)
         B_VAL_PHO_RECO(SETZERO)
+        B_VAL_ELE_RECO(SETZERO)
         B_VAL_JET_RECO(SETZERO)
         B_VEC_PHO_RECO(SETZERO)
+        B_VEC_ELE_RECO(SETZERO)
         B_VEC_JET_RECO(SETZERO)
 
         if (_gen) {
             B_VAL_EVT_GEN(SETZERO)
-            B_VAL_PHO_GEN(SETZERO)
+            B_VAL_EGM_GEN(SETZERO)
             B_VAL_JET_GEN(SETZERO)
-            B_VEC_PHO_GEN(SETZERO)
+            B_VEC_EGM_GEN(SETZERO)
             B_VEC_JET_GEN(SETZERO)
         }
 
@@ -97,10 +103,11 @@ class pjtree {
 
     void clear() {
         B_VEC_PHO_RECO(CLEAROBJ)
+        B_VEC_ELE_RECO(CLEAROBJ)
         B_VEC_JET_RECO(CLEAROBJ)
 
         if (_gen) {
-            B_VEC_PHO_GEN(CLEAROBJ)
+            B_VEC_EGM_GEN(CLEAROBJ)
             B_VEC_JET_GEN(CLEAROBJ)
         }
 
@@ -117,13 +124,20 @@ class pjtree {
         }
     }
 
+    void copy(electrons* t) {
+        B_VAL_ELE_RECO(COPYVAL, t)
+        B_VEC_ELE_RECO(COPYOBJ, t)
+    }
+
     void copy(photons* t) {
         B_VAL_PHO_RECO(COPYVAL, t)
         B_VEC_PHO_RECO(COPYOBJ, t)
+    }
 
+    void copy(eggen* t) {
         if (_gen) {
-            B_VAL_PHO_GEN(COPYVAL, t)
-            B_VEC_PHO_GEN(COPYOBJ, t)
+            B_VAL_EGM_GEN(COPYVAL, t)
+            B_VEC_EGM_GEN(COPYOBJ, t)
         }
     }
 
@@ -145,12 +159,14 @@ class pjtree {
 
     B_VAL_EVT_RECO(DECLVAL)
     B_VAL_PHO_RECO(DECLVAL)
+    B_VAL_ELE_RECO(DECLVAL)
     B_VEC_PHO_RECO(DECLPTR)
+    B_VEC_ELE_RECO(DECLPTR)
     B_VAL_JET_RECO(DECLVAL)
     B_VEC_JET_RECO(DECLPTR)
     B_VAL_EVT_GEN(DECLVAL)
-    B_VAL_PHO_GEN(DECLVAL)
-    B_VEC_PHO_GEN(DECLPTR)
+    B_VAL_EGM_GEN(DECLVAL)
+    B_VEC_EGM_GEN(DECLPTR)
     B_VAL_JET_GEN(DECLVAL)
     B_VEC_JET_GEN(DECLPTR)
     B_VAL_EXT(DECLVAL)
@@ -160,15 +176,17 @@ class pjtree {
     void branch(TTree* t) {
         B_VAL_EVT_RECO(BRANCHVAL, t)
         B_VAL_PHO_RECO(BRANCHVAL, t)
+        B_VAL_ELE_RECO(BRANCHVAL, t)
         B_VAL_JET_RECO(BRANCHVAL, t)
         B_VEC_PHO_RECO(BRANCHPTR, t)
+        B_VEC_ELE_RECO(BRANCHPTR, t)
         B_VEC_JET_RECO(BRANCHPTR, t)
 
         if (_gen) {
             B_VAL_EVT_GEN(BRANCHVAL, t)
-            B_VAL_PHO_GEN(BRANCHVAL, t)
+            B_VAL_EGM_GEN(BRANCHVAL, t)
             B_VAL_JET_GEN(BRANCHVAL, t)
-            B_VEC_PHO_GEN(BRANCHPTR, t)
+            B_VEC_EGM_GEN(BRANCHPTR, t)
             B_VEC_JET_GEN(BRANCHPTR, t)
         }
 
@@ -182,15 +200,17 @@ class pjtree {
     void read(TTree* t) {
         B_VAL_EVT_RECO(SETVALADDR, t)
         B_VAL_PHO_RECO(SETVALADDR, t)
+        B_VAL_ELE_RECO(SETVALADDR, t)
         B_VAL_JET_RECO(SETVALADDR, t)
         B_VEC_PHO_RECO(SETVALADDR, t)
+        B_VEC_ELE_RECO(SETVALADDR, t)
         B_VEC_JET_RECO(SETVALADDR, t)
 
         if (_gen) {
             B_VAL_EVT_GEN(SETVALADDR, t)
-            B_VAL_PHO_GEN(SETVALADDR, t)
+            B_VAL_EGM_GEN(SETVALADDR, t)
             B_VAL_JET_GEN(SETVALADDR, t)
-            B_VEC_PHO_GEN(SETVALADDR, t)
+            B_VEC_EGM_GEN(SETVALADDR, t)
             B_VEC_JET_GEN(SETVALADDR, t)
         }
 

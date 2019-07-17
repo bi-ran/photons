@@ -39,7 +39,9 @@ int extract(char const* config, char const* output) {
     (*forest)();
 
     auto tree_evt = new event(chain_evt, mc_branches);
-    auto tree_eg = new photons(chain_eg, mc_branches);
+    auto tree_egg = new eggen(chain_eg, mc_branches);
+    auto tree_ele = new electrons(chain_eg);
+    auto tree_pho = new photons(chain_eg);
     auto tree_jet = new jets(chain_jet, mc_branches, array_size);
     auto tree_hlt = new triggers(chain_hlt, paths);
 
@@ -62,7 +64,7 @@ int extract(char const* config, char const* output) {
         forest->get(i);
 
         if (!skim.empty()) {
-            if (tree_eg->nPho < 1) { continue; }
+            if (tree_pho->nPho < 1) { continue; }
 
             bool pass_skim = false;
             for (auto const& path : skim)
@@ -73,7 +75,9 @@ int extract(char const* config, char const* output) {
         }
 
         tree_pj->copy(tree_evt);
-        tree_pj->copy(tree_eg);
+        tree_pj->copy(tree_egg);
+        tree_pj->copy(tree_ele);
+        tree_pj->copy(tree_pho);
         tree_pj->copy(tree_jet);
         tree_pj->copy(tree_hlt);
 
