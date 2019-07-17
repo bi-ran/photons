@@ -135,6 +135,8 @@ int diffaxis(char const* config, char const* output) {
 
     auto events_to_mix = conf->get<int64_t>("events_to_mix");
 
+    auto type = conf->get<std::string>("type");
+
     /* convert to integral angle units (cast to double) */
     convert_in_place_pi(rdphi);
 
@@ -372,9 +374,13 @@ int diffaxis(char const* config, char const* output) {
     c3->draw("pdf");
     c4->draw("pdf");
 
-    /* fout->Write("", TObject::kOverwrite); */
+    pjet_f_x->save(type);
+    pjet_es_f_dphi_d_ppt->save(type);
+    pjet_wta_f_dphi_d_ppt->save(type);
+    pjet_f_ddr_d_ppt->save(type);
+    pjet_f_ddr_d_x->save(type);
 
-    (void)fout;
+    fout->Close();
 
     printf("destroying objects..\n");
 
