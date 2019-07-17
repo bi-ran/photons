@@ -1,4 +1,5 @@
 #include "../include/pjtree.h"
+#include "../include/JetCorrector.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -27,6 +28,7 @@ int extract(char const* config, char const* output) {
     auto skim = conf->get<std::vector<std::string>>("skim");
     auto jet_algo = conf->get<std::string>("jet_algo");
     auto array_size = conf->get<int64_t>("array_size");
+    auto jec_file = conf->get<std::string>("jec_file");
 
     auto forest = new train(files);
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
@@ -46,6 +48,8 @@ int extract(char const* config, char const* output) {
     TFile* fout = new TFile(output, "recreate");
     TTree* tout = new TTree("pj", "photon-jet");
     auto tree_pj = new pjtree(tout, mc_branches, hlt_branches);
+
+    auto JEC = new JetCorrector(jec_file);
 
     int64_t nentries = forest->count();
     if (max_entries) nentries = std::min(nentries, max_entries);
@@ -78,7 +82,15 @@ int extract(char const* config, char const* output) {
             tree_pj->hiHF = 0;
         }
 
-        tree_pj->weight = mc_branches ? tree_pj->Ncoll : 1.f;
+        tree_pj->weight = mc_branches ? tree_pj->Ncoll / 1000.f : 1.f;
+
+        /* apply l2 jet energy corrections */
+        for (int64_t j = 0; j < tree_pj->nref; ++j) {
+            JEC->SetJetPT((*tree_pj->rawpt)[j]);
+            JEC->SetJetEta((*tree_pj->jteta)[j]);
+
+            (*tree_pj->jtpt)[j] = JEC->GetCorrectedPT();
+        }
 
         tout->Fill();
     }
