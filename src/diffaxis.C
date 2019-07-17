@@ -46,17 +46,19 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
         if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
 
+        double jet_pt = (*pjt->jtpt)[j];
+        double pjet_x = jet_pt / photon_leading_pt;
+
+        double hf = pjt->hiHF;
+
+        /* calculate index */
+        int64_t index = mdiff->index_for(v{photon_leading_pt, hf, pjet_x});
+
         auto jet_eta = (*pjt->jteta)[j];
         auto jet_phi = convert_radian((*pjt->jtphi)[j]);
 
         auto jet_wta_eta = (*pjt->WTAeta)[j];
         auto jet_wta_phi = convert_radian((*pjt->WTAphi)[j]);
-
-        double jet_pt = (*pjt->jtpt)[j];
-        double pjet_x = jet_pt / photon_leading_pt;
-
-        /* calculate index for jet pt, x */
-        int64_t index = mdiff->index_for(v{photon_leading_pt, jet_pt, pjet_x});
 
         auto photon_jet_dphi = std::abs(photon_phi - jet_phi);
         auto photon_wta_dphi = std::abs(photon_phi - jet_wta_phi); 
@@ -124,7 +126,7 @@ int diffaxis(char const* config, char const* output) {
     auto rdr = conf->get<std::vector<float>>("dr_range");
 
     auto dppt = conf->get<std::vector<float>>("ppt_diff");
-    auto djpt = conf->get<std::vector<float>>("jpt_diff");
+    auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dx = conf->get<std::vector<float>>("x_diff");
 
     auto events_to_mix = conf->get<int64_t>("events_to_mix");
@@ -140,12 +142,12 @@ int diffaxis(char const* config, char const* output) {
 
     auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
     auto ippt = std::make_shared<interval>(dppt);
-    auto ijpt = std::make_shared<interval>(djpt);
+    auto ihf = std::make_shared<interval>(dhf);
     auto ix = std::make_shared<interval>(dx);
 
     auto mincl = std::make_shared<multival>(*incl);
     auto mppt = std::make_shared<multival>(dppt);
-    auto mdiff = std::make_shared<multival>(dppt, djpt, dx);
+    auto mdiff = std::make_shared<multival>(dppt, dhf, dx);
 
     auto nevt = std::make_unique<history>("nevt"s, "", incl, mppt);
     auto nmix = std::make_unique<history>("nmix"s, "", incl, mppt);
@@ -290,7 +292,7 @@ int diffaxis(char const* config, char const* output) {
     auto photon_pt_selection = [&](int64_t index) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
-            (*ijpt)[index - 1], (*ijpt)[index]);
+            (*ippt)[index - 1], (*ippt)[index]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
