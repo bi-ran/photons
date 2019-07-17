@@ -248,6 +248,9 @@ int diffaxis(char const* config, char const* output) {
         for (int64_t k = 0; k < events_to_mix; ++k) {
             tm->GetEntry(m);
 
+            /* hf within +/- 10% */
+            if (std::abs(pjtm->hiHF / pjt->hiHF - 1.) > 0.1) { continue; }
+
             fill_axes(pjtm, jet_pt_min, jet_eta_abs,
                       photon_leading_pt, photon_phi,
                       photon_pt_x, mdiff, nmix,
