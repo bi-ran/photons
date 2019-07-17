@@ -22,14 +22,17 @@
 
 using namespace std::literals::string_literals;
 
-void fill_histograms(std::unique_ptr<history>& see_iso,
-                     std::unique_ptr<history>& see_noniso,
-                     std::shared_ptr<multival>& mpthf,
-                     TTree* t, pjtree* p,
-                     float pt_min, float eta_max,
-                     float iso_max, float noniso_min,
-                     bool fill_noniso) {
-    printf("fill histograms\n");
+static bool in_hem_failure_region(float eta, float phi) {
+    return (-3. < eta && eta < -1.3 && -1.57 < phi && phi < -0.87);
+}
+
+void fill_data(std::unique_ptr<history>& see_iso,
+               std::unique_ptr<history>& see_noniso,
+               std::shared_ptr<multival>& mpthf,
+               TTree* t, pjtree* p,
+               float pt_min, float eta_max, float hovere_max,
+               float iso_max, float noniso_min) {
+    printf("fill data\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
     for (int64_t i = 0; i < nentries; ++i) {
@@ -42,8 +45,11 @@ void fill_histograms(std::unique_ptr<history>& see_iso,
         int64_t leading = -1;
         for (int64_t j = 0; j < p->nPho; ++j) {
             if ((*p->phoEt)[j] < pt_min) { continue; }
-            if (std::abs((*p->phoEta)[j]) > eta_max) { continue; }
-            if ((*p->phoHoverE)[j] > 0.1) { continue; }
+            if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
+            if ((*p->phoHoverE)[j] > hovere_max) { continue; }
+
+            if (in_hem_failure_region((*p->phoSCEta)[j], (*p->phoSCPhi)[j]))
+                continue;
 
             leading = j;
             break;
@@ -57,12 +63,55 @@ void fill_histograms(std::unique_ptr<history>& see_iso,
             + (*p->pho_hcalRechitIsoR4)[leading]
             + (*p->pho_trackIsoR4PtCut20)[leading];
 
-        if (!fill_noniso && isolation > iso_max) { continue; }
-
-        if (fill_noniso && isolation > iso_max && isolation < noniso_min)
-            continue;
+        if (isolation > iso_max && isolation < noniso_min) { continue; }
 
         auto const& see = isolation > iso_max ? see_noniso : see_iso;
+        int64_t index = mpthf->index_for(v{(*p->phoEt)[leading], p->hiHF});
+        (*see)[index]->Fill((*p->phoSigmaIEtaIEta_2012)[leading], p->weight);
+    }
+
+    printf("\n");
+}
+
+void fill_signal(std::unique_ptr<history>& see,
+                 std::shared_ptr<multival>& mpthf,
+                 TTree* t, pjtree* p,
+                 float pt_min, float eta_max, float hovere_max) {
+    printf("fill signal\n");
+
+    auto nentries = static_cast<int64_t>(t->GetEntries());
+    for (int64_t i = 0; i < nentries; ++i) {
+        if (i % 100000 == 0) { printf("%li/%li\n", i, nentries); }
+
+        t->GetEntry(i);
+
+        /* event selections */
+
+        int64_t leading = -1;
+        for (int64_t j = 0; j < p->nPho; ++j) {
+            if ((*p->phoEt)[j] < pt_min) { continue; }
+            if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
+            if ((*p->phoHoverE)[j] > hovere_max) { continue; }
+
+            leading = j;
+            break;
+        }
+
+        /* require leading photon */
+        if (leading < 0) { continue; }
+
+        /* require gen-matching */
+        int64_t gen_index = (*p->pho_genMatchedIndex)[leading];
+        if (gen_index == -1) { continue; }
+
+        auto pid = (*p->mcPID)[gen_index];
+        auto mpid = (*p->mcMomPID)[gen_index];
+        if (pid != 22 || (std::abs(mpid) > 22 && mpid != -999)) { continue; }
+
+        /* gen isolation requirement */
+        float isolation = (*p->mcCalIsoDR04)[gen_index];
+        if (isolation > 5.) { continue; }
+
         int64_t index = mpthf->index_for(v{(*p->phoEt)[leading], p->hiHF});
         (*see)[index]->Fill((*p->phoSigmaIEtaIEta_2012)[leading], p->weight);
     }
@@ -77,11 +126,14 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg) {
     TH1F* tsig = (TH1F*)hsig->Clone(("t_s"s + tag).data());
     TH1F* tbkg = (TH1F*)hbkg->Clone(("t_b"s + tag).data());
 
+    tsig->Scale(1. / tsig->Integral());
+    tbkg->Scale(1. / tbkg->Integral());
+
     auto evaluate = [&](double* x, double* p) {
         float nsig = tsig->GetBinContent(tsig->FindBin(x[0]));
         float nbkg = tbkg->GetBinContent(tbkg->FindBin(x[0]));
 
-        return p[0] * nsig * p[1] + nbkg * (1 - p[1]);
+        return p[0] * (nsig * p[1] + nbkg * (1 - p[1]));
     };
 
     auto range_low = tdata->GetBinLowEdge(1);
@@ -115,6 +167,7 @@ int purity(char const* config, char const* output) {
 
     auto pt_min = conf->get<float>("pt_min");
     auto eta_max = conf->get<float>("eta_max");
+    auto hovere_max = conf->get<float>("hovere_max");
     auto iso_max = conf->get<float>("iso_max");
     auto noniso_min = conf->get<float>("noniso_min");
 
@@ -153,12 +206,10 @@ int purity(char const* config, char const* output) {
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
-    fill_histograms(see_data, see_bkg, mpthf, td, pd, pt_min, eta_max,
-                    iso_max, noniso_min, true);
+    fill_data(see_data, see_bkg, mpthf, td, pd, pt_min, eta_max, hovere_max,
+              iso_max, noniso_min);
 
-    std::unique_ptr<history> invalid;
-    fill_histograms(see_sig, invalid, mpthf, ts, ps, pt_min, eta_max,
-                    iso_max, 0, false);
+    fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max);
 
     auto hb = new pencil();
     hb->category("type", "data", "sig", "bkg");
@@ -201,9 +252,10 @@ int purity(char const* config, char const* output) {
 
     printf("fit templates\n");
 
+    std::vector<float> purities = { 0 };
+
     for (int64_t i = ipt->size(); i < mpthf->size(); ++i) {
         auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i]);
-        printf("chi2/ndof: %.2f/%i\n", std::get<4>(res), std::get<5>(res));
 
         auto tag = "p_"s + (*see_data)[i]->GetName();
         auto pfit = (TH1F*)(*see_sig)[i]->Clone((tag + "f").data());
@@ -211,6 +263,7 @@ int purity(char const* config, char const* output) {
 
         auto entries = std::get<0>(res);
         auto fraction = std::get<1>(res);
+
         pfit->Scale(entries * fraction / pfit->Integral());
         pbkg->Scale(entries * (1. - fraction) / pbkg->Integral());
 
@@ -222,7 +275,25 @@ int purity(char const* config, char const* output) {
 
         c1->adjust(pfit, "hist f", "lf");
         c1->adjust(pbkg, "hist f", "lf");
+
+        auto ntot = pfit->Integral(1, pfit->FindBin(0.01));
+        auto nbkg = pbkg->Integral(1, pbkg->FindBin(0.01));
+
+        printf("purity: %.3f\n", 1. - nbkg / ntot);
+        purities.push_back(1. - nbkg / ntot);
     }
+
+    auto purity_text = [&](int64_t index) {
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "purity: %.3f", purities[index]);
+
+        TLatex* text = new TLatex();
+        text->SetTextFont(43);
+        text->SetTextSize(12);
+        text->DrawLatexNDC(0.54, 0.56, buffer);
+    };
+
+    c1->accessory(purity_text);
 
     auto sig_style = [](TH1* h) {
         h->SetLineColor(kPink);
