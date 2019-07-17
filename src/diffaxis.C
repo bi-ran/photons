@@ -118,6 +118,10 @@ int diffaxis(char const* config, char const* output) {
     auto photon_eta_abs = conf->get<float>("photon_eta_abs");
     auto jet_pt_min = conf->get<float>("jet_pt_min");
     auto jet_eta_abs = conf->get<float>("jet_eta_abs");
+    auto const hovere_max = conf->get<float>("hovere_max");
+    auto const see_min = conf->get<float>("see_min");
+    auto const see_max = conf->get<float>("see_max");
+    auto const iso_max = conf->get<float>("iso_max");
 
     auto rppt = conf->get<std::vector<float>>("ppt_range");
     auto rjpt = conf->get<std::vector<float>>("jpt_range");
@@ -204,12 +208,15 @@ int diffaxis(char const* config, char const* output) {
         for (int64_t j = 0; j < pjt->nPho; ++j) {
             if ((*pjt->phoEt)[j] < photon_pt_min) { continue; }
             if (std::abs((*pjt->phoEta)[j]) > photon_eta_abs) { continue; }
-            if ((*pjt->phoHoverE)[j] > 0.1) { continue; }
-            if ((*pjt->phoSigmaIEtaIEta_2012)[j] > 0.01) { continue; }
+            if ((*pjt->phoHoverE)[j] > hovere_max) { continue; }
 
             photon_leading = j;
             break;
         }
+
+        if ((*pjt->phoSigmaIEtaIEta_2012)[photon_leading] > see_max
+                || (*pjt->phoSigmaIEtaIEta_2012)[photon_leading] < see_min)
+            continue;
 
         /* require leading photon */
         if (photon_leading < 0) { continue; }
@@ -218,7 +225,7 @@ int diffaxis(char const* config, char const* output) {
         float isolation = (*pjt->pho_ecalClusterIsoR4)[photon_leading]
             + (*pjt->pho_hcalRechitIsoR4)[photon_leading]
             + (*pjt->pho_trackIsoR4PtCut20)[photon_leading];
-        if (isolation > 1.f) { continue; }
+        if (isolation > iso_max) { continue; }
 
         double photon_leading_pt = (*pjt->phoEt)[photon_leading];
         int64_t photon_pt_x = ippt->index_for(photon_leading_pt);
