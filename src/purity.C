@@ -313,7 +313,15 @@ int purity(char const* config, char const* output) {
 
     c1->draw("pdf");
 
-    fout->Write("", TObject::kOverwrite);
+    /* save purities in history format */
+    auto incl = std::make_shared<interval>(1, 0., 1.);
+    auto values = std::make_unique<history>("pthf"s, "purity"s, incl, mpthf);
+
+    for (int64_t i = 0; i < values->size(); ++i)
+        (*values)[i]->SetBinContent(1, purities[i]);
+
+    values->save("purity"s);
+
     fout->Close();
 
     return 0;
