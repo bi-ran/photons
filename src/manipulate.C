@@ -20,7 +20,6 @@ int manipulate(char const* config, char const* output) {
     auto inputs = conf->get<std::vector<std::string>>("inputs");
     auto groups = conf->get<std::vector<std::string>>("groups");
     auto labels = conf->get<std::vector<std::string>>("labels");
-    auto dims = conf->get<std::vector<int32_t>>("dims");
     auto tag = conf->get<std::string>("tag");
 
     if (inputs.empty()) { return 1; }
@@ -64,17 +63,7 @@ int manipulate(char const* config, char const* output) {
                 ? purities : impurities;
 
             /* scale by appropriate (im)purity values */
-            auto pdim = factors->dims();
-            if (dims[i] == pdim) {
-                histograms.back()->multiply(*factors);
-            } else if (dims[i] > pdim) {
-                std::vector<int64_t> axes(dims[i] - pdim);
-                std::iota(std::begin(axes), std::end(axes), pdim);
-                histograms.back()->multiply(*factors, axes);
-            } else {
-                printf("error! dimension mismatch\n");
-                return 1;
-            }
+            histograms.back()->multiply(*factors);
         }
 
         /* subtract scaled histograms */
