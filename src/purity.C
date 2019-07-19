@@ -31,7 +31,7 @@ void fill_data(std::unique_ptr<history>& see_iso,
                std::shared_ptr<multival>& mpthf,
                TTree* t, pjtree* p,
                float pt_min, float eta_max, float hovere_max,
-               float iso_max, float noniso_min) {
+               float iso_max, float noniso_min, float hf_min) {
     printf("fill data\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -39,6 +39,8 @@ void fill_data(std::unique_ptr<history>& see_iso,
         if (i % 100000 == 0) { printf("%li/%li\n", i, nentries); }
 
         t->GetEntry(i);
+
+        if (p->hiHF <= hf_min) { continue; }
 
         int64_t leading = -1;
         for (int64_t j = 0; j < p->nPho; ++j) {
@@ -74,7 +76,7 @@ void fill_data(std::unique_ptr<history>& see_iso,
 void fill_signal(std::unique_ptr<history>& see,
                  std::shared_ptr<multival>& mpthf,
                  TTree* t, pjtree* p,
-                 float pt_min, float eta_max, float hovere_max) {
+                 float pt_min, float eta_max, float hovere_max, float hf_min) {
     printf("fill signal\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -82,6 +84,8 @@ void fill_signal(std::unique_ptr<history>& see,
         if (i % 100000 == 0) { printf("%li/%li\n", i, nentries); }
 
         t->GetEntry(i);
+
+        if (p->hiHF <= hf_min) { continue; }
 
         int64_t leading = -1;
         for (int64_t j = 0; j < p->nPho; ++j) {
@@ -176,6 +180,9 @@ int purity(char const* config, char const* output) {
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
+    /* exclude most peripheral events */
+    auto hf_min = dhf.front();
+
     auto rsee = std::make_shared<interval>(
         see_nbins, see_low, see_high, "#sigma_{#eta#eta}");
 
@@ -205,9 +212,9 @@ int purity(char const* config, char const* output) {
     TH1::SetDefaultSumw2();
 
     fill_data(see_data, see_bkg, mpthf, td, pd, pt_min, eta_max, hovere_max,
-              iso_max, noniso_min);
+              iso_max, noniso_min, hf_min);
 
-    fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max);
+    fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max, hf_min);
 
     auto hb = new pencil();
     hb->category("type", "data", "sig", "bkg");
@@ -247,9 +254,8 @@ int purity(char const* config, char const* output) {
 
     printf("fit templates\n");
 
-    std::vector<float> purities = { 0 };
-
-    for (int64_t i = ipt->size(); i < mpthf->size(); ++i) {
+    std::vector<float> purities(mpthf->size(), 1.);
+    for (int64_t i = 0; i < mpthf->size(); ++i) {
         auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i]);
 
         auto tag = "p_"s + (*see_data)[i]->GetName();
@@ -275,7 +281,7 @@ int purity(char const* config, char const* output) {
         auto nbkg = pbkg->Integral(1, pbkg->FindBin(see_max));
 
         printf("purity: %.3f\n", 1. - nbkg / ntot);
-        purities.push_back(1. - nbkg / ntot);
+        purities[i] = 1. - nbkg / ntot;
     }
 
     auto purity_text = [&](int64_t index) {

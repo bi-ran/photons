@@ -113,6 +113,9 @@ int populate(char const* config, char const* output) {
     frequency = frequency ? frequency : 10000;
     events_to_mix = std::max(100L, events_to_mix);
 
+    /* exclude most peripheral events */
+    auto hf_min = dhf.front();
+
     printf("prepare histograms..\n");
 
     auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
@@ -172,6 +175,8 @@ int populate(char const* config, char const* output) {
         if (i % frequency == 0) { printf("entry: %li/%li\n", i, nentries); }
 
         t->GetEntry(i);
+
+        if (pjt->hiHF <= hf_min) { continue; }
 
         int64_t leading = -1;
         for (int64_t j = 0; j < pjt->nPho; ++j) {
