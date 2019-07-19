@@ -1,13 +1,3 @@
-#include "TFile.h"
-#include "TTree.h"
-#include "TH1.h"
-#include "TLatex.h"
-
-#include <cmath>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "../git/config/include/configurer.h"
 
 #include "../git/history/include/interval.h"
@@ -21,6 +11,16 @@
 
 #include "../include/lambdas.h"
 #include "../include/pjtree.h"
+
+#include "TFile.h"
+#include "TTree.h"
+#include "TH1.h"
+#include "TLatex.h"
+
+#include <cmath>
+#include <memory>
+#include <string>
+#include <vector>
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 #define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill
@@ -100,7 +100,7 @@ void normalise_to_unity(std::unique_ptr<T>&... args) {
         obj->Scale(1. / obj->Integral(), "width"); }), 0)... };
 }
 
-int diffaxis(char const* config, char const* output) {
+int populate(char const* config, char const* output) {
     printf("load config options..\n");
 
     auto conf = new configurer(config);
@@ -199,8 +199,6 @@ int diffaxis(char const* config, char const* output) {
         if (i % frequency == 0) { printf("entry: %li/%li\n", i, nentries); }
 
         t->GetEntry(i);
-
-        /* event selections */
 
         int64_t leading = -1;
         for (int64_t j = 0; j < pjt->nPho; ++j) {
@@ -422,7 +420,7 @@ int diffaxis(char const* config, char const* output) {
 
 int main(int argc, char* argv[]) {
     if (argc == 3)
-        return diffaxis(argv[1], argv[2]);
+        return populate(argv[1], argv[2]);
 
     printf("usage: %s [config] [output]\n", argv[0]);
     return 1;
