@@ -4,18 +4,13 @@
 #include "../git/history/include/multival.h"
 #include "../git/history/include/history.h"
 
-#include "../git/paper-and-pencil/include/paper.h"
-#include "../git/paper-and-pencil/include/pencil.h"
-
 #include "../git/tricks-and-treats/include/overflow_angles.h"
 
-#include "../include/lambdas.h"
 #include "../include/pjtree.h"
 
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1.h"
-#include "TLatex.h"
 
 #include <cmath>
 #include <memory>
@@ -23,13 +18,14 @@
 #include <vector>
 
 #define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
-#define FP_TH1_FILLW (int (TH1::*)(double, double))&TH1::Fill
-#define FP_TH1_GETBC (double (TH1::*)(int) const)&TH1::GetBinContent
-#define FP_TH1_SETBC (void (TH1::*)(int, double))&TH1::SetBinContent
-#define FP_TH1_DRAW (void (TH1::*)(char const*))&TH1::Draw
 
 using namespace std::literals::string_literals;
 using namespace std::placeholders;
+
+template <typename... T>
+void scale(double factor, std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->scale(factor), 0)... };
+}
 
 void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_pt, int64_t photon_phi,
@@ -75,29 +71,6 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
 
         (*pjet_f_ddr)[x{pt_x, hf_x, x_x}]->Fill(std::sqrt(jt_dr));
     }
-}
-
-template <typename... T>
-void normalise(std::unique_ptr<history>& norm,
-               std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->divide(*norm), 0)... };
-}
-
-template <typename... T>
-void scale(double factor, std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->scale(factor), 0)... };
-}
-
-template <typename... T>
-void scale_bin_width(std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
-        obj->Scale(1., "width"); }), 0)... };
-}
-
-template <typename... T>
-void normalise_to_unity(std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
-        obj->Scale(1. / obj->Integral(), "width"); }), 0)... };
 }
 
 int populate(char const* config, char const* output) {
@@ -261,155 +234,48 @@ int populate(char const* config, char const* output) {
 
     /* normalise histograms */
     scale(1. / events_to_mix,
-        mix_pjet_es_f_dphi, mix_pjet_wta_f_dphi,
-        mix_pjet_f_ddr, mix_pjet_f_x);
-
-    /* integrate histograms */
-    auto nevt_d_pt = nevt->sum(1);
-    auto nevt_d_hf = nevt->sum(0);
-
-    auto pjet_es_f_dphi_d_pt = pjet_es_f_dphi->sum(1);
-    auto pjet_wta_f_dphi_d_pt = pjet_wta_f_dphi->sum(1);
-    auto pjet_f_x_d_pt = pjet_f_x->sum(1);
-    auto pjet_f_x_d_hf = pjet_f_x->sum(0);
-
-    auto pjet_f_ddr_d_pt = pjet_f_ddr->sum(1, 1);
-    auto pjet_f_ddr_d_hf = pjet_f_ddr->sum(0, 1);
-
-    /* mixed events */
-    auto mix_pjet_es_f_dphi_d_pt = mix_pjet_es_f_dphi->sum(1);
-    auto mix_pjet_wta_f_dphi_d_pt = mix_pjet_wta_f_dphi->sum(1);
-    auto mix_pjet_f_x_d_pt = mix_pjet_f_x->sum(1);
-    auto mix_pjet_f_x_d_hf = mix_pjet_f_x->sum(0);
-
-    auto mix_pjet_f_ddr_d_pt = mix_pjet_f_ddr->sum(1, 1);
-    auto mix_pjet_f_ddr_d_hf = mix_pjet_f_ddr->sum(0, 1);
+        mix_pjet_es_f_dphi,
+        mix_pjet_wta_f_dphi,
+        mix_pjet_f_ddr,
+        mix_pjet_f_x);
 
     /* subtract histograms */
-    /* *pjet_es_f_dphi -= *mix_pjet_es_f_dphi; */
-    /* *pjet_wta_f_dphi -= *mix_pjet_wta_f_dphi; */
-    /* *pjet_f_ddr -= *mix_pjet_f_ddr; */
-    /* *pjet_f_x -= *mix_pjet_f_x; */
+    auto sub_pjet_es_f_dphi = new history(*pjet_es_f_dphi, "sub");
+    auto sub_pjet_wta_f_dphi = new history(*pjet_wta_f_dphi, "sub");
+    auto sub_pjet_f_x = new history(*pjet_f_x, "sub");
+    auto sub_pjet_f_ddr = new history(*pjet_f_ddr, "sub");
 
-    /* normalise to number of photons (events) */
-    normalise(nevt_d_pt,
-        pjet_es_f_dphi_d_pt, mix_pjet_es_f_dphi_d_pt,
-        pjet_wta_f_dphi_d_pt, mix_pjet_wta_f_dphi_d_pt,
-        pjet_f_ddr_d_pt, mix_pjet_f_ddr_d_pt,
-        pjet_f_x_d_pt, mix_pjet_f_x_d_pt);
+    *sub_pjet_es_f_dphi -= *mix_pjet_es_f_dphi;
+    *sub_pjet_wta_f_dphi -= *mix_pjet_wta_f_dphi;
+    *sub_pjet_f_x -= *mix_pjet_f_x;
+    *sub_pjet_f_ddr -= *mix_pjet_f_ddr;
 
-    normalise(nevt_d_hf,
-        pjet_f_ddr_d_hf, mix_pjet_f_ddr_d_hf,
-        pjet_f_x_d_hf, mix_pjet_f_x_d_hf);
+    /* normalise by number of photons (events) */
+    sub_pjet_es_f_dphi->divide(*nevt);
+    sub_pjet_wta_f_dphi->divide(*nevt);
+    sub_pjet_f_x->divide(*nevt);
+    sub_pjet_f_ddr->divide(*nevt);
 
-    /* scale by bin width */
-    scale_bin_width(
-        pjet_f_ddr_d_pt, mix_pjet_f_ddr_d_pt,
-        pjet_f_ddr_d_hf, mix_pjet_f_ddr_d_hf,
-        pjet_f_x_d_pt, mix_pjet_f_x_d_pt,
-        pjet_f_x_d_hf, mix_pjet_f_x_d_hf);
+    /* save histograms */
+    nevt->save(type);
+    nmix->save(type);
 
-    /* normalise to unity */
-
-    printf("painting..\n");
-
-    auto photon_pt_selection = [&](int64_t index) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
-            (*ipt)[index - 1], (*ipt)[index]);
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
-    };
-
-    auto hf_selection = [&](int64_t index) {
-        char buffer[128] = { '\0' };
-        std::vector<int32_t> bins = { 90, 50, 30, 10, 0 };
-        sprintf(buffer, "%i - %i%%", bins[index], bins[index - 1]);
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
-    };
-
-    auto hb = new pencil();
-    hb->category("axis", "escheme", "wta");
-    hb->category("type", "raw", "mix");
-
-    /* hb->alias("raw", "sub."); */
-
-    auto system = "PbPb #sqrt{s_{NN}} = 5.02 TeV"s;
-
-    auto c1 = new paper("dphi_d_pt", hb);
-    apply_default_style(c1, system, 0., 0.8);
-    c1->accessory(photon_pt_selection);
-
-    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c1->add((*pjet_es_f_dphi_d_pt)[i], "escheme", "raw");
-        c1->stack((*pjet_wta_f_dphi_d_pt)[i], "wta", "raw");
-        c1->stack((*mix_pjet_es_f_dphi_d_pt)[i], "escheme", "mix");
-        c1->stack((*mix_pjet_wta_f_dphi_d_pt)[i], "wta", "mix");
-    }
-
-    auto c2 = new paper("ddr_d_pt", hb);
-    apply_default_style(c2, system, 0., 12.);
-    c2->accessory(photon_pt_selection);
-
-    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c2->add((*pjet_f_ddr_d_pt)[i], "raw");
-        c2->stack((*mix_pjet_f_ddr_d_pt)[i], "mix");
-    }
-
-    auto c3 = new paper("ddr_d_hf", hb);
-    apply_default_style(c3, system, 0., 12.);
-    c3->accessory(hf_selection);
-
-    for (int64_t i = 1; i < ihf->size(); ++i) {
-        c3->add((*pjet_f_ddr_d_hf)[i], "raw");
-        c3->stack((*mix_pjet_f_ddr_d_hf)[i], "mix");
-    }
-
-    auto c4 = new paper("x_d_pt", hb);
-    apply_default_style(c4, system, 0., 1.5);
-    c4->accessory(photon_pt_selection);
-
-    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c4->add((*pjet_f_x_d_pt)[i], "raw");
-        c4->stack((*mix_pjet_f_x_d_pt)[i], "mix");
-    }
-
-    auto c5 = new paper("x_d_hf", hb);
-    apply_default_style(c5, system, 0., 1.5);
-    c5->accessory(hf_selection);
-
-    for (int64_t i = 1; i < ihf->size(); ++i) {
-        c5->add((*pjet_f_x_d_hf)[i], "raw");
-        c5->stack((*mix_pjet_f_x_d_hf)[i], "mix");
-    }
-
-    hb->set_binary("type");
-    hb->sketch();
-
-    c1->draw("pdf");
-    c2->draw("pdf");
-    c3->draw("pdf");
-    c4->draw("pdf");
-    c5->draw("pdf");
+    photon_f_pt->save(type);
 
     pjet_es_f_dphi->save(type);
     pjet_wta_f_dphi->save(type);
-    pjet_f_ddr->save(type);
     pjet_f_x->save(type);
+    pjet_f_ddr->save(type);
 
-    pjet_es_f_dphi_d_pt->save(type);
-    pjet_wta_f_dphi_d_pt->save(type);
-    pjet_f_ddr_d_pt->save(type);
-    pjet_f_ddr_d_hf->save(type);
-    pjet_f_x_d_pt->save(type);
-    pjet_f_x_d_hf->save(type);
+    mix_pjet_es_f_dphi->save(type);
+    mix_pjet_wta_f_dphi->save(type);
+    mix_pjet_f_x->save(type);
+    mix_pjet_f_ddr->save(type);
+
+    sub_pjet_es_f_dphi->save(type);
+    sub_pjet_wta_f_dphi->save(type);
+    sub_pjet_f_x->save(type);
+    sub_pjet_f_ddr->save(type);
 
     fout->Close();
 
