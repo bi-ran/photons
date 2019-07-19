@@ -24,6 +24,7 @@ int extract(char const* config, char const* output) {
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
+    auto selections = conf->get<std::vector<std::string>>("selections");
     auto paths = conf->get<std::vector<std::string>>("paths");
     auto skim = conf->get<std::vector<std::string>>("skim");
     auto jet_algo = conf->get<std::string>("jet_algo");
@@ -32,6 +33,7 @@ int extract(char const* config, char const* output) {
 
     auto forest = new train(files);
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
+    auto chain_sel = forest->attach("skimanalysis/HltTree", true);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
     auto chain_jet = forest->attach((jet_algo + "/t").data(), true);
     auto chain_hlt = forest->attach("hltanalysis/HltTree", hlt_branches);
@@ -39,6 +41,7 @@ int extract(char const* config, char const* output) {
     (*forest)();
 
     auto tree_evt = new event(chain_evt, mc_branches);
+    auto tree_sel = new triggers(chain_sel, selections);
     auto tree_egg = new eggen(chain_eg, mc_branches);
     auto tree_ele = new electrons(chain_eg);
     auto tree_pho = new photons(chain_eg);
@@ -62,6 +65,15 @@ int extract(char const* config, char const* output) {
             printf("entry: %li/%li\n", i, nentries);
 
         forest->get(i);
+
+        if (!selections.empty()) {
+            bool pass_selection = false;
+            for (auto const& path : selections)
+                if (tree_sel->accept(path) == 1)
+                    pass_selection = true;
+
+            if (!pass_selection) { continue; }
+        }
 
         if (!skim.empty()) {
             if (tree_pho->nPho < 1) { continue; }
