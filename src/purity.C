@@ -40,8 +40,6 @@ void fill_data(std::unique_ptr<history>& see_iso,
 
         t->GetEntry(i);
 
-        /* event selections */
-
         int64_t leading = -1;
         for (int64_t j = 0; j < p->nPho; ++j) {
             if ((*p->phoEt)[j] < pt_min) { continue; }
@@ -84,8 +82,6 @@ void fill_signal(std::unique_ptr<history>& see,
         if (i % 100000 == 0) { printf("%li/%li\n", i, nentries); }
 
         t->GetEntry(i);
-
-        /* event selections */
 
         int64_t leading = -1;
         for (int64_t j = 0; j < p->nPho; ++j) {
@@ -170,16 +166,18 @@ int purity(char const* config, char const* output) {
     auto hovere_max = conf->get<float>("hovere_max");
     auto iso_max = conf->get<float>("iso_max");
     auto noniso_min = conf->get<float>("noniso_min");
+    auto see_max = conf->get<float>("see_max");
 
     auto see_nbins = conf->get<int64_t>("see_nbins");
-    auto see_min = conf->get<float>("see_min");
-    auto see_max = conf->get<float>("see_max");
+    auto see_low = conf->get<float>("see_low");
+    auto see_high = conf->get<float>("see_high");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
+    auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
     auto rsee = std::make_shared<interval>(
-        see_nbins, see_min, see_max, "#sigma_{#eta#eta}");
+        see_nbins, see_low, see_high, "#sigma_{#eta#eta}");
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
@@ -235,12 +233,9 @@ int purity(char const* config, char const* output) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{#gamma} < %0.f",
             (*ipt)[pt_x], (*ipt)[pt_x + 1]);
-
         text->DrawLatexNDC(0.54, 0.67, buffer);
 
-        std::vector<std::string> bins = { "90"s, "50"s, "30"s, "10"s, "0"s };
-        sprintf(buffer, "%s - %s%%", bins[hf_x + 1].data(), bins[hf_x].data());
-
+        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
         text->DrawLatexNDC(0.54, 0.63, buffer);
     };
 
@@ -276,8 +271,8 @@ int purity(char const* config, char const* output) {
         c1->adjust(pfit, "hist f", "lf");
         c1->adjust(pbkg, "hist f", "lf");
 
-        auto ntot = pfit->Integral(1, pfit->FindBin(0.01));
-        auto nbkg = pbkg->Integral(1, pbkg->FindBin(0.01));
+        auto ntot = pfit->Integral(1, pfit->FindBin(see_max));
+        auto nbkg = pbkg->Integral(1, pbkg->FindBin(see_max));
 
         printf("purity: %.3f\n", 1. - nbkg / ntot);
         purities.push_back(1. - nbkg / ntot);
