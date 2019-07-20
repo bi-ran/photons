@@ -23,11 +23,18 @@
     ACTION(sv<float>,       WTAphi,                     ## __VA_ARGS__)     \
 
 #define B_VEC_JET_GEN(ACTION, ...)                                          \
+    ACTION(sv<int32_t>,     gensubid,                   ## __VA_ARGS__)     \
     ACTION(sv<float>,       genpt,                      ## __VA_ARGS__)     \
     ACTION(sv<float>,       geneta,                     ## __VA_ARGS__)     \
     ACTION(sv<float>,       genphi,                     ## __VA_ARGS__)     \
     ACTION(sv<float>,       WTAgeneta,                  ## __VA_ARGS__)     \
     ACTION(sv<float>,       WTAgenphi,                  ## __VA_ARGS__)     \
+
+#define B_VEC_JET_REF(ACTION, ...)                                          \
+    ACTION(sv<int32_t>,     subid,                      ## __VA_ARGS__)     \
+    ACTION(sv<float>,       refpt,                      ## __VA_ARGS__)     \
+    ACTION(sv<float>,       refeta,                     ## __VA_ARGS__)     \
+    ACTION(sv<float>,       refphi,                     ## __VA_ARGS__)     \
 
 #define B_VEC_TRG(ACTION, ...)                                              \
     ACTION(sv<int32_t>,     accepts,                    ## __VA_ARGS__)     \
@@ -54,6 +61,7 @@ class pjtree {
             B_VAL_JET_GEN(SETMONE)
             B_VEC_EGM_GEN(ALLOCOBJ)
             B_VEC_JET_GEN(ALLOCOBJ)
+            B_VEC_JET_REF(ALLOCOBJ)
         }
 
         if (_hlt) {
@@ -85,6 +93,7 @@ class pjtree {
             B_VAL_JET_GEN(SETZERO)
             B_VEC_EGM_GEN(SETZERO)
             B_VEC_JET_GEN(SETZERO)
+            B_VEC_JET_REF(SETZERO)
         }
 
         if (_hlt) {
@@ -109,6 +118,7 @@ class pjtree {
         if (_gen) {
             B_VEC_EGM_GEN(CLEAROBJ)
             B_VEC_JET_GEN(CLEAROBJ)
+            B_VEC_JET_REF(CLEAROBJ)
         }
 
         if (_hlt) {
@@ -148,6 +158,7 @@ class pjtree {
         if (_gen) {
             B_VAL_JET_GEN(COPYVAL, t)
             B_VEC_JET_GEN(COPYPTR, t, ngen)
+            B_VEC_JET_REF(COPYPTR, t, nref)
         }
     }
 
@@ -169,6 +180,7 @@ class pjtree {
     B_VEC_EGM_GEN(DECLPTR)
     B_VAL_JET_GEN(DECLVAL)
     B_VEC_JET_GEN(DECLPTR)
+    B_VEC_JET_REF(DECLPTR)
     B_VAL_EXT(DECLVAL)
     B_VEC_TRG(DECLPTR)
 
@@ -188,6 +200,7 @@ class pjtree {
             B_VAL_JET_GEN(BRANCHVAL, t)
             B_VEC_EGM_GEN(BRANCHPTR, t)
             B_VEC_JET_GEN(BRANCHPTR, t)
+            B_VEC_JET_REF(BRANCHPTR, t)
         }
 
         if (_hlt) {
@@ -212,6 +225,7 @@ class pjtree {
             B_VAL_JET_GEN(SETVALADDR, t)
             B_VEC_EGM_GEN(SETVALADDR, t)
             B_VEC_JET_GEN(SETVALADDR, t)
+            B_VEC_JET_REF(SETVALADDR, t)
         }
 
         if (_hlt) {
