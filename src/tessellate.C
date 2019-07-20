@@ -183,8 +183,8 @@ int tessellate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    auto rsee = std::make_shared<interval>(
-        see_nbins, see_low, see_high, "#sigma_{#eta#eta}");
+    auto rsee = std::make_shared<interval>("#sigma_{#eta#eta}",
+        see_nbins, see_low, see_high);
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
