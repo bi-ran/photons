@@ -10,7 +10,14 @@
 
 #include "../git/paper-and-pencil/include/paper.h"
 
-auto histogram_formatter = [](TH1* obj, double min, double max) {
+auto simple_formatter = [](TH1* obj) {
+    obj->SetStats(0);
+    obj->SetMarkerSize(0.84);
+    obj->GetXaxis()->CenterTitle();
+    obj->GetYaxis()->CenterTitle();
+};
+
+auto default_formatter = [](TH1* obj, double min, double max) {
     obj->SetStats(0);
     obj->SetMarkerSize(0.84);
     obj->SetAxisRange(min, max, "Y");
@@ -53,7 +60,7 @@ void apply_default_style(paper* p, std::string const& system,
                          double min, double max) {
     using namespace std::placeholders;
 
-    p->format(std::bind(histogram_formatter, _1, min, max));
+    p->format(std::bind(default_formatter, _1, min, max));
     p->decorate(std::bind(default_decorator, system));
     p->legend(std::bind(coordinates, 0.45, 0.9, 0.87, 0.04));
     p->style(std::bind(default_legend_style, _1, 43, 12));
