@@ -159,7 +159,7 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg) {
     return std::make_tuple(p0, p1, p0_err, p1_err, chisq, ndof);
 }
 
-int purity(char const* config, char const* output) {
+int tessellate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto data = conf->get<std::string>("data");
@@ -316,12 +316,12 @@ int purity(char const* config, char const* output) {
 
     /* save purities in history format */
     auto incl = std::make_shared<interval>(1, 0., 1.);
-    auto values = std::make_unique<history>("pthf"s, "purity"s, incl, mpthf);
+    auto purity = std::make_unique<history>("pthf"s, "purity"s, incl, mpthf);
 
-    for (int64_t i = 0; i < values->size(); ++i)
-        (*values)[i]->SetBinContent(1, purities[i]);
+    for (int64_t i = 0; i < purity->size(); ++i)
+        (*purity)[i]->SetBinContent(1, purities[i]);
 
-    values->save("purity"s);
+    purity->save("purity"s);
 
     fout->Close();
 
@@ -330,7 +330,7 @@ int purity(char const* config, char const* output) {
 
 int main(int argc, char* argv[]) {
     if (argc == 3)
-        return purity(argv[1], argv[2]);
+        return tessellate(argv[1], argv[2]);
 
     return 0;
 }
