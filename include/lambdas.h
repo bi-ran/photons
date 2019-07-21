@@ -10,6 +10,13 @@
 
 #include "../git/paper-and-pencil/include/paper.h"
 
+auto _for_bins = [](TH1* h, float (*f)(float)) {
+    for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
+        auto val = h->GetBinContent(j);
+        h->SetBinContent(j, f(val));
+    }
+};
+
 auto simple_formatter = [](TH1* obj) {
     obj->SetStats(0);
     obj->SetMarkerSize(0.84);
