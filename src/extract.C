@@ -96,6 +96,7 @@ int extract(char const* config, char const* output) {
         if (!centrality) {
             tree_pj->hiBin = 0;
             tree_pj->hiHF = 0;
+            tree_pj->Ncoll = 1000;
         }
 
         tree_pj->weight = mc_branches ? tree_pj->Ncoll / 1000.f : 1.f;
