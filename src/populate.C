@@ -111,7 +111,6 @@ int populate(char const* config, char const* output) {
 
     /* default values for config options */
     frequency = frequency ? frequency : 10000;
-    events_to_mix = std::max(100L, events_to_mix);
 
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
@@ -238,11 +237,12 @@ int populate(char const* config, char const* output) {
     }
 
     /* normalise histograms */
-    scale(1. / events_to_mix,
-        mix_pjet_es_f_dphi,
-        mix_pjet_wta_f_dphi,
-        mix_pjet_f_ddr,
-        mix_pjet_f_x);
+    if (events_to_mix > 0)
+        scale(1. / events_to_mix,
+            mix_pjet_es_f_dphi,
+            mix_pjet_wta_f_dphi,
+            mix_pjet_f_ddr,
+            mix_pjet_f_x);
 
     /* subtract histograms */
     auto sub_pjet_es_f_dphi = new history(*pjet_es_f_dphi, "sub");
