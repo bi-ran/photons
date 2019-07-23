@@ -71,7 +71,7 @@ int invigilate(char const* config, char const* output) {
             if (reco_pt <= pt_min) { continue; }
 
             auto reco_eta = (*p->jteta)[j];
-            if (std::abs(reco_eta) > eta_max) { continue; }
+            if (std::abs(reco_eta) >= eta_max) { continue; }
 
             auto gen_pt = (*p->refpt)[j];
             if (gen_pt < 0) { continue; }
