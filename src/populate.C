@@ -39,8 +39,8 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
-        if ((*pjt->jtpt)[j] < jet_pt_min) { continue; }
-        if (std::abs((*pjt->jteta)[j]) > jet_eta_abs) { continue; }
+        if ((*pjt->jtpt)[j] <= jet_pt_min) { continue; }
+        if (std::abs((*pjt->jteta)[j]) >= jet_eta_abs) { continue; }
 
         auto jet_eta = (*pjt->jteta)[j];
         auto jet_phi = convert_radian((*pjt->jtphi)[j]);
