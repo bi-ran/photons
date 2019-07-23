@@ -42,6 +42,10 @@
 #define B_VAL_EXT(ACTION, ...)                                              \
     ACTION(float,           weight,                     ## __VA_ARGS__)     \
 
+#define B_VEC_EXT(ACTION, ...)                                              \
+    ACTION(sv<float>,       jtpt_up,                    ## __VA_ARGS__)     \
+    ACTION(sv<float>,       jtpt_down,                  ## __VA_ARGS__)     \
+
 class pjtree {
   public:
     pjtree(TTree* t, bool gen, bool hlt)
@@ -69,6 +73,7 @@ class pjtree {
         }
 
         B_VAL_EXT(SETMONE)
+        B_VEC_EXT(ALLOCOBJ)
 
         branch(t);
     }
@@ -101,6 +106,7 @@ class pjtree {
         }
 
         B_VAL_EXT(SETZERO)
+        B_VEC_EXT(SETZERO)
 
         read(t);
     }
@@ -124,6 +130,8 @@ class pjtree {
         if (_hlt) {
             B_VEC_TRG(CLEAROBJ)
         }
+
+        B_VEC_EXT(CLEAROBJ)
     }
 
     void copy(event* t) {
@@ -182,6 +190,7 @@ class pjtree {
     B_VEC_JET_GEN(DECLPTR)
     B_VEC_JET_REF(DECLPTR)
     B_VAL_EXT(DECLVAL)
+    B_VEC_EXT(DECLPTR)
     B_VEC_TRG(DECLPTR)
 
   private:
@@ -208,6 +217,7 @@ class pjtree {
         }
 
         B_VAL_EXT(BRANCHVAL, t)
+        B_VEC_EXT(BRANCHPTR, t)
     }
 
     void read(TTree* t) {
@@ -233,6 +243,7 @@ class pjtree {
         }
 
         B_VAL_EXT(SETVALADDR, t)
+        B_VEC_EXT(SETVALADDR, t)
     }
 
     bool _gen;

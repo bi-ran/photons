@@ -1,5 +1,6 @@
 #include "../include/pjtree.h"
 #include "../include/JetCorrector.h"
+#include "../include/JetUncertainty.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -30,6 +31,7 @@ int extract(char const* config, char const* output) {
     auto jet_algo = conf->get<std::string>("jet_algo");
     auto array_size = conf->get<int64_t>("array_size");
     auto jecs = conf->get<std::vector<std::string>>("jecs");
+    auto jeu = conf->get<std::string>("jeu");
 
     auto forest = new train(files);
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
@@ -55,6 +57,7 @@ int extract(char const* config, char const* output) {
     auto tree_pj = new pjtree(tout, mc_branches, hlt_branches);
 
     auto JEC = new JetCorrector(jecs);
+    auto JEU = new JetUncertainty(jeu);
 
     int64_t nentries = forest->count();
     if (max_entries) nentries = std::min(nentries, max_entries);
@@ -101,13 +104,18 @@ int extract(char const* config, char const* output) {
 
         tree_pj->weight = mc_branches ? tree_pj->Ncoll / 1000.f : 1.f;
 
-        /* apply l2 jet energy corrections */
+        /* apply l2 jet energy corrections and evaluate uncertainties */
         for (int64_t j = 0; j < tree_pj->nref; ++j) {
             JEC->SetJetPT((*tree_pj->rawpt)[j]);
             JEC->SetJetEta((*tree_pj->jteta)[j]);
             JEC->SetJetPhi((*tree_pj->jtphi)[j]);
 
-            (*tree_pj->jtpt)[j] = JEC->GetCorrectedPT();
+            float corr = JEC->GetCorrectedPT();
+            (*tree_pj->jtpt)[j] = corr;
+
+            auto unc = JEU->GetUncertainty();
+            tree_pj->jtpt_up->push_back(corr * (1. - unc.first));
+            tree_pj->jtpt_down->push_back(corr * (1. + unc.second));
         }
 
         tout->Fill();
