@@ -179,8 +179,8 @@ int populate(char const* config, char const* output) {
 
         int64_t leading = -1;
         for (int64_t j = 0; j < pjt->nPho; ++j) {
-            if ((*pjt->phoEt)[j] < photon_pt_min) { continue; }
-            if (std::abs((*pjt->phoEta)[j]) > photon_eta_abs) { continue; }
+            if ((*pjt->phoEt)[j] <= photon_pt_min) { continue; }
+            if (std::abs((*pjt->phoSCEta)[j]) >= photon_eta_abs) { continue; }
             if ((*pjt->phoHoverE)[j] > hovere_max) { continue; }
 
             leading = j;
@@ -195,9 +195,9 @@ int populate(char const* config, char const* output) {
         if (leading < 0) { continue; }
 
         /* isolation requirement */
-        float isolation = (*pjt->pho_ecalClusterIsoR4)[leading]
-            + (*pjt->pho_hcalRechitIsoR4)[leading]
-            + (*pjt->pho_trackIsoR4PtCut20)[leading];
+        float isolation = (*pjt->pho_ecalClusterIsoR3)[leading]
+            + (*pjt->pho_hcalRechitIsoR3)[leading]
+            + (*pjt->pho_trackIsoR3PtCut20)[leading];
         if (isolation > iso_max) { continue; }
 
         double photon_pt = (*pjt->phoEt)[leading];

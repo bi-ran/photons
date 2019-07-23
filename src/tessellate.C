@@ -29,7 +29,7 @@ static bool in_hem_failure_region(float eta, float phi) {
 void fill_data(std::unique_ptr<history>& see_iso,
                std::unique_ptr<history>& see_noniso,
                std::shared_ptr<multival>& mpthf,
-               TTree* t, pjtree* p,
+               TTree* t, pjtree* p, bool exclude_hem,
                float pt_min, float eta_max, float hovere_max,
                float iso_max, float noniso_min, float hf_min) {
     printf("fill data\n");
@@ -48,7 +48,8 @@ void fill_data(std::unique_ptr<history>& see_iso,
             if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
             if ((*p->phoHoverE)[j] > hovere_max) { continue; }
 
-            if (in_hem_failure_region((*p->phoSCEta)[j], (*p->phoSCPhi)[j]))
+            if (exclude_hem && in_hem_failure_region(
+                    (*p->phoSCEta)[j], (*p->phoSCPhi)[j]))
                 continue;
 
             leading = j;
@@ -59,9 +60,9 @@ void fill_data(std::unique_ptr<history>& see_iso,
         if (leading < 0) { continue; }
 
         /* isolation requirement */
-        float isolation = (*p->pho_ecalClusterIsoR4)[leading]
-            + (*p->pho_hcalRechitIsoR4)[leading]
-            + (*p->pho_trackIsoR4PtCut20)[leading];
+        float isolation = (*p->pho_ecalClusterIsoR3)[leading]
+            + (*p->pho_hcalRechitIsoR3)[leading]
+            + (*p->pho_trackIsoR3PtCut20)[leading];
 
         if (isolation > iso_max && isolation < noniso_min) { continue; }
 
@@ -172,6 +173,8 @@ int tessellate(char const* config, char const* output) {
     auto noniso_min = conf->get<float>("noniso_min");
     auto see_max = conf->get<float>("see_max");
 
+    auto exclude_hem = conf->get<bool>("exclude_hem");
+
     auto see_nbins = conf->get<int64_t>("see_nbins");
     auto see_low = conf->get<float>("see_low");
     auto see_high = conf->get<float>("see_high");
@@ -213,8 +216,8 @@ int tessellate(char const* config, char const* output) {
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
-    fill_data(see_data, see_bkg, mpthf, td, pd, pt_min, eta_max, hovere_max,
-              iso_max, noniso_min, hf_min);
+    fill_data(see_data, see_bkg, mpthf, td, pd, exclude_hem, pt_min, eta_max,
+              hovere_max, iso_max, noniso_min, hf_min);
 
     fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max, hf_min);
 
