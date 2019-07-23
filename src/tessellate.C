@@ -323,6 +323,10 @@ int tessellate(char const* config, char const* output) {
 
     purity->save("purity"s);
 
+    see_data->save("see_data"s);
+    see_sig->save("see_sig"s);
+    see_bkg->save("see_bkg"s);
+
     fout->Close();
 
     return 0;
