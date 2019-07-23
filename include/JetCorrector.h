@@ -1,9 +1,10 @@
-// JetCorrector
-// v2.0
+// SingleJetCorrector
+// v3.0
 // Author: Yi Chen
 //
 // This class applies JEC for any given level using TF1 as the workhorse
 // Supposedly runs faster than v1.0
+// v3.0: one can add list of text files to apply them one by one
 
 #include <iostream>
 #include <fstream>
@@ -14,7 +15,30 @@
 #include "TF2.h"
 #include "TF3.h"
 
+class JetCorrector;
+class SingleJetCorrector;
+
 class JetCorrector
+{
+private:
+   std::vector<SingleJetCorrector> JEC;
+   double JetPT, JetEta, JetPhi, JetArea, Rho;
+public:
+   JetCorrector()                               {}
+   JetCorrector(std::string File)               { Initialize(File); }
+   JetCorrector(std::vector<std::string> Files) { Initialize(Files); }
+   void Initialize(std::string File)            { std::vector<std::string> X; X.push_back(File); Initialize(X); }
+   void Initialize(std::vector<std::string> Files);
+   void SetJetPT(double value)     { JetPT = value; }
+   void SetJetEta(double value)    { JetEta = value; }
+   void SetJetPhi(double value)    { JetPhi = value; }
+   void SetJetArea(double value)   { JetArea = value; }
+   void SetRho(double value)       { Rho = value; }
+   double GetCorrection();
+   double GetCorrectedPT();
+};
+
+class SingleJetCorrector
 {
 private:
    enum Type { TypeNone, TypeJetPT, TypeJetEta, TypeJetPhi, TypeJetArea, TypeRho };
@@ -29,9 +53,9 @@ private:
    std::vector<std::vector<double>> DependencyRanges;
    std::vector<TF1 *> Functions;
 public:
-   JetCorrector()                  { Initialized = false; }
-   JetCorrector(std::string File)  { Initialized = false; Initialize(File); }
-   ~JetCorrector()                 { for(auto P : Functions) if(P != nullptr) delete P; }
+   SingleJetCorrector()                  { Initialized = false; }
+   SingleJetCorrector(std::string File)  { Initialized = false; Initialize(File); }
+   ~SingleJetCorrector()                 { for(auto P : Functions) if(P != nullptr) delete P; }
    void SetJetPT(double value)     { JetPT = value; }
    void SetJetEta(double value)    { JetEta = value; }
    void SetJetPhi(double value)    { JetPhi = value; }
@@ -41,7 +65,7 @@ public:
    std::vector<std::string> BreakIntoParts(std::string Line);
    bool CheckDefinition(std::string Line);
    std::string StripBracket(std::string Line);
-   JetCorrector::Type ToType(std::string Line);
+   SingleJetCorrector::Type ToType(std::string Line);
    double GetCorrection();
    double GetCorrectedPT();
    double GetValue(Type T);
@@ -49,7 +73,43 @@ private:
    std::string Hack4(std::string Formula, char V, int N);
 };
 
-void JetCorrector::Initialize(std::string FileName)
+void JetCorrector::Initialize(std::vector<std::string> Files)
+{
+   JEC.clear();
+   for(auto File : Files)
+      JEC.push_back(SingleJetCorrector(File));
+}
+
+double JetCorrector::GetCorrection()
+{
+   double PT = GetCorrectedPT();
+   if(PT < 0)
+      return -1;
+   return PT / JetPT;
+}
+
+double JetCorrector::GetCorrectedPT()
+{
+   double PT = JetPT;
+
+   for(int i = 0; i < (int)JEC.size(); i++)
+   {
+      JEC[i].SetJetPT(PT);
+      JEC[i].SetJetEta(JetEta);
+      JEC[i].SetJetPhi(JetPhi);
+      JEC[i].SetRho(Rho);
+      JEC[i].SetJetArea(JetArea);
+
+      PT = JEC[i].GetCorrectedPT();
+
+      if(PT < 0)
+         break;
+   }
+
+   return PT;
+}
+
+void SingleJetCorrector::Initialize(std::string FileName)
 {
    int nvar = 0, npar = 0;
    std::string CurrentFormula = "";
@@ -140,7 +200,7 @@ void JetCorrector::Initialize(std::string FileName)
    Initialized = true;
 }
 
-std::vector<std::string> JetCorrector::BreakIntoParts(std::string Line)
+std::vector<std::string> SingleJetCorrector::BreakIntoParts(std::string Line)
 {
    std::stringstream str(Line);
 
@@ -158,7 +218,7 @@ std::vector<std::string> JetCorrector::BreakIntoParts(std::string Line)
    return Result;
 }
 
-bool JetCorrector::CheckDefinition(std::string Line)
+bool SingleJetCorrector::CheckDefinition(std::string Line)
 {
    for(int i = 0; i < (int)Line.size(); i++)
    {
@@ -172,7 +232,7 @@ bool JetCorrector::CheckDefinition(std::string Line)
    return false;
 }
 
-std::string JetCorrector::StripBracket(std::string Line)
+std::string SingleJetCorrector::StripBracket(std::string Line)
 {
    for(int i = 0; i < (int)Line.size(); i++)
    {
@@ -186,7 +246,7 @@ std::string JetCorrector::StripBracket(std::string Line)
    return Line;
 }
 
-JetCorrector::Type JetCorrector::ToType(std::string Line)
+SingleJetCorrector::Type SingleJetCorrector::ToType(std::string Line)
 {
    if(Line == "JetPt")    return TypeJetPT;
    if(Line == "JetEta")   return TypeJetEta;
@@ -194,12 +254,12 @@ JetCorrector::Type JetCorrector::ToType(std::string Line)
    if(Line == "JetA")     return TypeJetArea;
    if(Line == "Rho")      return TypeRho;
 
-   std::cerr << "[JetCorrector] Warning: variable type " << Line << " not found!" << std::endl;
+   std::cerr << "[SingleJetCorrector] Warning: variable type " << Line << " not found!" << std::endl;
 
    return TypeNone;
 }
 
-double JetCorrector::GetCorrection()
+double SingleJetCorrector::GetCorrection()
 {
    if(Initialized == false)
       return -1;
@@ -224,7 +284,7 @@ double JetCorrector::GetCorrection()
          return -1;   // huh?
       if(Dependencies[iE].size() > 4)
       {
-         std::cerr << "[JetCorrector] There are " << Dependencies[iE].size() << " parameters!" << std::endl;
+         std::cerr << "[SingleJetCorrector] There are " << Dependencies[iE].size() << " parameters!" << std::endl;
          return -1;   // huh?
       }
 
@@ -266,13 +326,24 @@ double JetCorrector::GetCorrection()
          Function->SetParameter(Parameters[iE].size(), GetValue(Dependencies[iE][3]));
       double Result = Function->EvalPar(V);
 
+      // cout << Formulas[iE] << endl;
+      // cout << "P" << endl;
+      // for(int i = 0; i < (int)Parameters[iE].size(); i++)
+      //    cout << " " << Parameters[iE][i] << endl;
+      // cout << "V" << endl;
+      // cout << " " << V[0] << endl;
+      // cout << " " << V[1] << endl;
+      // cout << " " << V[2] << endl;
+      // cout << Dependencies[iE].size() << endl;
+      // cout << Function->EvalPar(V) << endl;
+
       return Result;
    }
 
    return -1;
 }
 
-double JetCorrector::GetCorrectedPT()
+double SingleJetCorrector::GetCorrectedPT()
 {
    double Correction = GetCorrection();
 
@@ -282,7 +353,7 @@ double JetCorrector::GetCorrectedPT()
    return JetPT * Correction;
 }
 
-double JetCorrector::GetValue(Type T)
+double SingleJetCorrector::GetValue(Type T)
 {
    if(T == TypeNone)      return 0;
    if(T == TypeJetPT)     return JetPT;
@@ -294,7 +365,7 @@ double JetCorrector::GetValue(Type T)
    return -1;
 }
 
-std::string JetCorrector::Hack4(std::string Formula, char V, int N)
+std::string SingleJetCorrector::Hack4(std::string Formula, char V, int N)
 {
    int Size = Formula.size();
    for(int i = 0; i < Size; i++)

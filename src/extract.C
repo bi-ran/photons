@@ -29,7 +29,7 @@ int extract(char const* config, char const* output) {
     auto skim = conf->get<std::vector<std::string>>("skim");
     auto jet_algo = conf->get<std::string>("jet_algo");
     auto array_size = conf->get<int64_t>("array_size");
-    auto jec_file = conf->get<std::string>("jec_file");
+    auto jecs = conf->get<std::vector<std::string>>("jecs");
 
     auto forest = new train(files);
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
@@ -54,7 +54,7 @@ int extract(char const* config, char const* output) {
     TTree* tout = new TTree("pj", "photon-jet");
     auto tree_pj = new pjtree(tout, mc_branches, hlt_branches);
 
-    auto JEC = new JetCorrector(jec_file);
+    auto JEC = new JetCorrector(jecs);
 
     int64_t nentries = forest->count();
     if (max_entries) nentries = std::min(nentries, max_entries);
@@ -105,6 +105,7 @@ int extract(char const* config, char const* output) {
         for (int64_t j = 0; j < tree_pj->nref; ++j) {
             JEC->SetJetPT((*tree_pj->rawpt)[j]);
             JEC->SetJetEta((*tree_pj->jteta)[j]);
+            JEC->SetJetPhi((*tree_pj->jtphi)[j]);
 
             (*tree_pj->jtpt)[j] = JEC->GetCorrectedPT();
         }
