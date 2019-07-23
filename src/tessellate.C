@@ -180,6 +180,8 @@ int tessellate(char const* config, char const* output) {
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
+    auto prefix = conf->get<std::string>("prefix");
+
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
@@ -246,7 +248,7 @@ int tessellate(char const* config, char const* output) {
         text->DrawLatexNDC(0.54, 0.63, buffer);
     };
 
-    auto c1 = new paper("purity", hb);
+    auto c1 = new paper(prefix + "_purity", hb);
     apply_default_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s, 0., 1.);
     c1->format(formatter);
     c1->accessory(info_text);
