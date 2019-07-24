@@ -17,11 +17,21 @@
 #include <string>
 #include <vector>
 
+float weight_for(std::vector<int32_t> const& divisions,
+                 std::vector<float> const& weights, float value) {
+    int64_t index = -1;
+    for (auto edge : divisions)
+        if (value > edge)
+            ++index;
+
+    return weights[index];
+}
+
 int extract(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto files = conf->get<std::vector<std::string>>("files");
-    auto centrality = conf->get<bool>("centrality");
+    auto heavyion = conf->get<bool>("heavyion");
     auto max_entries = conf->get<int64_t>("max_entries");
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
@@ -32,6 +42,10 @@ int extract(char const* config, char const* output) {
     auto array_size = conf->get<int64_t>("array_size");
     auto jecs = conf->get<std::vector<std::string>>("jecs");
     auto jeu = conf->get<std::string>("jeu");
+
+    auto pthat = conf->get<std::vector<int32_t>>("pthat");
+    auto pthatw = conf->get<std::vector<float>>("pthatw");
+    auto vzw = conf->get<std::vector<float>>("vzw");
 
     auto forest = new train(files);
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
@@ -58,6 +72,9 @@ int extract(char const* config, char const* output) {
 
     auto JEC = new JetCorrector(jecs);
     auto JEU = new JetUncertainty(jeu);
+
+    TF1* fweight = new TF1("fweight", "(gaus(0))/(gaus(3))");
+    fweight->SetParameters(vzw[0], vzw[1], vzw[2], vzw[3], vzw[4], vzw[5]);
 
     int64_t nentries = forest->count();
     if (max_entries) nentries = std::min(nentries, max_entries);
@@ -96,13 +113,17 @@ int extract(char const* config, char const* output) {
         tree_pj->copy(tree_jet);
         tree_pj->copy(tree_hlt);
 
-        if (!centrality) {
+        if (!heavyion) {
             tree_pj->hiBin = 0;
             tree_pj->hiHF = 0;
             tree_pj->Ncoll = 1000;
         }
 
-        tree_pj->weight = mc_branches ? tree_pj->Ncoll / 1000.f : 1.f;
+        tree_pj->weight = mc_branches
+            ? tree_pj->Ncoll / 1000.f
+                * fweight->Eval(tree_pj->vz)
+                * weight_for(pthat, pthatw, tree_pj->pthat)
+            : 1.f;
 
         /* apply l2 jet energy corrections and evaluate uncertainties */
         for (int64_t j = 0; j < tree_pj->nref; ++j) {
