@@ -59,7 +59,7 @@ int distillate(char const* config, char const* output) {
     auto es_f_pt = std::make_unique<history>("es_d_eta_hf"s,
         "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, mhf);
     auto er_f_pt = std::make_unique<history>("er_d_eta_hf"s,
-        "#sigma_{p_{T}}/p_{T}", "jet p_{T}", rpt, mhf);
+        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, mhf);
 
     /* load fitting parameters */
     auto flow = new std::vector<float>[ihf->size()];
@@ -69,6 +69,20 @@ int distillate(char const* config, char const* output) {
         flow[i] = conf->get<std::vector<float>>("flow_"s + index_str);
         fhigh[i] = conf->get<std::vector<float>>("fhigh_"s + index_str);
     }
+
+    /* info text */
+    auto pt_selection = [&](int64_t index) {
+        auto pt_x = scale_d_pthf->indices_for(index - 1)[0];
+
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%.0f < p_{T}^{jet} < %.0f",
+            (*ipt)[pt_x], (*ipt)[pt_x + 1]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, 0.75, buffer);
+    };
 
     /* draw plots */
     auto hb = new pencil();
@@ -82,6 +96,7 @@ int distillate(char const* config, char const* output) {
     auto c1 = new paper("jesr_fits_"s + tag, hb);
     apply_default_style(c1, system, 0., 1.);
     c1->format(simple_formatter);
+    c1->accessory(pt_selection);
     c1->divide(ipt->size(), -1);
 
     /* fit scale and resolution */
@@ -106,7 +121,7 @@ int distillate(char const* config, char const* output) {
         (*er_f_pt)[hf_x]->SetBinContent(pt_x, f->GetParameter(2));
         (*er_f_pt)[hf_x]->SetBinError(pt_x, f->GetParError(2));
 
-        c1->add(h, std::to_string(pt_x));
+        c1->add(h, std::to_string(hf_x));
     });
 
     auto c2 = new paper("jesr_"s + tag, hb);
