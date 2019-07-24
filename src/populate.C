@@ -39,10 +39,12 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
-        if ((*pjt->jtpt)[j] <= jet_pt_min) { continue; }
-        if (std::abs((*pjt->jteta)[j]) >= jet_eta_abs) { continue; }
+        auto jet_pt = (*pjt->jtpt)[j];
+        if (jet_pt <= jet_pt_min) { continue; }
 
         auto jet_eta = (*pjt->jteta)[j];
+        if (std::abs(jet_eta) >= jet_eta_abs) { continue; }
+
         auto jet_phi = convert_radian((*pjt->jtphi)[j]);
 
         auto jet_wta_eta = (*pjt->WTAeta)[j];
@@ -57,9 +59,7 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         /* require back-to-back jets */
         if (photon_jet_dphi < 0.875_pi) { continue; }
 
-        double jet_pt = (*pjt->jtpt)[j];
         double pjet_x = jet_pt / photon_pt;
-
         (*pjet_f_x)[pthf_x]->Fill(pjet_x);
 
         /* calculate index */
@@ -73,6 +73,43 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
     }
 }
 
+static int64_t within_hem_failure_region(pjtree* t, int64_t index) {
+    return ((*t->phoSCEta)[index] < -1.3
+        && (*t->phoSCPhi)[index] < -0.9
+        && (*t->phoSCPhi)[index] > -1.6);
+}
+
+static int64_t passes_basic_selections(pjtree* t, int64_t index) {
+    return (*t->eleMissHits)[index] <= 1 && (*t->eleIP3D)[index] < 0.03;
+}
+
+static int64_t passes_looseid_barrel(pjtree* t, int64_t index, bool pp) {
+    if (!passes_basic_selections(t, index)) { return 0; }
+    if (!(std::abs((*t->eleSCEta)[index]) < 1.442)) { return 0; }
+
+    if (!pp) {
+        if (t->hiBin < 60) {
+            return (*t->eleHoverEBc)[index] < 0.1616
+                && (*t->eleSigmaIEtaIEta_2012)[index] < 0.0135
+                && std::abs((*t->eledEtaSeedAtVtx)[index]) < 0.0038
+                && std::abs((*t->eledPhiAtVtx)[index]) < 0.0376
+                && std::abs((*t->eleEoverPInv)[index]) < 0.0177;
+        }
+
+        return (*t->eleHoverEBc)[index] < 0.1268
+            && (*t->eleSigmaIEtaIEta_2012)[index] < 0.0107
+            && std::abs((*t->eledEtaSeedAtVtx)[index]) < 0.0035
+            && std::abs((*t->eledPhiAtVtx)[index]) < 0.0327
+            && std::abs((*t->eleEoverPInv)[index]) < 0.0774;
+    } else {
+        return (*t->eleHoverE)[index] < 0.02711
+            && (*t->eleSigmaIEtaIEta_2012)[index] < 0.01016
+            && std::abs((*t->eledEtaSeedAtVtx)[index]) < 0.00316
+            && std::abs((*t->eledPhiAtVtx)[index]) < 0.03937
+            && std::abs((*t->eleEoverPInv)[index]) < 0.05304;
+    }
+}
+
 int populate(char const* config, char const* output) {
     printf("load config options..\n");
 
@@ -82,9 +119,16 @@ int populate(char const* config, char const* output) {
     auto mix = conf->get<std::string>("mix");
     auto max_entries = conf->get<int64_t>("max_entries");
     auto frequency = conf->get<int64_t>("frequency");
+    auto events_to_mix = conf->get<int64_t>("events_to_mix");
 
     auto type = conf->get<std::string>("type");
 
+    /* options */
+    auto pp = conf->get<bool>("pp");
+    auto generator_isolation = conf->get<bool>("generator_isolation");
+    auto electron_rejection = conf->get<bool>("electron_rejection");
+
+    /* selections */
     auto const photon_pt_min = conf->get<float>("photon_pt_min");
     auto const photon_eta_abs = conf->get<float>("photon_eta_abs");
     auto const jet_pt_min = conf->get<float>("jet_pt_min");
@@ -103,8 +147,6 @@ int populate(char const* config, char const* output) {
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dx = conf->get<std::vector<float>>("x_diff");
-
-    auto events_to_mix = conf->get<int64_t>("events_to_mix");
 
     /* convert to integral angle units (cast to double) */
     convert_in_place_pi(rdphi);
@@ -194,19 +236,51 @@ int populate(char const* config, char const* output) {
         /* require leading photon */
         if (leading < 0) { continue; }
 
+        /* hem failure region exclusion */
+        if (!pp && within_hem_failure_region(pjt, leading)) { continue; }
+
         /* isolation requirement */
-        float isolation = (*pjt->pho_ecalClusterIsoR3)[leading]
-            + (*pjt->pho_hcalRechitIsoR3)[leading]
-            + (*pjt->pho_trackIsoR3PtCut20)[leading];
-        if (isolation > iso_max) { continue; }
+        if (generator_isolation) {
+            float gen_index = (*pjt->pho_genMatchedIndex)[leading];
+            if (gen_index == -1) { continue; }
+
+            float isolation = (*pjt->mcCalIsoDR04)[gen_index];
+            if (isolation > iso_max) { continue; }
+        } else {
+            float isolation = (*pjt->pho_ecalClusterIsoR3)[leading]
+                + (*pjt->pho_hcalRechitIsoR3)[leading]
+                + (*pjt->pho_trackIsoR3PtCut20)[leading];
+            if (isolation > iso_max) { continue; }
+        }
+
+        /* leading photon axis */
+        auto photon_eta = (*pjt->phoEta)[leading];
+        auto photon_phi = convert_radian((*pjt->phoPhi)[leading]);
+
+        /* electron rejection */
+        if (electron_rejection) {
+            bool electron_match = false;
+            for (int64_t j = 0; j < pjt->nEle; ++j) {
+                auto deta = photon_eta - (*pjt->eleEta)[j];
+                if (deta > 0.1) { continue; }
+
+                auto ele_phi = convert_radian((*pjt->elePhi)[j]);
+                auto dphi = revert_radian(photon_phi - ele_phi);
+                auto dr2 = deta * deta + dphi * dphi;
+
+                if (dr2 < 0.01 && passes_looseid_barrel(pjt, j, pp)) {
+                    electron_match = true;
+                    break;
+                }
+            }
+
+            if (electron_match) { continue; }
+        }
 
         double photon_pt = (*pjt->phoEt)[leading];
         auto pt_x = ipt->index_for(photon_pt);
 
         (*photon_f_pt)(0, FP_TH1_FILL, photon_pt);
-
-        /* set (phi) axis of leading photon */
-        auto photon_phi = convert_radian((*pjt->phoPhi)[leading]);
 
         double hf = pjt->hiHF;
         auto hf_x = ihf->index_for(hf);
