@@ -6,6 +6,8 @@
 #include "../git/history/include/multival.h"
 #include "../git/history/include/history.h"
 
+#include "../git/tricks-and-treats/include/overflow_angles.h"
+
 #include "TFile.h"
 #include "TH1.h"
 #include "TTree.h"
@@ -64,6 +66,20 @@ int invigilate(char const* config, char const* output) {
 
         if (p->hiHF <= hf_min) { continue; }
 
+        std::vector<int64_t> exclusion;
+
+        for (int64_t j = 0; j < p->nMC; ++j) {
+            auto pid = (*p->mcPID)[j];
+            auto mpid = (*p->mcMomPID)[j];
+            if (pid != 22 || (std::abs(mpid) > 22 && mpid != -999)) { continue; }
+
+            /* gen isolation requirement */
+            float isolation = (*p->mcCalIsoDR04)[j];
+            if (isolation > 5.) { continue; }
+
+            exclusion.push_back(j);
+        }
+
         for (int64_t j = 0; j < p->nref; ++j) {
             if ((*p->subid)[j] > 0) { continue; }
 
@@ -75,6 +91,20 @@ int invigilate(char const* config, char const* output) {
 
             auto gen_pt = (*p->refpt)[j];
             if (gen_pt < 0) { continue; }
+
+            bool match = false;
+            for (auto const& index : exclusion) {
+                auto photon_phi = convert_radian((*p->mcPhi)[index]);
+                auto gen_phi = convert_radian((*p->genphi)[j]);
+
+                auto deta = (*p->mcEta)[index] - (*p->geneta)[j];
+                auto dphi = revert_radian(photon_phi - gen_phi);
+                auto dr2 = deta * deta + dphi * dphi;
+
+                if (dr2 < 0.01) { match = true; break; }
+            }
+
+            if (match == true) { continue; }
 
             (*scale)[v{reco_pt, reco_eta, p->hiHF}]->Fill(
                 reco_pt / gen_pt, p->weight);
