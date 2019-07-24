@@ -28,7 +28,7 @@ void scale(double factor, std::unique_ptr<T>&... args) {
 }
 
 void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
-               double photon_pt, int64_t photon_phi,
+               double photon_pt, float photon_eta, int64_t photon_phi,
                int64_t pt_x, int64_t hf_x, int64_t pthf_x,
                std::shared_ptr<interval>& ix,
                std::unique_ptr<history>& nevt,
@@ -46,6 +46,12 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         if (std::abs(jet_eta) >= jet_eta_abs) { continue; }
 
         auto jet_phi = convert_radian((*pjt->jtphi)[j]);
+
+        auto pj_deta = photon_eta - jet_eta;
+        auto pj_dphi = revert_radian(photon_phi - jet_phi);
+        auto pj_dr = pj_deta * pj_deta + pj_dphi * pj_dphi;
+
+        if (pj_dr < 0.16) { continue; }
 
         auto jet_wta_eta = (*pjt->WTAeta)[j];
         auto jet_wta_phi = convert_radian((*pjt->WTAphi)[j]);
@@ -288,7 +294,7 @@ int populate(char const* config, char const* output) {
         auto pthf_x = mpthf->index_for(x{pt_x, hf_x});
 
         fill_axes(pjt, jet_pt_min, jet_eta_abs,
-                  photon_pt, photon_phi,
+                  photon_pt, photon_eta, photon_phi,
                   pt_x, hf_x, pthf_x, ix,
                   nevt, pjet_es_f_dphi, pjet_wta_f_dphi,
                   pjet_f_x, pjet_f_ddr);
@@ -301,7 +307,7 @@ int populate(char const* config, char const* output) {
             if (std::abs(pjtm->hiHF / pjt->hiHF - 1.) > 0.1) { continue; }
 
             fill_axes(pjtm, jet_pt_min, jet_eta_abs,
-                      photon_pt, photon_phi,
+                      photon_pt, photon_eta, photon_phi,
                       pt_x, hf_x, pthf_x, ix,
                       nmix, mix_pjet_es_f_dphi, mix_pjet_wta_f_dphi,
                       mix_pjet_f_x, mix_pjet_f_ddr);
