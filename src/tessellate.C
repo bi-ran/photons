@@ -121,11 +121,11 @@ void fill_signal(std::unique_ptr<history>& see,
 }
 
 auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg) {
-    auto tag = "_"s + hdata->GetName();
+    auto stub = "_"s + hdata->GetName();
 
-    TH1F* tdata = (TH1F*)hdata->Clone(("t"s + tag).data());
-    TH1F* tsig = (TH1F*)hsig->Clone(("t_s"s + tag).data());
-    TH1F* tbkg = (TH1F*)hbkg->Clone(("t_b"s + tag).data());
+    TH1F* tdata = (TH1F*)hdata->Clone(("t"s + stub).data());
+    TH1F* tsig = (TH1F*)hsig->Clone(("t_s"s + stub).data());
+    TH1F* tbkg = (TH1F*)hbkg->Clone(("t_b"s + stub).data());
 
     tsig->Scale(1. / tsig->Integral());
     tbkg->Scale(1. / tbkg->Integral());
@@ -140,13 +140,13 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg) {
     auto range_low = tdata->GetBinLowEdge(1);
     auto range_high = tdata->GetBinLowEdge(tdata->GetNbinsX() + 1);
 
-    TF1* f = new TF1(("f"s + tag).data(), evaluate, range_low, range_high, 2);
+    TF1* f = new TF1(("f"s + stub).data(), evaluate, range_low, range_high, 2);
     f->SetParameters(tdata->Integral(), 0.8);
     f->SetParLimits(1, 0., 1.);
 
-    tdata->Fit(("f"s + tag).data(), "L0Q", "", range_low, range_high);
-    tdata->Fit(("f"s + tag).data(), "L0Q", "", range_low, range_high);
-    tdata->Fit(("f"s + tag).data(), "L0QM", "", range_low, range_high);
+    tdata->Fit(("f"s + stub).data(), "L0Q", "", range_low, range_high);
+    tdata->Fit(("f"s + stub).data(), "L0Q", "", range_low, range_high);
+    tdata->Fit(("f"s + stub).data(), "L0QM", "", range_low, range_high);
 
     auto p0 = f->GetParameter(0);
     auto p1 = f->GetParameter(1);
@@ -165,6 +165,7 @@ int tessellate(char const* config, char const* output) {
 
     auto data = conf->get<std::string>("data");
     auto signal = conf->get<std::string>("signal");
+    auto tag = conf->get<std::string>("tag");
 
     auto pt_min = conf->get<float>("pt_min");
     auto eta_max = conf->get<float>("eta_max");
@@ -182,8 +183,6 @@ int tessellate(char const* config, char const* output) {
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
-
-    auto prefix = conf->get<std::string>("prefix");
 
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
@@ -251,7 +250,7 @@ int tessellate(char const* config, char const* output) {
         text->DrawLatexNDC(0.54, 0.63, buffer);
     };
 
-    auto c1 = new paper(prefix + "_purity", hb);
+    auto c1 = new paper(tag + "_purity", hb);
     apply_default_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s, 0., 1.);
     c1->format(formatter);
     c1->accessory(info_text);
@@ -263,9 +262,9 @@ int tessellate(char const* config, char const* output) {
     for (int64_t i = 0; i < mpthf->size(); ++i) {
         auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i]);
 
-        auto tag = "p_"s + (*see_data)[i]->GetName();
-        auto pfit = (TH1F*)(*see_sig)[i]->Clone((tag + "f").data());
-        auto pbkg = (TH1F*)(*see_bkg)[i]->Clone((tag + "b").data());
+        auto stub = "p_"s + (*see_data)[i]->GetName();
+        auto pfit = (TH1F*)(*see_sig)[i]->Clone((stub + "f").data());
+        auto pbkg = (TH1F*)(*see_bkg)[i]->Clone((stub + "b").data());
 
         auto entries = std::get<0>(res);
         auto fraction = std::get<1>(res);
@@ -326,11 +325,11 @@ int tessellate(char const* config, char const* output) {
     for (int64_t i = 0; i < purity->size(); ++i)
         (*purity)[i]->SetBinContent(1, purities[i]);
 
-    purity->save("purity"s);
+    purity->save(tag);
 
-    see_data->save("see_data"s);
-    see_sig->save("see_sig"s);
-    see_bkg->save("see_bkg"s);
+    see_data->save(tag);
+    see_sig->save(tag);
+    see_bkg->save(tag);
 
     fout->Close();
 

@@ -23,6 +23,7 @@ int distillate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
+    auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
 
     auto rpt = conf->get<std::vector<float>>("pt_range");
@@ -31,8 +32,6 @@ int distillate(char const* config, char const* output) {
     auto deta = conf->get<std::vector<float>>("eta_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
-
-    auto system = conf->get<std::string>("system");
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -53,8 +52,8 @@ int distillate(char const* config, char const* output) {
 
     auto scale_d_pthf = scale->sum(1);
 
-    auto es = new history("es_"s + tag, "", ival, scale_d_pthf->shape());
-    auto er = new history("er_"s + tag, "", ival, scale_d_pthf->shape());
+    auto es = new history("es"s, "", ival, scale_d_pthf->shape());
+    auto er = new history("er"s, "", ival, scale_d_pthf->shape());
 
     auto es_f_pt = std::make_unique<history>("es_d_eta_hf"s,
         "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, mhf);
@@ -93,8 +92,8 @@ int distillate(char const* config, char const* output) {
     hb->alias("2", "10 - 30%");
     hb->alias("3", "0 - 10%");
 
-    auto c1 = new paper("jesr_fits_"s + tag, hb);
-    apply_default_style(c1, system, 0., 1.);
+    auto c1 = new paper(tag + "_jesr_fits", hb);
+    apply_default_style(c1, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
     c1->format(simple_formatter);
     c1->accessory(pt_selection);
     c1->divide(ipt->size(), -1);
@@ -124,7 +123,7 @@ int distillate(char const* config, char const* output) {
         c1->add(h, std::to_string(hf_x));
     });
 
-    auto c2 = new paper("jesr_"s + tag, hb);
+    auto c2 = new paper(tag + "_jesr", hb);
     apply_default_style(c2, system, 0., 1.);
     c2->format(simple_formatter);
     c2->divide(ihf->size(), -1);
@@ -162,13 +161,13 @@ int distillate(char const* config, char const* output) {
     /* save output */
     TFile* fout = new TFile(output, "recreate");
 
-    scale_d_pthf->save("pthf");
+    scale_d_pthf->save(tag);
 
-    es->save("jes");
-    er->save("jer");
+    es->save(tag);
+    er->save(tag);
 
-    es_f_pt->save("jes_f_pt");
-    er_f_pt->save("jer_f_pt");
+    es_f_pt->save(tag);
+    er_f_pt->save(tag);
 
     fout->Close();
 

@@ -26,7 +26,7 @@ int emulate(char const* config, char const* output) {
     auto files = conf->get<std::vector<std::string>>("files");
     auto pthats = conf->get<std::vector<int32_t>>("pthats");
     auto system = conf->get<std::string>("system");
-    auto prefix = conf->get<std::string>("prefix");
+    auto tag = conf->get<std::string>("tag");
 
     auto rpthat = conf->get<std::vector<float>>("pthat_range");
     auto rvz = conf->get<std::vector<float>>("vz_range");
@@ -36,7 +36,6 @@ int emulate(char const* config, char const* output) {
     auto ivz = std::make_shared<interval>("v_{z}"s,
         static_cast<int64_t>(rvz[0]), rvz[1], rvz[2]);
 
-    /* TH1::AddDirectory(false); */
     TH1::SetDefaultSumw2();
 
     /* merged gen inputs */
@@ -64,6 +63,8 @@ int emulate(char const* config, char const* output) {
         printf("[%i, %i]: %f\n", pthats[i], pthats[i + 1], weight);
     }
 
+    printf("\n");
+
     /* calculate vz weights */
     auto vz = std::make_unique<history>("vz"s, "", ivz, 3L);
 
@@ -76,8 +77,8 @@ int emulate(char const* config, char const* output) {
     (*vz)[0]->Scale(1. / (*vz)[0]->Integral());
     (*vz)[1]->Scale(1. / (*vz)[1]->Integral());
 
-    (*vz)[0]->Fit("gaus", "LM", "", -15, 15);
-    (*vz)[1]->Fit("gaus", "LM", "", -15, 15);
+    (*vz)[0]->Fit("gaus", "LMQ", "", -15, 15);
+    (*vz)[1]->Fit("gaus", "LMQ", "", -15, 15);
 
     auto fdata = (*vz)[0]->GetFunction("gaus");
     printf("data: (%f, %f, %f)\n", fdata->GetParameter(0),
@@ -101,7 +102,7 @@ int emulate(char const* config, char const* output) {
 
     auto system_tag = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
-    auto c1 = new paper(prefix + "_vz", hb);
+    auto c1 = new paper(tag + "_vz", hb);
     apply_default_style(c1, system_tag, 0., 0.04);
     c1->jewellery([&](TH1* h, int64_t index) {
         if (index == 3) {
@@ -121,8 +122,8 @@ int emulate(char const* config, char const* output) {
     /* save output */
     TFile* fout = new TFile(output, "recreate");
 
-    pthat->save("weight");
-    vz->save("weight");
+    pthat->save(tag);
+    vz->save(tag);
 
     fout->Close();
 

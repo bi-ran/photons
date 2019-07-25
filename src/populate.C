@@ -89,11 +89,11 @@ static int64_t passes_basic_selections(pjtree* t, int64_t index) {
     return (*t->eleMissHits)[index] <= 1 && (*t->eleIP3D)[index] < 0.03;
 }
 
-static int64_t passes_looseid_barrel(pjtree* t, int64_t index, bool pp) {
+static int64_t passes_looseid_barrel(pjtree* t, int64_t index, bool heavyion) {
     if (!passes_basic_selections(t, index)) { return 0; }
     if (!(std::abs((*t->eleSCEta)[index]) < 1.442)) { return 0; }
 
-    if (!pp) {
+    if (heavyion) {
         if (t->hiBin < 60) {
             return (*t->eleHoverEBc)[index] < 0.1616
                 && (*t->eleSigmaIEtaIEta_2012)[index] < 0.0135
@@ -122,15 +122,14 @@ int populate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
-    auto mix = conf->get<std::string>("mix");
-    auto max_entries = conf->get<int64_t>("max_entries");
+    auto mb = conf->get<std::string>("mb");
+    auto entries = conf->get<int64_t>("entries");
+    auto mix = conf->get<int64_t>("mix");
     auto frequency = conf->get<int64_t>("frequency");
-    auto events_to_mix = conf->get<int64_t>("events_to_mix");
-
-    auto type = conf->get<std::string>("type");
+    auto tag = conf->get<std::string>("tag");
 
     /* options */
-    auto pp = conf->get<bool>("pp");
+    auto heavyion = conf->get<bool>("heavyion");
     auto generator_isolation = conf->get<bool>("generator_isolation");
     auto electron_rejection = conf->get<bool>("electron_rejection");
 
@@ -156,9 +155,6 @@ int populate(char const* config, char const* output) {
 
     /* convert to integral angle units (cast to double) */
     convert_in_place_pi(rdphi);
-
-    /* default values for config options */
-    frequency = frequency ? frequency : 10000;
 
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
@@ -205,7 +201,7 @@ int populate(char const* config, char const* output) {
     TTree* t = (TTree*)f->Get("pj");
     auto pjt = new pjtree(false, t);
 
-    TFile* fm = new TFile(mix.data(), "read");
+    TFile* fm = new TFile(mb.data(), "read");
     TTree* tm = (TTree*)fm->Get("pj");
     auto pjtm = new pjtree(false, tm);
 
@@ -216,7 +212,7 @@ int populate(char const* config, char const* output) {
     TH1::SetDefaultSumw2();
 
     int64_t nentries = static_cast<int64_t>(t->GetEntries());
-    if (max_entries) { nentries = std::min(nentries, max_entries); }
+    if (entries) { nentries = std::min(nentries, entries); }
     int64_t mentries = static_cast<int64_t>(tm->GetEntries());
     for (int64_t i = 0, m = 0; i < nentries; ++i) {
         if (i % frequency == 0) { printf("entry: %li/%li\n", i, nentries); }
@@ -243,7 +239,7 @@ int populate(char const* config, char const* output) {
         if (leading < 0) { continue; }
 
         /* hem failure region exclusion */
-        if (!pp && within_hem_failure_region(pjt, leading)) { continue; }
+        if (heavyion && within_hem_failure_region(pjt, leading)) { continue; }
 
         /* isolation requirement */
         if (generator_isolation) {
@@ -274,7 +270,7 @@ int populate(char const* config, char const* output) {
                 auto dphi = revert_radian(photon_phi - ele_phi);
                 auto dr2 = deta * deta + dphi * dphi;
 
-                if (dr2 < 0.01 && passes_looseid_barrel(pjt, j, pp)) {
+                if (dr2 < 0.01 && passes_looseid_barrel(pjt, j, heavyion)) {
                     electron_match = true;
                     break;
                 }
@@ -300,7 +296,7 @@ int populate(char const* config, char const* output) {
                   pjet_f_x, pjet_f_ddr);
 
         /* mixing events in minimum bias */
-        for (int64_t k = 0; k < events_to_mix; m = (m + 1) % mentries) {
+        for (int64_t k = 0; k < mix; m = (m + 1) % mentries) {
             tm->GetEntry(m);
 
             /* hf within +/- 10% */
@@ -317,8 +313,8 @@ int populate(char const* config, char const* output) {
     }
 
     /* normalise histograms */
-    if (events_to_mix > 0)
-        scale(1. / events_to_mix,
+    if (mix > 0)
+        scale(1. / mix,
             mix_pjet_es_f_dphi,
             mix_pjet_wta_f_dphi,
             mix_pjet_f_ddr,
@@ -342,25 +338,25 @@ int populate(char const* config, char const* output) {
     sub_pjet_f_ddr->divide(*nevt);
 
     /* save histograms */
-    nevt->save(type);
-    nmix->save(type);
+    nevt->save(tag);
+    nmix->save(tag);
 
-    photon_f_pt->save(type);
+    photon_f_pt->save(tag);
 
-    pjet_es_f_dphi->save(type);
-    pjet_wta_f_dphi->save(type);
-    pjet_f_x->save(type);
-    pjet_f_ddr->save(type);
+    pjet_es_f_dphi->save(tag);
+    pjet_wta_f_dphi->save(tag);
+    pjet_f_x->save(tag);
+    pjet_f_ddr->save(tag);
 
-    mix_pjet_es_f_dphi->save(type);
-    mix_pjet_wta_f_dphi->save(type);
-    mix_pjet_f_x->save(type);
-    mix_pjet_f_ddr->save(type);
+    mix_pjet_es_f_dphi->save(tag);
+    mix_pjet_wta_f_dphi->save(tag);
+    mix_pjet_f_x->save(tag);
+    mix_pjet_f_ddr->save(tag);
 
-    sub_pjet_es_f_dphi->save(type);
-    sub_pjet_wta_f_dphi->save(type);
-    sub_pjet_f_x->save(type);
-    sub_pjet_f_ddr->save(type);
+    sub_pjet_es_f_dphi->save(tag);
+    sub_pjet_wta_f_dphi->save(tag);
+    sub_pjet_f_x->save(tag);
+    sub_pjet_f_ddr->save(tag);
 
     fout->Close();
 

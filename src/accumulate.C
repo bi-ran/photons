@@ -40,9 +40,8 @@ int accumulate(char const* config, char const* output) {
 
     auto input = conf->get<std::string>("input");
     auto label = conf->get<std::string>("label");
-    auto tag = conf->get<std::string>("tag");
     auto system = conf->get<std::string>("system");
-    auto prefix = conf->get<std::string>("prefix");
+    auto tag = conf->get<std::string>("tag");
 
     auto rppt = conf->get<std::vector<float>>("ppt_range");
     auto rdphi = conf->get<std::vector<float>>("dphi_range");
@@ -161,10 +160,10 @@ int accumulate(char const* config, char const* output) {
     hb->alias("wta", "WTA");
     hb->alias("na", "");
 
-    auto system_tag = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
+    auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
-    auto c1 = new paper(prefix + "_dphi_d_pt", hb);
-    apply_default_style(c1, system_tag, -0.08, 0.6);
+    auto c1 = new paper(tag + "_dphi_d_pt", hb);
+    apply_default_style(c1, collisions, -0.08, 0.6);
     c1->accessory(photon_pt_selection);
     c1->accessory(std::bind(line_at_unity, _1, rdphi[0], rdphi[1]));
 
@@ -173,32 +172,32 @@ int accumulate(char const* config, char const* output) {
         c1->stack((*pjet_wta_f_dphi_d_pt)[i], system, "wta");
     }
 
-    auto c2 = new paper(prefix + "_ddr_d_pt", hb);
-    apply_default_style(c2, system_tag, -1., 12.);
+    auto c2 = new paper(tag + "_ddr_d_pt", hb);
+    apply_default_style(c2, collisions, -1., 12.);
     c2->accessory(photon_pt_selection);
     c2->accessory(std::bind(line_at_unity, _1, rdr[0], rdr[1]));
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i)
         c2->add((*pjet_f_ddr_d_pt)[i], system, "na");
 
-    auto c3 = new paper(prefix + "_ddr_d_hf", hb);
-    apply_default_style(c3, system_tag, -1., 12.);
+    auto c3 = new paper(tag + "_ddr_d_hf", hb);
+    apply_default_style(c3, collisions, -1., 12.);
     c3->accessory(hf_selection);
     c3->accessory(std::bind(line_at_unity, _1, rdr[0], rdr[1]));
 
     for (int64_t i = 0; i < ihf->size(); ++i)
         c3->add((*pjet_f_ddr_d_hf)[i], system, "na");
 
-    auto c4 = new paper(prefix + "_x_d_pt", hb);
-    apply_default_style(c4, system_tag, -0.1, 1.2);
+    auto c4 = new paper(tag + "_x_d_pt", hb);
+    apply_default_style(c4, collisions, -0.1, 1.2);
     c4->accessory(photon_pt_selection);
     c4->accessory(std::bind(line_at_unity, _1, rx[0], rx[1]));
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i)
         c4->add((*pjet_f_x_d_pt)[i], system, "na");
 
-    auto c5 = new paper(prefix + "_x_d_hf", hb);
-    apply_default_style(c5, system_tag, -0.1, 1.2);
+    auto c5 = new paper(tag + "_x_d_hf", hb);
+    apply_default_style(c5, collisions, -0.1, 1.2);
     c5->accessory(hf_selection);
     c5->accessory(std::bind(line_at_unity, _1, rx[0], rx[1]));
 
