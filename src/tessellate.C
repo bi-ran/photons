@@ -50,8 +50,7 @@ void fill_data(std::unique_ptr<history>& see_iso,
             if ((*p->phoHoverE)[j] > hovere_max) { continue; }
 
             if (heavyion && in_hem_failure_region(
-                    (*p->phoSCEta)[j], (*p->phoSCPhi)[j]))
-                continue;
+                (*p->phoSCEta)[j], (*p->phoSCPhi)[j])) { continue; }
 
             leading = j;
             break;
@@ -78,8 +77,9 @@ void fill_data(std::unique_ptr<history>& see_iso,
 
 void fill_signal(std::unique_ptr<history>& see,
                  std::shared_ptr<multival>& mpthf,
-                 TTree* t, pjtree* p,
-                 float pt_min, float eta_max, float hovere_max, float hf_min) {
+                 TTree* t, pjtree* p, bool heavyion,
+                 float pt_min, float eta_max, float hovere_max,
+                 float hf_min) {
     printf("fill signal\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -95,6 +95,9 @@ void fill_signal(std::unique_ptr<history>& see,
             if ((*p->phoEt)[j] < pt_min) { continue; }
             if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
             if ((*p->phoHoverE)[j] > hovere_max) { continue; }
+
+            if (heavyion && in_hem_failure_region(
+                (*p->phoSCEta)[j], (*p->phoSCPhi)[j])) { continue; }
 
             leading = j;
             break;
@@ -217,10 +220,13 @@ int tessellate(char const* config, char const* output) {
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
-    fill_data(see_data, see_bkg, mpthf, td, pd, heavyion, pt_min, eta_max,
-              hovere_max, iso_max, noniso_min, noniso_max, hf_min);
+    fill_data(see_data, see_bkg, mpthf, td, pd, heavyion,
+              pt_min, eta_max, hovere_max, iso_max, noniso_min, noniso_max,
+              hf_min);
 
-    fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max, hf_min);
+    fill_signal(see_sig, mpthf, ts, ps, heavyion,
+                pt_min, eta_max, hovere_max,
+                hf_min);
 
     auto hb = new pencil();
     hb->category("type", "data", "sig", "bkg");
