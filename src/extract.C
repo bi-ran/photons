@@ -74,7 +74,8 @@ int extract(char const* config, char const* output) {
     auto JEU = new JetUncertainty(jeu);
 
     TF1* fweight = new TF1("fweight", "(gaus(0))/(gaus(3))");
-    fweight->SetParameters(vzw[0], vzw[1], vzw[2], vzw[3], vzw[4], vzw[5]);
+    if (mc_branches) { fweight->SetParameters(
+        vzw[0], vzw[1], vzw[2], vzw[3], vzw[4], vzw[5]); }
 
     int64_t nentries = forest->count();
     if (max_entries) nentries = std::min(nentries, max_entries);
