@@ -29,7 +29,7 @@ static bool in_hem_failure_region(float eta, float phi) {
 void fill_data(std::unique_ptr<history>& see_iso,
                std::unique_ptr<history>& see_noniso,
                std::shared_ptr<multival>& mpthf,
-               TTree* t, pjtree* p, bool exclude_hem,
+               TTree* t, pjtree* p, bool heavyion,
                float pt_min, float eta_max, float hovere_max,
                float iso_max, float noniso_min, float noniso_max,
                float hf_min) {
@@ -49,7 +49,7 @@ void fill_data(std::unique_ptr<history>& see_iso,
             if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
             if ((*p->phoHoverE)[j] > hovere_max) { continue; }
 
-            if (exclude_hem && in_hem_failure_region(
+            if (heavyion && in_hem_failure_region(
                     (*p->phoSCEta)[j], (*p->phoSCPhi)[j]))
                 continue;
 
@@ -167,6 +167,7 @@ int tessellate(char const* config, char const* output) {
 
     auto data = conf->get<std::string>("data");
     auto signal = conf->get<std::string>("signal");
+    auto heavyion = conf->get<bool>("heavyion");
     auto tag = conf->get<std::string>("tag");
 
     auto pt_min = conf->get<float>("pt_min");
@@ -176,8 +177,6 @@ int tessellate(char const* config, char const* output) {
     auto noniso_min = conf->get<float>("noniso_min");
     auto noniso_max = conf->get<float>("noniso_max");
     auto see_max = conf->get<float>("see_max");
-
-    auto exclude_hem = conf->get<bool>("exclude_hem");
 
     auto see_nbins = conf->get<int64_t>("see_nbins");
     auto see_low = conf->get<float>("see_low");
@@ -218,7 +217,7 @@ int tessellate(char const* config, char const* output) {
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
-    fill_data(see_data, see_bkg, mpthf, td, pd, exclude_hem, pt_min, eta_max,
+    fill_data(see_data, see_bkg, mpthf, td, pd, heavyion, pt_min, eta_max,
               hovere_max, iso_max, noniso_min, noniso_max, hf_min);
 
     fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max, hf_min);
