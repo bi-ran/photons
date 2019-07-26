@@ -31,7 +31,8 @@ void fill_data(std::unique_ptr<history>& see_iso,
                std::shared_ptr<multival>& mpthf,
                TTree* t, pjtree* p, bool exclude_hem,
                float pt_min, float eta_max, float hovere_max,
-               float iso_max, float noniso_min, float hf_min) {
+               float iso_max, float noniso_min, float noniso_max,
+               float hf_min) {
     printf("fill data\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -64,7 +65,8 @@ void fill_data(std::unique_ptr<history>& see_iso,
             + (*p->pho_hcalRechitIsoR3)[leading]
             + (*p->pho_trackIsoR3PtCut20)[leading];
 
-        if (isolation > iso_max && isolation < noniso_min) { continue; }
+        if ((isolation > iso_max && isolation < noniso_min)
+            || isolation > noniso_max) { continue; }
 
         auto const& see = isolation > iso_max ? see_noniso : see_iso;
         int64_t index = mpthf->index_for(v{(*p->phoEt)[leading], p->hiHF});
@@ -172,6 +174,7 @@ int tessellate(char const* config, char const* output) {
     auto hovere_max = conf->get<float>("hovere_max");
     auto iso_max = conf->get<float>("iso_max");
     auto noniso_min = conf->get<float>("noniso_min");
+    auto noniso_max = conf->get<float>("noniso_max");
     auto see_max = conf->get<float>("see_max");
 
     auto exclude_hem = conf->get<bool>("exclude_hem");
@@ -216,7 +219,7 @@ int tessellate(char const* config, char const* output) {
     TH1::SetDefaultSumw2();
 
     fill_data(see_data, see_bkg, mpthf, td, pd, exclude_hem, pt_min, eta_max,
-              hovere_max, iso_max, noniso_min, hf_min);
+              hovere_max, iso_max, noniso_min, noniso_max, hf_min);
 
     fill_signal(see_sig, mpthf, ts, ps, pt_min, eta_max, hovere_max, hf_min);
 
