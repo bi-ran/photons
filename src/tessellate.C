@@ -298,7 +298,7 @@ int tessellate(char const* config, char const* output) {
 
     auto purity_text = [&](int64_t index) {
         char buffer[128] = { '\0' };
-        sprintf(buffer, "purity: %.3f", purities[index]);
+        sprintf(buffer, "purity: %.3f", purities[index - 1]);
 
         TLatex* text = new TLatex();
         text->SetTextFont(43);
