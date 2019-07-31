@@ -83,14 +83,11 @@ int invigilate(char const* config, char const* output) {
         for (int64_t j = 0; j < p->nref; ++j) {
             if ((*p->subid)[j] > 0) { continue; }
 
-            auto reco_pt = (*p->jtpt)[j];
-            if (reco_pt <= pt_min) { continue; }
-
-            auto reco_eta = (*p->jteta)[j];
-            if (std::abs(reco_eta) >= eta_max) { continue; }
-
             auto gen_pt = (*p->refpt)[j];
-            if (gen_pt < 0) { continue; }
+            if (gen_pt < pt_min) { continue; }
+
+            auto gen_eta = (*p->refeta)[j];
+            if (std::abs(gen_eta) >= eta_max) { continue; }
 
             bool match = false;
             for (auto const& index : exclusion) {
@@ -106,7 +103,9 @@ int invigilate(char const* config, char const* output) {
 
             if (match == true) { continue; }
 
-            (*scale)[v{reco_pt, reco_eta, p->hiHF}]->Fill(
+            auto reco_pt = (*p->jtpt)[j];
+
+            (*scale)[v{gen_pt, gen_eta, p->hiHF}]->Fill(
                 reco_pt / gen_pt, p->weight);
         }
     }
