@@ -39,7 +39,7 @@ int distillate(char const* config, char const* output) {
 
     /* load input */
     TFile* f = new TFile(input.data(), "read");
-    auto scale = new history(f, tag);
+    auto scale = new history(f, tag + "_scale");
 
     /* prepare histograms */
     auto ival = std::make_shared<interval>(1, 0., 1.);
