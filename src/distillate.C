@@ -70,12 +70,28 @@ int distillate(char const* config, char const* output) {
     }
 
     /* info text */
-    auto pt_selection = [&](int64_t index) {
+    auto pt_hf_selection = [&](int64_t index) {
         auto pt_x = scale_d_pthf->indices_for(index - 1)[0];
+        auto hf_x = scale_d_pthf->indices_for(index - 1)[1];
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
 
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{jet} < %.0f",
             (*ipt)[pt_x], (*ipt)[pt_x + 1]);
+        l->DrawLatexNDC(0.135, 0.75, buffer);
+
+        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
+        l->DrawLatexNDC(0.135, 0.71, buffer);
+    };
+
+    auto hf_selection = [&](int64_t index) {
+        auto hf_x = (index - 1) % ihf->size();
+
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
@@ -85,17 +101,14 @@ int distillate(char const* config, char const* output) {
 
     /* draw plots */
     auto hb = new pencil();
-    hb->category("centrality", "0", "1", "2", "3");
+    hb->category("sample", "mc");
 
-    hb->alias("0", "50 - 90%");
-    hb->alias("1", "30 - 50%");
-    hb->alias("2", "10 - 30%");
-    hb->alias("3", "0 - 10%");
+    hb->alias("mc", "AllQCDPhoton");
 
     auto c1 = new paper(tag + "_jesr_fits", hb);
     apply_default_style(c1, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
     c1->format(simple_formatter);
-    c1->accessory(pt_selection);
+    c1->accessory(pt_hf_selection);
     c1->divide(ipt->size(), -1);
 
     /* fit scale and resolution */
@@ -120,25 +133,26 @@ int distillate(char const* config, char const* output) {
         (*er_f_pt)[hf_x]->SetBinContent(pt_x, f->GetParameter(2));
         (*er_f_pt)[hf_x]->SetBinError(pt_x, f->GetParError(2));
 
-        c1->add(h, std::to_string(hf_x));
+        c1->add(h, "mc");
     });
 
     auto c2 = new paper(tag + "_jesr", hb);
-    apply_default_style(c2, system, 0., 1.);
+    apply_default_style(c2, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
     c2->format(simple_formatter);
+    c2->accessory(hf_selection);
     c2->divide(ihf->size(), -1);
     c2->set(paper::flags::logx);
 
     es_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(0.5, 1.5, "Y");
+        h->SetAxisRange(0.8, 1.5, "Y");
 
         auto label = "f_es_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)",
             rpt.front(), rpt.back());
         f->SetParameters(1.1, 1.2, 4.8);
-        h->Fit(label.data(), "MEQ", "", rpt.front(), rpt.back());
+        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
-        c2->add(h, std::to_string(index));
+        c2->add(h, "mc");
     });
 
     er_f_pt->apply([&](TH1* h, int64_t index) {
@@ -148,9 +162,9 @@ int distillate(char const* config, char const* output) {
         TF1* f = new TF1(label.data(), "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))",
             rpt.front(), rpt.back());
         f->SetParameters(0.1, 1.2, 4.8);
-        h->Fit(label.data(), "MEQ", "", rpt.front(), rpt.back());
+        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
-        c2->add(h, std::to_string(index));
+        c2->add(h, "mc");
     });
 
     hb->sketch();
