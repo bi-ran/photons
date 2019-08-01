@@ -18,11 +18,17 @@
 
 using namespace std::literals::string_literals;
 
+static bool in_hem_failure_region(float eta, float phi) {
+    return (eta < -1.242 && -1.72 < phi && phi < -0.72);
+}
+
 int invigilate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
     auto tag = conf->get<std::string>("tag");
+
+    auto heavyion = conf->get<bool>("heavyion");
 
     auto pt_min = conf->get<float>("pt_min");
     auto eta_max = conf->get<float>("eta_max");
@@ -102,6 +108,9 @@ int invigilate(char const* config, char const* output) {
             }
 
             if (match == true) { continue; }
+
+            if (heavyion && in_hem_failure_region(gen_eta, (*p->refphi)[j]))
+                continue;
 
             auto reco_pt = (*p->jtpt)[j];
 
