@@ -27,6 +27,7 @@ int distillate(char const* config, char const* output) {
     auto tag = conf->get<std::string>("tag");
 
     auto rpt = conf->get<std::vector<float>>("pt_range");
+    auto reta = conf->get<std::vector<float>>("eta_range");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto deta = conf->get<std::vector<float>>("eta_diff");
@@ -50,23 +51,42 @@ int distillate(char const* config, char const* output) {
 
     auto mhf = std::make_shared<multival>(dhf);
 
+    /* differential in pt, hf */
     auto scale_d_pthf = scale->sum(1);
 
-    auto es = new history("es"s, "", ival, scale_d_pthf->shape());
-    auto er = new history("er"s, "", ival, scale_d_pthf->shape());
+    auto es_d_pt = new history("es_d_pt"s, "", ival, scale_d_pthf->shape());
+    auto er_d_pt = new history("er_d_pt"s, "", ival, scale_d_pthf->shape());
 
-    auto es_f_pt = std::make_unique<history>("es_d_eta_hf"s,
+    auto es_f_pt = std::make_unique<history>("es_f_pt"s,
         "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, mhf);
-    auto er_f_pt = std::make_unique<history>("er_d_eta_hf"s,
+    auto er_f_pt = std::make_unique<history>("er_f_pt"s,
         "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, mhf);
 
+    /* differential in eta, hf */
+
+    /* remove first pt interval - hardcoded for [25, 30] */
+    std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
+    auto scale_d_etahf = scale->shrink("valid", resize, {1, 0, 0})->sum(0);
+
+    auto es_d_eta = new history("es_d_eta"s, "", ival, scale_d_etahf->shape());
+    auto er_d_eta = new history("er_d_eta"s, "", ival, scale_d_etahf->shape());
+
+    auto es_f_eta = std::make_unique<history>("es_f_eta"s,
+        "reco p_{T}/gen p_{T}", "jet #eta", reta, mhf);
+    auto er_f_eta = std::make_unique<history>("er_f_eta"s,
+        "#sigma(p_{T})/p_{T}", "jet #eta", reta, mhf);
+
     /* load fitting parameters */
-    auto flow = new std::vector<float>[ihf->size()];
-    auto fhigh = new std::vector<float>[ihf->size()];
+    auto flp = new std::vector<float>[ihf->size()];
+    auto fhp = new std::vector<float>[ihf->size()];
+    auto fle = new std::vector<float>[ihf->size()];
+    auto fhe = new std::vector<float>[ihf->size()];
     for (int64_t i = 0; i < ihf->size(); ++i) {
         auto index_str = std::to_string(i);
-        flow[i] = conf->get<std::vector<float>>("flow_"s + index_str);
-        fhigh[i] = conf->get<std::vector<float>>("fhigh_"s + index_str);
+        flp[i] = conf->get<std::vector<float>>("flp_"s + index_str);
+        fhp[i] = conf->get<std::vector<float>>("fhp_"s + index_str);
+        fle[i] = conf->get<std::vector<float>>("fle_"s + index_str);
+        fhe[i] = conf->get<std::vector<float>>("fhe_"s + index_str);
     }
 
     /* info text */
@@ -105,7 +125,7 @@ int distillate(char const* config, char const* output) {
 
     hb->alias("mc", "AllQCDPhoton");
 
-    auto c1 = new paper(tag + "_jesr_fits", hb);
+    auto c1 = new paper(tag + "_pt_jesr_fits", hb);
     apply_default_style(c1, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
     c1->format(simple_formatter);
     c1->accessory(pt_hf_selection);
@@ -117,14 +137,14 @@ int distillate(char const* config, char const* output) {
         auto pt_x = indices[0];
         auto hf_x = indices[1];
 
-        auto label = "f_"s + std::to_string(index);
-        TF1* f = new TF1(label.data(), "gaus", rpt.front(), rpt.back());
-        h->Fit(label.data(), "WLMQ", "", flow[hf_x][pt_x], fhigh[hf_x][pt_x]);
+        auto label = "f_pt_"s + std::to_string(index);
+        TF1* f = new TF1(label.data(), "gaus", 0, 2);
+        h->Fit(label.data(), "WLMQ", "", flp[hf_x][pt_x], fhp[hf_x][pt_x]);
 
-        (*es)[index]->SetBinContent(1, f->GetParameter(1));
-        (*es)[index]->SetBinError(1, f->GetParError(1));
-        (*er)[index]->SetBinContent(1, f->GetParameter(2));
-        (*er)[index]->SetBinError(1, f->GetParError(2));
+        (*es_d_pt)[index]->SetBinContent(1, f->GetParameter(1));
+        (*es_d_pt)[index]->SetBinError(1, f->GetParError(1));
+        (*er_d_pt)[index]->SetBinContent(1, f->GetParameter(2));
+        (*er_d_pt)[index]->SetBinError(1, f->GetParError(2));
 
         ++pt_x;
 
@@ -136,7 +156,7 @@ int distillate(char const* config, char const* output) {
         c1->add(h, "mc");
     });
 
-    auto c2 = new paper(tag + "_jesr", hb);
+    auto c2 = new paper(tag + "_pt_jesr", hb);
     apply_default_style(c2, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
     c2->format(simple_formatter);
     c2->accessory(hf_selection);
@@ -146,7 +166,7 @@ int distillate(char const* config, char const* output) {
     es_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(0.8, 1.5, "Y");
 
-        auto label = "f_es_"s + std::to_string(index);
+        auto label = "f_es_pt_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)",
             rpt.front(), rpt.back());
         f->SetParameters(1.1, 1.2, 4.8);
@@ -158,7 +178,7 @@ int distillate(char const* config, char const* output) {
     er_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(0., 1., "Y");
 
-        auto label = "f_er_"s + std::to_string(index);
+        auto label = "f_er_pt_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))",
             rpt.front(), rpt.back());
         f->SetParameters(0.1, 1.2, 4.8);
@@ -167,21 +187,72 @@ int distillate(char const* config, char const* output) {
         c2->add(h, "mc");
     });
 
+    auto c3 = new paper(tag + "_eta_jesr_fits", hb);
+    apply_default_style(c3, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
+    c3->format(simple_formatter);
+    c3->divide(ieta->size(), -1);
+
+    /* fit scale and resolution */
+    scale_d_etahf->apply([&](TH1* h, int64_t index) {
+        auto indices = scale_d_etahf->indices_for(index);
+        auto eta_x = indices[0];
+        auto hf_x = indices[1];
+
+        auto label = "f_eta_"s + std::to_string(index);
+        TF1* f = new TF1(label.data(), "gaus", 0, 2);
+        h->Fit(label.data(), "WLMQ", "", fle[hf_x][eta_x], fhe[hf_x][eta_x]);
+
+        (*es_d_eta)[index]->SetBinContent(1, f->GetParameter(1));
+        (*es_d_eta)[index]->SetBinError(1, f->GetParError(1));
+        (*er_d_eta)[index]->SetBinContent(1, f->GetParameter(2));
+        (*er_d_eta)[index]->SetBinError(1, f->GetParError(2));
+
+        ++eta_x;
+
+        (*es_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(1));
+        (*es_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(1));
+        (*er_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(2));
+        (*er_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(2));
+
+        c3->add(h, "mc");
+    });
+
+    auto c4 = new paper(tag + "_eta_jesr", hb);
+    apply_default_style(c4, system + " #sqrt{s_{NN}} = 5.02 TeV" , 0., 1.);
+    c4->format(simple_formatter);
+    c4->accessory(hf_selection);
+    c4->divide(ihf->size(), -1);
+
+    es_f_eta->apply([&](TH1* h) {
+        h->SetAxisRange(0.8, 1.5, "Y");
+        c4->add(h, "mc"); });
+
+    er_f_eta->apply([&](TH1* h) {
+        h->SetAxisRange(0., 1., "Y");
+        c4->add(h, "mc"); });
+
     hb->sketch();
 
     c1->draw("pdf");
     c2->draw("pdf");
+    c3->draw("pdf");
+    c4->draw("pdf");
 
     /* save output */
     TFile* fout = new TFile(output, "recreate");
 
     scale_d_pthf->save(tag);
+    scale_d_etahf->save(tag);
 
-    es->save(tag);
-    er->save(tag);
-
+    es_d_pt->save(tag);
+    er_d_pt->save(tag);
     es_f_pt->save(tag);
     er_f_pt->save(tag);
+
+    es_d_eta->save(tag);
+    er_d_eta->save(tag);
+    es_f_eta->save(tag);
+    er_f_eta->save(tag);
 
     fout->Close();
 
