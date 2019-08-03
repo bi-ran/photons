@@ -4,7 +4,7 @@
 
 #include "../git/history/include/interval.h"
 #include "../git/history/include/multival.h"
-#include "../git/history/include/history.h"
+#include "../git/history/include/memory.h"
 
 #include "../git/tricks-and-treats/include/overflow_angles.h"
 
@@ -52,7 +52,7 @@ int invigilate(char const* config, char const* output) {
 
     auto mptetahf = std::make_shared<multival>(dpt, deta, dhf);
 
-    auto scale = std::make_unique<history>("scale"s, "counts", ies, mptetahf);
+    auto scale = std::make_unique<memory>("scale"s, "counts", ies, mptetahf);
 
     /* load input */
     TFile* f = new TFile(input.data(), "read");

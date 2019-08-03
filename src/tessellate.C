@@ -5,7 +5,7 @@
 
 #include "../git/history/include/interval.h"
 #include "../git/history/include/multival.h"
-#include "../git/history/include/history.h"
+#include "../git/history/include/memory.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
@@ -26,8 +26,8 @@ static bool in_hem_failure_region(float eta, float phi) {
     return (-3. < eta && eta < -1.3 && -1.57 < phi && phi < -0.87);
 }
 
-void fill_data(std::unique_ptr<history>& see_iso,
-               std::unique_ptr<history>& see_noniso,
+void fill_data(std::unique_ptr<memory>& see_iso,
+               std::unique_ptr<memory>& see_noniso,
                std::shared_ptr<multival>& mpthf,
                TTree* t, pjtree* p, bool heavyion,
                float pt_min, float eta_max, float hovere_max,
@@ -75,7 +75,7 @@ void fill_data(std::unique_ptr<history>& see_iso,
     printf("\n");
 }
 
-void fill_signal(std::unique_ptr<history>& see,
+void fill_signal(std::unique_ptr<memory>& see,
                  std::shared_ptr<multival>& mpthf,
                  TTree* t, pjtree* p, bool heavyion,
                  float pt_min, float eta_max, float hovere_max,
@@ -200,11 +200,11 @@ int tessellate(char const* config, char const* output) {
 
     auto mpthf = std::make_shared<multival>(dpt, dhf);
 
-    auto see_data = std::make_unique<history>("sigma_ieta_ieta_data"s,
+    auto see_data = std::make_unique<memory>("sigma_ieta_ieta_data"s,
         "counts", rsee, mpthf);
-    auto see_sig = std::make_unique<history>("sigma_ieta_ieta_sig"s,
+    auto see_sig = std::make_unique<memory>("sigma_ieta_ieta_sig"s,
         "counts", rsee, mpthf);
-    auto see_bkg = std::make_unique<history>("sigma_ieta_ieta_bkg"s,
+    auto see_bkg = std::make_unique<memory>("sigma_ieta_ieta_bkg"s,
         "counts", rsee, mpthf);
 
     TFile* fd = new TFile(data.data(), "read");
@@ -328,7 +328,7 @@ int tessellate(char const* config, char const* output) {
 
     /* save purities in history format */
     auto incl = std::make_shared<interval>(1, 0., 1.);
-    auto purity = std::make_unique<history>("pthf"s, "purity"s, incl, mpthf);
+    auto purity = std::make_unique<memory>("pthf"s, "purity"s, incl, mpthf);
 
     for (int64_t i = 0; i < purity->size(); ++i)
         (*purity)[i]->SetBinContent(1, purities[i]);

@@ -2,7 +2,7 @@
 
 #include "../git/history/include/interval.h"
 #include "../git/history/include/multival.h"
-#include "../git/history/include/history.h"
+#include "../git/history/include/memory.h"
 
 #include "../git/tricks-and-treats/include/overflow_angles.h"
 
@@ -31,11 +31,11 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_pt, float photon_eta, int64_t photon_phi,
                int64_t pt_x, int64_t hf_x, int64_t pthf_x,
                std::shared_ptr<interval>& ix,
-               std::unique_ptr<history>& nevt,
-               std::unique_ptr<history>& pjet_es_f_dphi,
-               std::unique_ptr<history>& pjet_wta_f_dphi,
-               std::unique_ptr<history>& pjet_f_x,
-               std::unique_ptr<history>& pjet_f_ddr) {
+               std::unique_ptr<memory>& nevt,
+               std::unique_ptr<memory>& pjet_es_f_dphi,
+               std::unique_ptr<memory>& pjet_wta_f_dphi,
+               std::unique_ptr<memory>& pjet_f_x,
+               std::unique_ptr<memory>& pjet_f_ddr) {
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
@@ -170,29 +170,29 @@ int populate(char const* config, char const* output) {
     auto mpthf = std::make_shared<multival>(dpt, dhf);
     auto mpthfx = std::make_shared<multival>(dpt, dhf, dx);
 
-    auto nevt = std::make_unique<history>("nevt"s, "", incl, mpthf);
-    auto nmix = std::make_unique<history>("nmix"s, "", incl, mpthf);
+    auto nevt = std::make_unique<memory>("nevt"s, "", incl, mpthf);
+    auto nmix = std::make_unique<memory>("nmix"s, "", incl, mpthf);
 
-    auto photon_f_pt = std::make_unique<history>("photon_f_pt"s,
+    auto photon_f_pt = std::make_unique<memory>("photon_f_pt"s,
         "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rppt, mincl);
 
-    auto pjet_es_f_dphi = std::make_unique<history>("pjet_es_f_dphi"s,
+    auto pjet_es_f_dphi = std::make_unique<memory>("pjet_es_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
-    auto pjet_wta_f_dphi = std::make_unique<history>("pjet_wta_f_dphi"s,
+    auto pjet_wta_f_dphi = std::make_unique<memory>("pjet_wta_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
-    auto pjet_f_x = std::make_unique<history>("pjet_f_x"s,
+    auto pjet_f_x = std::make_unique<memory>("pjet_f_x"s,
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
 
-    auto mix_pjet_es_f_dphi = std::make_unique<history>("mix_pjet_es_f_dphi"s,
+    auto mix_pjet_es_f_dphi = std::make_unique<memory>("mix_pjet_es_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
-    auto mix_pjet_wta_f_dphi = std::make_unique<history>("mix_pjet_wta_f_dphi"s,
+    auto mix_pjet_wta_f_dphi = std::make_unique<memory>("mix_pjet_wta_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
-    auto mix_pjet_f_x = std::make_unique<history>("mix_pjet_f_x"s,
+    auto mix_pjet_f_x = std::make_unique<memory>("mix_pjet_f_x"s,
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
 
-    auto pjet_f_ddr = std::make_unique<history>("pjet_f_ddr"s,
+    auto pjet_f_ddr = std::make_unique<memory>("pjet_f_ddr"s,
         "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthfx);
-    auto mix_pjet_f_ddr = std::make_unique<history>("mix_pjet_f_ddr",
+    auto mix_pjet_f_ddr = std::make_unique<memory>("mix_pjet_f_ddr",
         "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthfx);
 
     printf("iterate..\n");
@@ -321,10 +321,10 @@ int populate(char const* config, char const* output) {
             mix_pjet_f_x);
 
     /* subtract histograms */
-    auto sub_pjet_es_f_dphi = new history(*pjet_es_f_dphi, "sub");
-    auto sub_pjet_wta_f_dphi = new history(*pjet_wta_f_dphi, "sub");
-    auto sub_pjet_f_x = new history(*pjet_f_x, "sub");
-    auto sub_pjet_f_ddr = new history(*pjet_f_ddr, "sub");
+    auto sub_pjet_es_f_dphi = new memory(*pjet_es_f_dphi, "sub");
+    auto sub_pjet_wta_f_dphi = new memory(*pjet_wta_f_dphi, "sub");
+    auto sub_pjet_f_x = new memory(*pjet_f_x, "sub");
+    auto sub_pjet_f_ddr = new memory(*pjet_f_ddr, "sub");
 
     *sub_pjet_es_f_dphi -= *mix_pjet_es_f_dphi;
     *sub_pjet_wta_f_dphi -= *mix_pjet_wta_f_dphi;

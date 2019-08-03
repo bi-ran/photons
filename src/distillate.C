@@ -50,41 +50,42 @@ int distillate(char const* config, char const* output) {
     auto ieta = std::make_shared<interval>(deta);
     auto ihf = std::make_shared<interval>(dhf);
 
-    auto mhf = std::make_shared<multival>(dhf);
-    auto metahf = std::make_shared<multival>(deta, dhf);
+    auto hf_shape = x{ ihf->size() };
+    auto pthf_shape = x{ ipt->size(), ihf->size() };
+    auto etahf_shape = x{ ieta->size(), ihf->size() };
 
     /* fully differential (pt, eta, hf) */
     auto es = new history("es"s, "", ival, scale->shape());
     auto er = new history("er"s, "", ival, scale->shape());
 
     auto es_f_pt = std::make_unique<history>("es_f_pt"s,
-        "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, metahf);
+        "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, etahf_shape);
     auto er_f_pt = std::make_unique<history>("er_f_pt"s,
-        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, metahf);
+        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, etahf_shape);
 
     /* differential in pt, hf */
     auto scale_dpthf = scale->sum(1);
 
-    auto es_dpthf = new history("es_dpthf", "", ival, scale_dpthf->shape());
-    auto er_dpthf = new history("er_dpthf", "", ival, scale_dpthf->shape());
+    auto es_dpthf = new history("es_dpthf", "", ival, pthf_shape);
+    auto er_dpthf = new history("er_dpthf", "", ival, pthf_shape);
 
     auto es_dhf_f_pt = std::make_unique<history>("es_dhf_f_pt"s,
-        "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, mhf);
+        "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, hf_shape);
     auto er_dhf_f_pt = std::make_unique<history>("er_dhf_f_pt"s,
-        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, mhf);
+        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, hf_shape);
 
     /* differential in eta, hf */
     /* remove first pt interval - hardcoded for [25, 30] */
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
     auto scale_detahf = scale->shrink("valid", resize, {1, 0, 0})->sum(0);
 
-    auto es_detahf = new history("es_detahf", "", ival, scale_detahf->shape());
-    auto er_detahf = new history("er_detahf", "", ival, scale_detahf->shape());
+    auto es_detahf = new history("es_detahf", "", ival, etahf_shape);
+    auto er_detahf = new history("er_detahf", "", ival, etahf_shape);
 
     auto es_dhf_f_eta = std::make_unique<history>("es_dhf_f_eta"s,
-        "reco p_{T}/gen p_{T}", "jet #eta", reta, mhf);
+        "reco p_{T}/gen p_{T}", "jet #eta", reta, hf_shape);
     auto er_dhf_f_eta = std::make_unique<history>("er_dhf_f_eta"s,
-        "#sigma(p_{T})/p_{T}", "jet #eta", reta, mhf);
+        "#sigma(p_{T})/p_{T}", "jet #eta", reta, hf_shape);
 
     /* load fitting parameters */
     auto fl = new std::vector<float>*[ihf->size()];
