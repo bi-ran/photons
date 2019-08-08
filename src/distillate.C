@@ -27,6 +27,8 @@ int distillate(char const* config, char const* output) {
     auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
 
+    auto heavyion = conf->get<bool>("heavyion");
+
     auto rpt = conf->get<std::vector<float>>("pt_range");
     auto reta = conf->get<std::vector<float>>("eta_range");
 
@@ -34,6 +36,9 @@ int distillate(char const* config, char const* output) {
     auto deta = conf->get<std::vector<float>>("eta_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
+
+    auto remove = conf->get<std::vector<int64_t>>("remove");
+    auto csn = conf->get<std::vector<float>>("csn");
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -75,9 +80,8 @@ int distillate(char const* config, char const* output) {
         "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, hf_shape);
 
     /* differential in eta, hf */
-    /* remove first pt interval - hardcoded for [25, 30] */
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
-    auto scale_detahf = scale->shrink("valid", resize, {1, 0, 0})->sum(0);
+    auto scale_detahf = scale->shrink("valid", resize, remove)->sum(0);
 
     auto es_detahf = new history("es_detahf", "", ival, etahf_shape);
     auto er_detahf = new history("er_detahf", "", ival, etahf_shape);
@@ -115,6 +119,19 @@ int distillate(char const* config, char const* output) {
         fle[i] = conf->get<std::vector<float>>("fle_"s + hf_str);
         fhe[i] = conf->get<std::vector<float>>("fhe_"s + hf_str);
     }
+
+    auto set_csn = [&](TF1* f, int64_t hf_x) {
+        if (!heavyion || csn.empty()) {
+            f->SetParameters(0.08, 0.32, 0.);
+            return;
+        }
+
+        f->SetParameters(csn[0], csn[1], csn[2]);
+        if (hf_x > 0) {
+            f->FixParameter(0, csn[0]);
+            f->FixParameter(1, csn[1]);
+        }
+    };
 
     /* info text */
     auto eta_info = [&](int64_t, int64_t eta_x, int64_t offset) {
@@ -238,8 +255,14 @@ int distillate(char const* config, char const* output) {
         auto label = "f_er_dhf_f_pt_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))",
             rpt.front(), rpt.back());
-        f->SetParameters(0.1, 1.2, 4.8);
+        set_csn(f, index);
         h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+
+        csn[1] = f->GetParameter(1);
+        csn[2] = f->GetParameter(2);
+
+        printf("%i - %i%%: %.3f, %.3f, %.3f\n",
+            dcent[index + 1], dcent[index], csn[0], csn[1], csn[2]);
 
         c2->add(h, "mc");
     });
@@ -353,8 +376,11 @@ int distillate(char const* config, char const* output) {
 
         auto label = "f_er_f_pt_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
-        f->SetParameters(0.1, 1.2, 4.8);
+        set_csn(f, index);
         h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+
+        csn[1] = f->GetParameter(1);
+        csn[2] = f->GetParameter(2);
 
         auto eta_x = er_f_pt->indices_for(index)[0];
         c6[eta_x]->add(h, "mc");
