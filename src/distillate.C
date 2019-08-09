@@ -13,6 +13,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TLatex.h"
+#include "TLine.h"
 
 #include <string>
 #include <vector>
@@ -40,6 +41,9 @@ int distillate(char const* config, char const* output) {
 
     auto remove = conf->get<std::vector<int64_t>>("remove");
     auto csn = conf->get<std::vector<float>>("csn");
+
+    auto es_range = conf->get<std::vector<float>>("es_range");
+    auto es_lines = conf->get<std::vector<float>>("es_lines");
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -192,6 +196,16 @@ int distillate(char const* config, char const* output) {
         l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
+    auto guide_lines = [&](int64_t index) {
+        if (index > ihf->size()) { return; }
+
+        for (auto val : es_lines) {
+            TLine* l = new TLine(rpt.front(), val, rpt.back(), val);
+            l->SetLineStyle(7);
+            l->Draw();
+        }
+    };
+
     auto system_info = system + " #sqrt{s_{NN}} = 5.02 TeV";
 
     /* draw plots */
@@ -235,11 +249,12 @@ int distillate(char const* config, char const* output) {
     apply_default_style(c2, system_info, 0., 1.);
     c2->format(simple_formatter);
     c2->accessory(hf_selection);
+    c2->accessory(guide_lines);
     c2->divide(ihf->size(), -1);
     c2->set(paper::flags::logx);
 
     es_dhf_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(0.8, 1.5, "Y");
+        h->SetAxisRange(es_range[0], es_range[1], "Y");
 
         if (fit) {
             auto label = "f_es_dhf_f_pt_"s + std::to_string(index);
@@ -309,7 +324,7 @@ int distillate(char const* config, char const* output) {
     c4->divide(ihf->size(), -1);
 
     es_dhf_f_eta->apply([&](TH1* h) {
-        h->SetAxisRange(0.8, 1.5, "Y");
+        h->SetAxisRange(es_range[0], es_range[1], "Y");
         c4->add(h, "mc"); });
 
     er_dhf_f_eta->apply([&](TH1* h) {
@@ -364,7 +379,7 @@ int distillate(char const* config, char const* output) {
     });
 
     es_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(0.8, 1.5, "Y");
+        h->SetAxisRange(es_range[0], es_range[1], "Y");
 
         if (fit) {
             auto label = "f_es_f_pt_"s + std::to_string(index);
