@@ -163,6 +163,7 @@ int extract(char const* config, char const* output) {
 
             float corr = JEC->GetCorrectedPT();
             float cres = (apply_residual) ? fres[hf_x]->Eval(corr) : 1.f;
+            cres = cres > 0.8 ? cres : 0.8;
             (*tree_pj->jtpt)[j] = corr / cres;
 
             auto unc = JEU->GetUncertainty();
