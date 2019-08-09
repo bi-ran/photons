@@ -28,6 +28,7 @@ int distillate(char const* config, char const* output) {
     auto tag = conf->get<std::string>("tag");
 
     auto heavyion = conf->get<bool>("heavyion");
+    auto fit = conf->get<bool>("fit");
 
     auto rpt = conf->get<std::vector<float>>("pt_range");
     auto reta = conf->get<std::vector<float>>("eta_range");
@@ -240,11 +241,12 @@ int distillate(char const* config, char const* output) {
     es_dhf_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(0.8, 1.5, "Y");
 
-        auto label = "f_es_dhf_f_pt_"s + std::to_string(index);
-        TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)",
-            rpt.front(), rpt.back());
-        f->SetParameters(1.1, 1.2, 4.8);
-        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        if (fit) {
+            auto label = "f_es_dhf_f_pt_"s + std::to_string(index);
+            TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
+            f->SetParameters(1.1, 1.2, 4.8);
+            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        }
 
         c2->add(h, "mc");
     });
@@ -252,17 +254,19 @@ int distillate(char const* config, char const* output) {
     er_dhf_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(0., 1., "Y");
 
-        auto label = "f_er_dhf_f_pt_"s + std::to_string(index);
-        TF1* f = new TF1(label.data(), "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))",
-            rpt.front(), rpt.back());
-        set_csn(f, index);
-        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        if (fit) {
+            auto label = "f_er_dhf_f_pt_"s + std::to_string(index);
+            TF1* f = new TF1(label.data(),
+                "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
+            set_csn(f, index);
+            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
-        csn[1] = f->GetParameter(1);
-        csn[2] = f->GetParameter(2);
+            csn[1] = f->GetParameter(1);
+            csn[2] = f->GetParameter(2);
 
-        printf("%i - %i%%: %.3f, %.3f, %.3f\n",
-            dcent[index + 1], dcent[index], csn[0], csn[1], csn[2]);
+            printf("%i - %i%%: %.3f, %.3f, %.3f\n",
+                dcent[index + 1], dcent[index], csn[0], csn[1], csn[2]);
+        }
 
         c2->add(h, "mc");
     });
@@ -362,10 +366,12 @@ int distillate(char const* config, char const* output) {
     es_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(0.8, 1.5, "Y");
 
-        auto label = "f_es_f_pt_"s + std::to_string(index);
-        TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
-        f->SetParameters(1.1, 1.2, 4.8);
-        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        if (fit) {
+            auto label = "f_es_f_pt_"s + std::to_string(index);
+            TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
+            f->SetParameters(1.1, 1.2, 4.8);
+            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        }
 
         auto eta_x = es_f_pt->indices_for(index)[0];
         c6[eta_x]->add(h, "mc");
@@ -374,13 +380,16 @@ int distillate(char const* config, char const* output) {
     er_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(0., 1., "Y");
 
-        auto label = "f_er_f_pt_"s + std::to_string(index);
-        TF1* f = new TF1(label.data(), "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
-        set_csn(f, index);
-        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        if (fit) {
+            auto label = "f_er_f_pt_"s + std::to_string(index);
+            TF1* f = new TF1(label.data(),
+                "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
+            set_csn(f, index);
+            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
-        csn[1] = f->GetParameter(1);
-        csn[2] = f->GetParameter(2);
+            csn[1] = f->GetParameter(1);
+            csn[2] = f->GetParameter(2);
+        }
 
         auto eta_x = er_f_pt->indices_for(index)[0];
         c6[eta_x]->add(h, "mc");
