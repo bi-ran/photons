@@ -220,6 +220,7 @@ int populate(char const* config, char const* output) {
         t->GetEntry(i);
 
         if (pjt->hiHF <= hf_min) { continue; }
+        if (pjt->hiHF >= 5199.95) { continue; }
 
         int64_t leading = -1;
         for (int64_t j = 0; j < pjt->nPho; ++j) {
