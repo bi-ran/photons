@@ -231,12 +231,12 @@ int populate(char const* config, char const* output) {
             break;
         }
 
+        /* require leading photon */
+        if (leading < 0) { continue; }
+
         if ((*pjt->phoSigmaIEtaIEta_2012)[leading] > see_max
                 || (*pjt->phoSigmaIEtaIEta_2012)[leading] < see_min)
             continue;
-
-        /* require leading photon */
-        if (leading < 0) { continue; }
 
         /* hem failure region exclusion */
         if (heavyion && within_hem_failure_region(pjt, leading)) { continue; }
