@@ -111,6 +111,8 @@ int emulate(char const* config, char const* output) {
         }
     });
 
+    c1->divide(3, -1);
+
     c1->add((*vz)[0], "data");
     c1->add((*vz)[1], "mc");
     c1->add((*vz)[2]);
