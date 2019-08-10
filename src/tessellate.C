@@ -125,7 +125,8 @@ void fill_signal(std::unique_ptr<memory>& see,
     printf("\n");
 }
 
-auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg) {
+auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
+                   std::vector<float> const& range) {
     auto stub = "_"s + hdata->GetName();
 
     TH1F* tdata = (TH1F*)hdata->Clone(("t"s + stub).data());
@@ -142,16 +143,13 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg) {
         return p[0] * (nsig * p[1] + nbkg * (1 - p[1]));
     };
 
-    auto range_low = tdata->GetBinLowEdge(1);
-    auto range_high = tdata->GetBinLowEdge(tdata->GetNbinsX() + 1);
-
-    TF1* f = new TF1(("f"s + stub).data(), evaluate, range_low, range_high, 2);
+    TF1* f = new TF1(("f"s + stub).data(), evaluate, range[0], range[1], 2);
     f->SetParameters(tdata->Integral(), 0.8);
     f->SetParLimits(1, 0., 1.);
 
-    tdata->Fit(("f"s + stub).data(), "L0Q", "", range_low, range_high);
-    tdata->Fit(("f"s + stub).data(), "L0Q", "", range_low, range_high);
-    tdata->Fit(("f"s + stub).data(), "L0QM", "", range_low, range_high);
+    tdata->Fit(("f"s + stub).data(), "L0Q", "", range[0], range[1]);
+    tdata->Fit(("f"s + stub).data(), "L0Q", "", range[0], range[1]);
+    tdata->Fit(("f"s + stub).data(), "L0QM", "", range[0], range[1]);
 
     auto p0 = f->GetParameter(0);
     auto p1 = f->GetParameter(1);
@@ -184,6 +182,7 @@ int tessellate(char const* config, char const* output) {
     auto see_nbins = conf->get<int64_t>("see_nbins");
     auto see_low = conf->get<float>("see_low");
     auto see_high = conf->get<float>("see_high");
+    auto rfit = conf->get<std::vector<float>>("rfit");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
@@ -268,7 +267,8 @@ int tessellate(char const* config, char const* output) {
 
     std::vector<float> purities(mpthf->size(), 1.);
     for (int64_t i = 0; i < mpthf->size(); ++i) {
-        auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i]);
+        auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i],
+                                 rfit);
 
         auto stub = "p_"s + (*see_data)[i]->GetName();
         auto pfit = (TH1F*)(*see_sig)[i]->Clone((stub + "f").data());
