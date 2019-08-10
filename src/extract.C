@@ -4,16 +4,21 @@
 
 #include "../git/config/include/configurer.h"
 
+#include "../git/foliage/include/eggen.h"
+#include "../git/foliage/include/electrons.h"
 #include "../git/foliage/include/event.h"
 #include "../git/foliage/include/jets.h"
 #include "../git/foliage/include/photons.h"
 #include "../git/foliage/include/triggers.h"
 
+#include "../git/history/include/interval.h"
 #include "../git/history/include/history.h"
 
 #include "../git/tricks-and-treats/include/train.h"
 
+#include "TF1.h"
 #include "TFile.h"
+#include "TH1.h"
 #include "TTree.h"
 
 #include <string>
@@ -47,7 +52,7 @@ int extract(char const* config, char const* output) {
     auto selections = conf->get<std::vector<std::string>>("selections");
     auto paths = conf->get<std::vector<std::string>>("paths");
     auto skim = conf->get<std::vector<std::string>>("skim");
-    auto jet_algo = conf->get<std::string>("jet_algo");
+    auto algo = conf->get<std::string>("algo");
     auto jecs = conf->get<std::vector<std::string>>("jecs");
     auto jeu = conf->get<std::string>("jeu");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
@@ -64,7 +69,7 @@ int extract(char const* config, char const* output) {
     auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
     auto chain_sel = forest->attach("skimanalysis/HltTree", true);
     auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
-    auto chain_jet = forest->attach((jet_algo + "/t").data(), true);
+    auto chain_jet = forest->attach((algo + "/t").data(), !algo.empty());
     auto chain_hlt = forest->attach("hltanalysis/HltTree", hlt_branches);
 
     (*forest)();
