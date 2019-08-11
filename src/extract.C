@@ -21,6 +21,8 @@
 #include "TH1.h"
 #include "TTree.h"
 
+#include <algorithm>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -48,6 +50,7 @@ int extract(char const* config, char const* output) {
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
     auto apply_residual = conf->get<bool>("apply_residual");
+    auto active = conf->get<std::vector<bool>>("active");
 
     auto selections = conf->get<std::vector<std::string>>("selections");
     auto paths = conf->get<std::vector<std::string>>("paths");
@@ -83,6 +86,8 @@ int extract(char const* config, char const* output) {
     auto thlt = harvest<triggers>(chain_hlt, paths);
 
     std::array<bool, tt::ntt> flags = { tevt, tegg, tpho, tele, tjet, thlt };
+    std::transform(flags.begin(), flags.end(), active.begin(), flags.begin(),
+                   [](bool a, bool b) -> bool { return a && b; });
 
     /* setup output tree */
     TTree::SetMaxTreeSize(1000000000000LL);
