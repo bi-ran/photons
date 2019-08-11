@@ -74,13 +74,13 @@ int extract(char const* config, char const* output) {
 
     (*forest)();
 
-    auto tree_evt = new event(chain_evt, mc_branches);
-    auto tree_sel = new triggers(chain_sel, selections);
-    auto tree_egg = new eggen(chain_eg, mc_branches);
-    auto tree_ele = new electrons(chain_eg);
-    auto tree_pho = new photons(chain_eg);
-    auto tree_jet = new jets(chain_jet, mc_branches, array_size);
-    auto tree_hlt = new triggers(chain_hlt, paths);
+    auto tree_evt = harvest<event>(chain_evt, mc_branches);
+    auto tree_sel = harvest<triggers>(chain_sel, selections);
+    auto tree_egg = harvest<eggen>(chain_eg, mc_branches);
+    auto tree_ele = harvest<electrons>(chain_eg);
+    auto tree_pho = harvest<photons>(chain_eg);
+    auto tree_jet = harvest<jets>(chain_jet, mc_branches, array_size);
+    auto tree_hlt = harvest<triggers>(chain_hlt, paths);
 
     /* setup output tree */
     TTree::SetMaxTreeSize(1000000000000LL);

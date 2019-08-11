@@ -56,10 +56,10 @@ int speculate(char const* config, char const* output) {
 
     (*forest)();
 
-    auto tevt = new event(chain_evt, false);
-    auto tsel = new triggers(chain_sel, selections);
-    auto tpho = new photons(chain_eg);
-    auto thlt = new triggers(chain_hlt, paths);
+    auto tevt = harvest<event>(chain_evt, false);
+    auto tsel = harvest<triggers>(chain_sel, selections);
+    auto tpho = harvest<photons>(chain_eg);
+    auto thlt = harvest<triggers>(chain_hlt, paths);
 
     auto counts = new history("count", "counts", "photon p_{T}", rpt, 2);
 
