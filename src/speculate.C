@@ -1,13 +1,9 @@
 #include "../include/lambdas.h"
+#include "../include/pjtree.h"
 #include "../include/specifics.h"
 
 #include "../git/config/include/configurer.h"
 
-#include "../git/foliage/include/event.h"
-#include "../git/foliage/include/photons.h"
-#include "../git/foliage/include/triggers.h"
-
-#include "../git/history/include/interval.h"
 #include "../git/history/include/history.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
@@ -29,15 +25,12 @@ using namespace std::placeholders;
 int speculate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
-    auto files = conf->get<std::vector<std::string>>("files");
+    auto input = conf->get<std::string>("input");
     auto max_entries = conf->get<int64_t>("max_entries");
     auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
 
     auto heavyion = conf->get<bool>("heavyion");
-
-    auto selections = conf->get<std::vector<std::string>>("selections");
-    auto paths = conf->get<std::vector<std::string>>("paths");
 
     auto const eta_abs = conf->get<float>("eta_abs");
     auto const hovere_max = conf->get<float>("hovere_max");
@@ -48,45 +41,27 @@ int speculate(char const* config, char const* output) {
     auto rpt = conf->get<std::vector<float>>("pt_range");
 
     /* load forest */
-    auto forest = new train(files);
-    auto chain_evt = forest->attach("hiEvtAnalyzer/HiTree", true);
-    auto chain_sel = forest->attach("skimanalysis/HltTree", true);
-    auto chain_eg = forest->attach("ggHiNtuplizerGED/EventTree", true);
-    auto chain_hlt = forest->attach("hltanalysis/HltTree", true);
-
-    (*forest)();
-
-    auto tevt = harvest<event>(chain_evt, false);
-    auto tsel = harvest<triggers>(chain_sel, selections);
-    auto tpho = harvest<photons>(chain_eg);
-    auto thlt = harvest<triggers>(chain_hlt, paths);
+    TFile* f = new TFile(input.data(), "read");
+    TTree* t = (TTree*)f->Get("pj");
+    auto p = new pjtree(false, true, t, { 1, 0, 1, 0, 0, 1 });
 
     auto counts = new history("count", "counts", "photon p_{T}", rpt, 2);
 
     /* iterate */
-    int64_t nentries = forest->count();
+    auto nentries = static_cast<int64_t>(t->GetEntries());
     if (max_entries) nentries = std::min(nentries, max_entries);
     for (int64_t i = 0; i < nentries; ++i) {
         if (i % 100000 == 0)
             printf("entry: %li/%li\n", i, nentries);
 
-        forest->get(i);
+        t->GetEntry(i);
 
-        if (std::abs(tevt->vz) > 15) { continue; }
-
-        if (!selections.empty()) {
-            bool pass_selection = false;
-            for (auto const& sel : selections)
-                if (tsel->accept(sel) == 1)
-                    pass_selection = true;
-
-            if (!pass_selection) { continue; }
-        }
+        if (std::abs(p->vz) > 15) { continue; }
 
         int64_t leading = -1;
-        for (int64_t j = 0; j < tpho->nPho; ++j) {
-            if (std::abs((*tpho->phoSCEta)[j]) >= eta_abs) { continue; }
-            if ((*tpho->phoHoverE)[j] > hovere_max) { continue; }
+        for (int64_t j = 0; j < p->nPho; ++j) {
+            if (std::abs((*p->phoSCEta)[j]) >= eta_abs) { continue; }
+            if ((*p->phoHoverE)[j] > hovere_max) { continue; }
 
             leading = j;
             break;
@@ -95,28 +70,24 @@ int speculate(char const* config, char const* output) {
         /* require leading photon */
         if (leading < 0) { continue; }
 
-        if ((*tpho->phoSigmaIEtaIEta_2012)[leading] > see_max
-                || (*tpho->phoSigmaIEtaIEta_2012)[leading] < see_min)
+        if ((*p->phoSigmaIEtaIEta_2012)[leading] > see_max
+                || (*p->phoSigmaIEtaIEta_2012)[leading] < see_min)
             continue;
 
         /* hem failure region exclusion */
-        if (heavyion && within_hem_failure_region(tpho, leading)) { continue; }
+        if (heavyion && within_hem_failure_region(p, leading)) { continue; }
 
         /* isolation requirement */
-        float isolation = (*tpho->pho_ecalClusterIsoR3)[leading]
-            + (*tpho->pho_hcalRechitIsoR3)[leading]
-            + (*tpho->pho_trackIsoR3PtCut20)[leading];
+        float isolation = (*p->pho_ecalClusterIsoR3)[leading]
+            + (*p->pho_hcalRechitIsoR3)[leading]
+            + (*p->pho_trackIsoR3PtCut20)[leading];
         if (isolation > iso_max) { continue; }
 
-        auto et = (*tpho->phoEt)[leading];
+        auto et = (*p->phoEt)[leading];
 
         (*counts)[0]->Fill(et);
-        for (auto const& path : paths) {
-            if (thlt->accept(path) == 1) {
-                (*counts)[1]->Fill(et);
-                break;
-            }
-        }
+        if ((*p->accepts)[0] == 1)
+            (*counts)[1]->Fill(et);
     }
 
     /* calculate efficiency */
