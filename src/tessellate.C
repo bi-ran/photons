@@ -203,11 +203,11 @@ int tessellate(char const* config, char const* output) {
 
     TFile* fd = new TFile(data.data(), "read");
     TTree* td = (TTree*)fd->Get("pj");
-    auto pd = new pjtree(false, td);
+    auto pd = new pjtree(false, false, td, { 1, 0, 1, 0, 0, 0 });
 
     TFile* fs = new TFile(signal.data(), "read");
     TTree* ts = (TTree*)fs->Get("pj");
-    auto ps = new pjtree(true, ts);
+    auto ps = new pjtree(true, false, ts, { 1, 1, 1, 0, 0, 0 });
 
     TFile* fout = new TFile(output, "recreate");
 

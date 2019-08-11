@@ -12,6 +12,7 @@
 
 #include "TTree.h"
 
+#include <array>
 #include <vector>
 
 #define B_VEC_JET_RECO(ACTION, ...)                                         \
@@ -39,18 +40,20 @@
 #define B_VEC_TRG(ACTION, ...)                                              \
     ACTION(sv<int32_t>,     accepts,                    ## __VA_ARGS__)     \
 
-#define B_VAL_EXT(ACTION, ...)                                              \
+#define B_VAL_EVT_EXT(ACTION, ...)                                          \
     ACTION(float,           weight,                     ## __VA_ARGS__)     \
 
-#define B_VEC_EXT(ACTION, ...)                                              \
+#define B_VEC_JET_EXT(ACTION, ...)                                          \
     ACTION(sv<float>,       jtpt_up,                    ## __VA_ARGS__)     \
     ACTION(sv<float>,       jtpt_down,                  ## __VA_ARGS__)     \
 
+enum tt { evt, egm, pho, ele, jet, trg, ntt };
+
 class pjtree {
   public:
-    pjtree(TTree* t, bool gen, bool hlt)
-            : _gen(gen),
-              _hlt(hlt) {
+    pjtree(TTree* t, bool gen, bool hlt,
+           std::array<bool, tt::ntt> const& flags)
+            : _gen(gen), _hlt(hlt), _flags(flags) {
         B_VAL_EVT_RECO(SETMONE)
         B_VAL_PHO_RECO(SETMONE)
         B_VAL_ELE_RECO(SETMONE)
@@ -72,18 +75,15 @@ class pjtree {
             B_VEC_TRG(ALLOCOBJ)
         }
 
-        B_VAL_EXT(SETMONE)
-        B_VEC_EXT(ALLOCOBJ)
+        B_VAL_EVT_EXT(SETMONE)
+        B_VEC_JET_EXT(ALLOCOBJ)
 
         branch(t);
     }
 
-    pjtree(TTree* t, bool gen)
-        : pjtree(t, gen, false) { }
-
-    pjtree(bool gen, bool hlt, TTree* t)
-            : _gen(gen),
-              _hlt(hlt) {
+    pjtree(bool gen, bool hlt, TTree* t,
+           std::array<bool, tt::ntt> const& flags)
+            : _gen(gen), _hlt(hlt), _flags(flags) {
         B_VAL_EVT_RECO(SETZERO)
         B_VAL_PHO_RECO(SETZERO)
         B_VAL_ELE_RECO(SETZERO)
@@ -105,14 +105,11 @@ class pjtree {
             B_VEC_TRG(SETZERO)
         }
 
-        B_VAL_EXT(SETZERO)
-        B_VEC_EXT(SETZERO)
+        B_VAL_EVT_EXT(SETZERO)
+        B_VEC_JET_EXT(SETZERO)
 
         read(t);
     }
-
-    pjtree(bool gen, TTree* t)
-        : pjtree(gen, false, t) { }
 
     ~pjtree() = default;
 
@@ -131,123 +128,171 @@ class pjtree {
             B_VEC_TRG(CLEAROBJ)
         }
 
-        B_VEC_EXT(CLEAROBJ)
+        B_VEC_JET_EXT(CLEAROBJ)
     }
 
-    void copy(event* t) {
-        B_VAL_EVT_RECO(COPYVAL, t)
+    void copy(event* tevt, eggen* tegg, photons* tpho, electrons* tele,
+              jets* tjet, triggers* thlt) {
+        if (_flags[tt::evt]) {
+            B_VAL_EVT_RECO(COPYVAL, tevt)
 
-        if (_gen) {
-            B_VAL_EVT_GEN(COPYVAL,t )
+            if (_gen) {
+                B_VAL_EVT_GEN(COPYVAL, tevt)
+            }
         }
-    }
 
-    void copy(electrons* t) {
-        B_VAL_ELE_RECO(COPYVAL, t)
-        B_VEC_ELE_RECO(COPYOBJ, t)
-    }
-
-    void copy(photons* t) {
-        B_VAL_PHO_RECO(COPYVAL, t)
-        B_VEC_PHO_RECO(COPYOBJ, t)
-    }
-
-    void copy(eggen* t) {
-        if (_gen) {
-            B_VAL_EGM_GEN(COPYVAL, t)
-            B_VEC_EGM_GEN(COPYOBJ, t)
+        if (_flags[tt::egm]) {
+            if (_gen) {
+                B_VAL_EGM_GEN(COPYVAL, tegg)
+                B_VEC_EGM_GEN(COPYOBJ, tegg)
+            }
         }
-    }
 
-    void copy(jets* t) {
-        B_VAL_JET_RECO(COPYVAL, t)
-        B_VEC_JET_RECO(COPYPTR, t, nref)
-
-        if (_gen) {
-            B_VAL_JET_GEN(COPYVAL, t)
-            B_VEC_JET_GEN(COPYPTR, t, ngen)
-            B_VEC_JET_REF(COPYPTR, t, nref)
+        if (_flags[tt::ele]) {
+            B_VAL_ELE_RECO(COPYVAL, tele)
+            B_VEC_ELE_RECO(COPYOBJ, tele)
         }
-    }
 
-    void copy(triggers* t) {
-        if (_hlt) {
-            B_VEC_TRG(COPYPTR, t, t->size())
+        if (_flags[tt::pho]) {
+            B_VAL_PHO_RECO(COPYVAL, tpho)
+            B_VEC_PHO_RECO(COPYOBJ, tpho)
+        }
+
+        if (_flags[tt::jet]) {
+            B_VAL_JET_RECO(COPYVAL, tjet)
+            B_VEC_JET_RECO(COPYPTR, tjet, nref)
+
+            if (_gen) {
+                B_VAL_JET_GEN(COPYVAL, tjet)
+                B_VEC_JET_GEN(COPYPTR, tjet, ngen)
+                B_VEC_JET_REF(COPYPTR, tjet, nref)
+            }
+        }
+
+        if (_flags[tt::trg]) {
+            if (_hlt) {
+                B_VEC_TRG(COPYPTR, thlt, thlt->size())
+            }
         }
     }
 
     B_VAL_EVT_RECO(DECLVAL)
+    B_VAL_EVT_GEN(DECLVAL)
+    B_VAL_EVT_EXT(DECLVAL)
+    B_VAL_EGM_GEN(DECLVAL)
+    B_VEC_EGM_GEN(DECLPTR)
     B_VAL_PHO_RECO(DECLVAL)
-    B_VAL_ELE_RECO(DECLVAL)
     B_VEC_PHO_RECO(DECLPTR)
+    B_VAL_ELE_RECO(DECLVAL)
     B_VEC_ELE_RECO(DECLPTR)
     B_VAL_JET_RECO(DECLVAL)
     B_VEC_JET_RECO(DECLPTR)
-    B_VAL_EVT_GEN(DECLVAL)
-    B_VAL_EGM_GEN(DECLVAL)
-    B_VEC_EGM_GEN(DECLPTR)
     B_VAL_JET_GEN(DECLVAL)
     B_VEC_JET_GEN(DECLPTR)
     B_VEC_JET_REF(DECLPTR)
-    B_VAL_EXT(DECLVAL)
-    B_VEC_EXT(DECLPTR)
+    B_VEC_JET_EXT(DECLPTR)
     B_VEC_TRG(DECLPTR)
 
   private:
     void branch(TTree* t) {
-        B_VAL_EVT_RECO(BRANCHVAL, t)
-        B_VAL_PHO_RECO(BRANCHVAL, t)
-        B_VAL_ELE_RECO(BRANCHVAL, t)
-        B_VAL_JET_RECO(BRANCHVAL, t)
-        B_VEC_PHO_RECO(BRANCHPTR, t)
-        B_VEC_ELE_RECO(BRANCHPTR, t)
-        B_VEC_JET_RECO(BRANCHPTR, t)
+        if (_flags[tt::evt]) {
+            B_VAL_EVT_RECO(BRANCHVAL, t)
 
-        if (_gen) {
-            B_VAL_EVT_GEN(BRANCHVAL, t)
-            B_VAL_EGM_GEN(BRANCHVAL, t)
-            B_VAL_JET_GEN(BRANCHVAL, t)
-            B_VEC_EGM_GEN(BRANCHPTR, t)
-            B_VEC_JET_GEN(BRANCHPTR, t)
-            B_VEC_JET_REF(BRANCHPTR, t)
+            if (_gen) {
+                B_VAL_EVT_GEN(BRANCHVAL, t)
+            }
+
+            B_VAL_EVT_EXT(BRANCHVAL, t)
         }
 
-        if (_hlt) {
-            B_VEC_TRG(BRANCHPTR, t)
+        if (_flags[tt::egm]) {
+            if (_gen) {
+                B_VAL_EGM_GEN(BRANCHVAL, t)
+                B_VEC_EGM_GEN(BRANCHPTR, t)
+            }
         }
 
-        B_VAL_EXT(BRANCHVAL, t)
-        B_VEC_EXT(BRANCHPTR, t)
+        if (_flags[tt::pho]) {
+            B_VAL_PHO_RECO(BRANCHVAL, t)
+            B_VEC_PHO_RECO(BRANCHPTR, t)
+        }
+
+        if (_flags[tt::ele]) {
+            B_VAL_ELE_RECO(BRANCHVAL, t)
+            B_VEC_ELE_RECO(BRANCHPTR, t)
+        }
+
+        if (_flags[tt::jet]) {
+            B_VAL_JET_RECO(BRANCHVAL, t)
+            B_VEC_JET_RECO(BRANCHPTR, t)
+
+            if (_gen) {
+                B_VAL_JET_GEN(BRANCHVAL, t)
+                B_VEC_JET_GEN(BRANCHPTR, t)
+                B_VEC_JET_REF(BRANCHPTR, t)
+            }
+
+            B_VEC_JET_EXT(BRANCHPTR, t)
+        }
+
+        if (_flags[tt::trg]) {
+            if (_hlt) {
+                B_VEC_TRG(BRANCHPTR, t)
+            }
+        }
     }
 
     void read(TTree* t) {
-        B_VAL_EVT_RECO(SETVALADDR, t)
-        B_VAL_PHO_RECO(SETVALADDR, t)
-        B_VAL_ELE_RECO(SETVALADDR, t)
-        B_VAL_JET_RECO(SETVALADDR, t)
-        B_VEC_PHO_RECO(SETVALADDR, t)
-        B_VEC_ELE_RECO(SETVALADDR, t)
-        B_VEC_JET_RECO(SETVALADDR, t)
+        if (_flags[tt::evt]) {
+            B_VAL_EVT_RECO(SETVALADDR, t)
 
-        if (_gen) {
-            B_VAL_EVT_GEN(SETVALADDR, t)
-            B_VAL_EGM_GEN(SETVALADDR, t)
-            B_VAL_JET_GEN(SETVALADDR, t)
-            B_VEC_EGM_GEN(SETVALADDR, t)
-            B_VEC_JET_GEN(SETVALADDR, t)
-            B_VEC_JET_REF(SETVALADDR, t)
+            if (_gen) {
+                B_VAL_EVT_GEN(SETVALADDR, t)
+            }
+
+            B_VAL_EVT_EXT(SETVALADDR, t)
         }
 
-        if (_hlt) {
-            B_VEC_TRG(SETVALADDR, t)
+        if (_flags[tt::egm]) {
+            if (_gen) {
+                B_VAL_EGM_GEN(SETVALADDR, t)
+                B_VEC_EGM_GEN(SETVALADDR, t)
+            }
         }
 
-        B_VAL_EXT(SETVALADDR, t)
-        B_VEC_EXT(SETVALADDR, t)
+        if (_flags[tt::pho]) {
+            B_VAL_PHO_RECO(SETVALADDR, t)
+            B_VEC_PHO_RECO(SETVALADDR, t)
+        }
+
+        if (_flags[tt::ele]) {
+            B_VAL_ELE_RECO(SETVALADDR, t)
+            B_VEC_ELE_RECO(SETVALADDR, t)
+        }
+
+        if (_flags[tt::jet]) {
+            B_VAL_JET_RECO(SETVALADDR, t)
+            B_VEC_JET_RECO(SETVALADDR, t)
+
+            if (_gen) {
+                B_VAL_JET_GEN(SETVALADDR, t)
+                B_VEC_JET_GEN(SETVALADDR, t)
+                B_VEC_JET_REF(SETVALADDR, t)
+            }
+
+            B_VEC_JET_EXT(SETVALADDR, t)
+        }
+
+        if (_flags[tt::trg]) {
+            if (_hlt) {
+                B_VEC_TRG(SETVALADDR, t)
+            }
+        }
     }
 
     bool _gen;
     bool _hlt;
+    std::array<bool, tt::ntt> _flags;
 };
 
 #endif /* PJTREE_H */

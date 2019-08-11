@@ -74,20 +74,22 @@ int extract(char const* config, char const* output) {
 
     (*forest)();
 
-    auto tree_evt = harvest<event>(chain_evt, mc_branches);
-    auto tree_sel = harvest<triggers>(chain_sel, selections);
-    auto tree_egg = harvest<eggen>(chain_eg, mc_branches);
-    auto tree_ele = harvest<electrons>(chain_eg);
-    auto tree_pho = harvest<photons>(chain_eg);
-    auto tree_jet = harvest<jets>(chain_jet, mc_branches, array_size);
-    auto tree_hlt = harvest<triggers>(chain_hlt, paths);
+    auto tevt = harvest<event>(chain_evt, mc_branches);
+    auto tsel = harvest<triggers>(chain_sel, selections);
+    auto tegg = harvest<eggen>(chain_eg, mc_branches);
+    auto tele = harvest<electrons>(chain_eg);
+    auto tpho = harvest<photons>(chain_eg);
+    auto tjet = harvest<jets>(chain_jet, mc_branches, array_size);
+    auto thlt = harvest<triggers>(chain_hlt, paths);
+
+    std::array<bool, tt::ntt> flags = { tevt, tegg, tpho, tele, tjet, thlt };
 
     /* setup output tree */
     TTree::SetMaxTreeSize(1000000000000LL);
 
     TFile* fout = new TFile(output, "recreate");
     TTree* tout = new TTree("pj", "photon-jet");
-    auto tree_pj = new pjtree(tout, mc_branches, hlt_branches);
+    auto tree_pj = new pjtree(tout, mc_branches, hlt_branches, flags);
 
     /* weights, corrections */
     auto JEC = new JetCorrector(jecs);
@@ -122,29 +124,24 @@ int extract(char const* config, char const* output) {
         if (!selections.empty()) {
             bool pass_selection = false;
             for (auto const& path : selections)
-                if (tree_sel->accept(path) == 1)
+                if (tsel->accept(path) == 1)
                     pass_selection = true;
 
             if (!pass_selection) { continue; }
         }
 
         if (!skim.empty()) {
-            if (tree_pho->nPho < 1) { continue; }
+            if (tpho->nPho < 1) { continue; }
 
             bool pass_skim = false;
             for (auto const& path : skim)
-                if (tree_hlt->accept(path) == 1)
+                if (thlt->accept(path) == 1)
                     pass_skim = true;
 
             if (!pass_skim) { continue; }
         }
 
-        tree_pj->copy(tree_evt);
-        tree_pj->copy(tree_egg);
-        tree_pj->copy(tree_ele);
-        tree_pj->copy(tree_pho);
-        tree_pj->copy(tree_jet);
-        tree_pj->copy(tree_hlt);
+        tree_pj->copy(tevt, tegg, tpho, tele, tjet, thlt);
 
         if (!heavyion) {
             tree_pj->hiBin = 0;

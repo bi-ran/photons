@@ -199,11 +199,11 @@ int populate(char const* config, char const* output) {
 
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
-    auto pjt = new pjtree(false, t);
+    auto pjt = new pjtree(false, false, t, { 1, 1, 1, 1, 1, 0 });
 
     TFile* fm = new TFile(mb.data(), "read");
     TTree* tm = (TTree*)fm->Get("pj");
-    auto pjtm = new pjtree(false, tm);
+    auto pjtm = new pjtree(false, false, tm, { 1, 1, 1, 1, 1, 0});
 
     TFile* fout = new TFile(output, "recreate");
 

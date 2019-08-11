@@ -57,7 +57,7 @@ int invigilate(char const* config, char const* output) {
     /* load input */
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
-    auto p = new pjtree(true, t);
+    auto p = new pjtree(true, false, t, { 1, 0, 1, 0, 1, 0 });
 
     /* manage memory manually */
     TH1::AddDirectory(false);
