@@ -1,4 +1,5 @@
 #include "../include/lambdas.h"
+#include "../include/specifics.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -144,12 +145,6 @@ int accumulate(char const* config, char const* output) {
         l->DrawLatexNDC(0.135, 0.75, buffer);
     };
 
-    auto line_at_unity = [&](int64_t, float low, float high) {
-        TLine* l1 = new TLine(low, 0., high, 0.);
-        l1->SetLineStyle(7);
-        l1->Draw();
-    };
-
     auto hb = new pencil();
     hb->category("system", "PbPb", "pp");
     hb->category("axis", "es", "wta", "na");
@@ -165,7 +160,7 @@ int accumulate(char const* config, char const* output) {
     auto c1 = new paper(tag + "_dphi_d_pt", hb);
     apply_default_style(c1, collisions, -0.08, 0.6);
     c1->accessory(photon_pt_selection);
-    c1->accessory(std::bind(line_at_unity, _1, rdphi[0], rdphi[1]));
+    c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i) {
         c1->add((*pjet_es_f_dphi_d_pt)[i], system, "es");
@@ -175,7 +170,7 @@ int accumulate(char const* config, char const* output) {
     auto c2 = new paper(tag + "_ddr_d_pt", hb);
     apply_default_style(c2, collisions, -1., 12.);
     c2->accessory(photon_pt_selection);
-    c2->accessory(std::bind(line_at_unity, _1, rdr[0], rdr[1]));
+    c2->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i)
         c2->add((*pjet_f_ddr_d_pt)[i], system, "na");
@@ -183,7 +178,7 @@ int accumulate(char const* config, char const* output) {
     auto c3 = new paper(tag + "_ddr_d_hf", hb);
     apply_default_style(c3, collisions, -1., 12.);
     c3->accessory(hf_selection);
-    c3->accessory(std::bind(line_at_unity, _1, rdr[0], rdr[1]));
+    c3->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
 
     for (int64_t i = 0; i < ihf->size(); ++i)
         c3->add((*pjet_f_ddr_d_hf)[i], system, "na");
@@ -191,7 +186,7 @@ int accumulate(char const* config, char const* output) {
     auto c4 = new paper(tag + "_x_d_pt", hb);
     apply_default_style(c4, collisions, -0.1, 1.2);
     c4->accessory(photon_pt_selection);
-    c4->accessory(std::bind(line_at_unity, _1, rx[0], rx[1]));
+    c4->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
 
     for (int64_t i = 0; i < ipt->size() - 1; ++i)
         c4->add((*pjet_f_x_d_pt)[i], system, "na");
@@ -199,7 +194,7 @@ int accumulate(char const* config, char const* output) {
     auto c5 = new paper(tag + "_x_d_hf", hb);
     apply_default_style(c5, collisions, -0.1, 1.2);
     c5->accessory(hf_selection);
-    c5->accessory(std::bind(line_at_unity, _1, rx[0], rx[1]));
+    c5->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
 
     for (int64_t i = 0; i < ihf->size(); ++i)
         c5->add((*pjet_f_x_d_hf)[i], system, "na");

@@ -1,4 +1,5 @@
 #include "../include/lambdas.h"
+#include "../include/specifics.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -23,19 +24,7 @@
 #include <vector>
 
 using namespace std::literals::string_literals;
-
-template <typename T>
-static int64_t within_hem_failure_region(T* t, int64_t index) {
-    return ((*t->phoSCEta)[index] < -1.3
-        && (*t->phoSCPhi)[index] < -0.9
-        && (*t->phoSCPhi)[index] > -1.6);
-}
-
-auto graph_formatter = [](TGraph* obj) {
-    obj->SetMarkerSize(0.84);
-    obj->GetXaxis()->CenterTitle();
-    obj->GetYaxis()->CenterTitle();
-};
+using namespace std::placeholders;
 
 int speculate(char const* config, char const* output) {
     auto conf = new configurer(config);
@@ -144,16 +133,9 @@ int speculate(char const* config, char const* output) {
 
     hb->alias("aa", "PbPb");
 
-    auto line_at_unity = [&](int64_t) {
-        TLine* l1 = new TLine(rpt.front(), 1., rpt.back(), 1.);
-        l1->SetLineStyle(7);
-        l1->Draw();
-    };
-
     auto c1 = new paper(tag + "_efficiency", hb);
     apply_default_style(c1, system + " #sqrt{s} = 5.02 TeV"s, 0., 1.2);
-    c1->format(graph_formatter);
-    c1->accessory(line_at_unity);
+    c1->accessory(std::bind(line_at, _1, 1., rpt.front(), rpt.back()));
 
     c1->add(frame);
     c1->stack(eff, tag);

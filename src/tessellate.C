@@ -1,5 +1,6 @@
 #include "../include/lambdas.h"
 #include "../include/pjtree.h"
+#include "../include/specifics.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -21,10 +22,6 @@
 #include <vector>
 
 using namespace std::literals::string_literals;
-
-static bool in_hem_failure_region(float eta, float phi) {
-    return (-3. < eta && eta < -1.3 && -1.57 < phi && phi < -0.87);
-}
 
 void fill_data(std::unique_ptr<memory>& see_iso,
                std::unique_ptr<memory>& see_noniso,
@@ -49,8 +46,7 @@ void fill_data(std::unique_ptr<memory>& see_iso,
             if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
             if ((*p->phoHoverE)[j] > hovere_max) { continue; }
 
-            if (heavyion && in_hem_failure_region(
-                (*p->phoSCEta)[j], (*p->phoSCPhi)[j])) { continue; }
+            if (heavyion && within_hem_failure_region(p, j)) { continue; }
 
             leading = j;
             break;
@@ -96,8 +92,7 @@ void fill_signal(std::unique_ptr<memory>& see,
             if (std::abs((*p->phoSCEta)[j]) > eta_max) { continue; }
             if ((*p->phoHoverE)[j] > hovere_max) { continue; }
 
-            if (heavyion && in_hem_failure_region(
-                (*p->phoSCEta)[j], (*p->phoSCPhi)[j])) { continue; }
+            if (heavyion && within_hem_failure_region(p, j)) { continue; }
 
             leading = j;
             break;

@@ -7,6 +7,7 @@
 #include "TH1.h"
 #include "TLatex.h"
 #include "TLegend.h"
+#include "TLine.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
 
@@ -15,6 +16,12 @@ auto _for_bins = [](TH1* h, float (*f)(float)) {
         auto val = h->GetBinContent(j);
         h->SetBinContent(j, f(val));
     }
+};
+
+auto graph_formatter = [](TGraph* obj) {
+    obj->SetMarkerSize(0.84);
+    obj->GetXaxis()->CenterTitle();
+    obj->GetYaxis()->CenterTitle();
 };
 
 auto simple_formatter = [](TH1* obj) {
@@ -67,10 +74,17 @@ void apply_default_style(paper* p, std::string const& system,
                          double min, double max) {
     using namespace std::placeholders;
 
+    p->format(graph_formatter);
     p->format(std::bind(default_formatter, _1, min, max));
     p->decorate(std::bind(default_decorator, system));
     p->legend(std::bind(coordinates, 0.45, 0.9, 0.87, 0.04));
     p->style(std::bind(default_legend_style, _1, 43, 12));
 }
+
+auto line_at = [&](int64_t, float val, float low, float high) {
+    TLine* l1 = new TLine(low, val, high, val);
+    l1->SetLineStyle(7);
+    l1->Draw();
+};
 
 #endif /* LAMBDAS_H */
