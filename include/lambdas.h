@@ -11,10 +11,17 @@
 
 #include "../git/paper-and-pencil/include/paper.h"
 
-auto _for_bins = [](TH1* h, float (*f)(float)) {
+auto _for_content = [](TH1* h, float (*f)(float)) {
     for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
         auto val = h->GetBinContent(j);
         h->SetBinContent(j, f(val));
+    }
+};
+
+auto _for_content_index = [](TH1* h, float (*f)(float, int64_t)) {
+    for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
+        auto val = h->GetBinContent(j);
+        h->SetBinContent(j, f(val, j));
     }
 };
 
