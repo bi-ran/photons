@@ -33,7 +33,26 @@ void scale_bin_width(std::unique_ptr<T>&... args) {
 template <typename... T>
 void normalise_to_unity(std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
-        obj->Scale(1. / obj->Integral(), "width"); }), 0)... };
+        obj->Scale(1. / obj->Integral("width")); }), 0)... };
+}
+
+template <typename... T>
+void scale_ia_bin_width(std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
+        for (int64_t i = 1; i <= obj->GetNbinsX(); ++i) {
+            auto width = revert_radian(obj->GetBinWidth(i));
+            obj->SetBinContent(i, obj->GetBinContent(i) / width);
+        }
+    }), 0)... };
+}
+
+template <typename... T>
+void normalise_ia_to_unity(std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
+        auto width = revert_radian(obj->GetBinLowEdge(1)
+            - obj->GetBinLowEdge(obj->GetNbinsX() + 1));
+        obj->Scale(1. / (obj->Integral() * std::abs(width)));
+    }), 0)... };
 }
 
 int accumulate(char const* config, char const* output) {
@@ -106,12 +125,23 @@ int accumulate(char const* config, char const* output) {
 
     /* scale by bin width */
     scale_bin_width(
-        pjet_f_ddr_d_pt,
-        pjet_f_ddr_d_hf,
         pjet_f_x_d_pt,
-        pjet_f_x_d_hf);
+        pjet_f_x_d_hf,
+        pjet_f_ddr_d_pt,
+        pjet_f_ddr_d_hf);
+
+    scale_ia_bin_width(
+        pjet_es_f_dphi_d_pt,
+        pjet_wta_f_dphi_d_pt);
 
     /* normalise to unity */
+    normalise_to_unity(
+        pjet_f_ddr_d_pt,
+        pjet_f_ddr_d_hf);
+
+    normalise_ia_to_unity(
+        pjet_es_f_dphi_d_pt,
+        pjet_wta_f_dphi_d_pt);
 
     /* save histograms */
     pjet_es_f_dphi_d_pt->save(tag);
@@ -158,7 +188,7 @@ int accumulate(char const* config, char const* output) {
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
     auto c1 = new paper(tag + "_dphi_d_pt", hb);
-    apply_default_style(c1, collisions, -0.08, 0.6);
+    apply_default_style(c1, collisions, -0.04, 0.24);
     c1->accessory(photon_pt_selection);
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
 
@@ -168,7 +198,7 @@ int accumulate(char const* config, char const* output) {
     }
 
     auto c2 = new paper(tag + "_ddr_d_pt", hb);
-    apply_default_style(c2, collisions, -1., 12.);
+    apply_default_style(c2, collisions, -1., 24.);
     c2->accessory(photon_pt_selection);
     c2->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
 
@@ -176,7 +206,7 @@ int accumulate(char const* config, char const* output) {
         c2->add((*pjet_f_ddr_d_pt)[i], system, "na");
 
     auto c3 = new paper(tag + "_ddr_d_hf", hb);
-    apply_default_style(c3, collisions, -1., 12.);
+    apply_default_style(c3, collisions, -1., 24.);
     c3->accessory(hf_selection);
     c3->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
 
@@ -184,7 +214,7 @@ int accumulate(char const* config, char const* output) {
         c3->add((*pjet_f_ddr_d_hf)[i], system, "na");
 
     auto c4 = new paper(tag + "_x_d_pt", hb);
-    apply_default_style(c4, collisions, -0.1, 1.2);
+    apply_default_style(c4, collisions, -0.1, 1.5);
     c4->accessory(photon_pt_selection);
     c4->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
 
@@ -192,7 +222,7 @@ int accumulate(char const* config, char const* output) {
         c4->add((*pjet_f_x_d_pt)[i], system, "na");
 
     auto c5 = new paper(tag + "_x_d_hf", hb);
-    apply_default_style(c5, collisions, -0.1, 1.2);
+    apply_default_style(c5, collisions, -0.1, 1.5);
     c5->accessory(hf_selection);
     c5->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
 
