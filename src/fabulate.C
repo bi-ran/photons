@@ -22,7 +22,7 @@ static bool in_hem_failure_region(float eta, float phi) {
     return (eta < -1.242 && -1.72 < phi && phi < -0.72);
 }
 
-int invigilate(char const* config, char const* output) {
+int fabulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
@@ -131,7 +131,7 @@ int invigilate(char const* config, char const* output) {
 
 int main(int argc, char* argv[]) {
     if (argc == 3)
-        return invigilate(argv[1], argv[2]);
+        return fabulate(argv[1], argv[2]);
 
     return 0;
 }

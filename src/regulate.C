@@ -38,7 +38,7 @@ float weight_for(std::vector<int32_t> const& divisions,
     return weights[index];
 }
 
-int extract(char const* config, char const* output) {
+int regulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto files = conf->get<std::vector<std::string>>("files");
@@ -189,7 +189,7 @@ int extract(char const* config, char const* output) {
 
 int main(int argc, char* argv[]) {
     if (argc == 3)
-        return extract(argv[1], argv[2]);
+        return regulate(argv[1], argv[2]);
 
     return 0;
 }
