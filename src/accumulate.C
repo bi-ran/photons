@@ -193,7 +193,7 @@ int accumulate(char const* config, char const* output) {
     /* draw plots */
     printf("painting..\n");
 
-    auto photon_pt_selection = [&](int64_t index) {
+    auto pt_selection = [&](int64_t index, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
             (*ipt)[index - 1], (*ipt)[index]);
@@ -201,75 +201,86 @@ int accumulate(char const* config, char const* output) {
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
+        l->DrawLatexNDC(0.135, pos, buffer);
     };
 
-    auto hf_selection = [&](int64_t index) {
+    auto hf_selection = [&](int64_t index, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%i - %i%%", dcent[index], dcent[index - 1]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
+        l->DrawLatexNDC(0.135, pos, buffer);
+    };
+
+    auto info_text = [&](int64_t index) {
+        auto indices = nevt->indices_for(index - 1);
+        auto pt_x = indices[0];
+        auto hf_x = indices[1];
+
+        pt_selection(pt_x + 1, 0.75);
+        hf_selection(hf_x + 1, 0.71);
     };
 
     auto hb = new pencil();
     hb->category("system", "PbPb", "pp");
-    hb->category("axis", "es", "wta", "na");
+    hb->category("axis", "na", "wta", "es");
 
-    hb->ditto("na", "es");
-
+    hb->alias("na", "");
     hb->alias("es", "E-Scheme");
     hb->alias("wta", "WTA");
-    hb->alias("na", "");
+
+    hb->ditto("es", "na");
 
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
     auto c1 = new paper(tag + "_dphi_d_pt", hb);
     apply_default_style(c1, collisions, -0.04, 0.24);
-    c1->accessory(photon_pt_selection);
+    c1->accessory(std::bind(pt_selection, _1, 0.75));
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
+    c1->divide(-1, 1);
 
-    for (int64_t i = 0; i < ipt->size() - 1; ++i) {
-        c1->add((*pjet_es_f_dphi_d_pt)[i], system, "es");
-        c1->stack((*pjet_wta_f_dphi_d_pt)[i], system, "wta");
-    }
+    nevt_d_pt->apply([&](TH1*, int64_t index) {
+        c1->add((*pjet_es_f_dphi_d_pt)[index], system, "es");
+        c1->stack((*pjet_wta_f_dphi_d_pt)[index], system, "wta");
+    });
 
     auto c2 = new paper(tag + "_ddr_d_pt", hb);
-    apply_default_style(c2, collisions, -1., 24.);
-    c2->accessory(photon_pt_selection);
+    apply_default_style(c2, collisions, -2., 27.);
+    c2->accessory(std::bind(pt_selection, _1, 0.75));
     c2->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
+    c2->divide(-1, 1);
 
-    for (int64_t i = 0; i < ipt->size() - 1; ++i)
-        c2->add((*pjet_f_ddr_d_pt)[i], system, "na");
+    pjet_f_ddr_d_pt->apply([&](TH1* h) { c2->add(h, system); });
 
     auto c3 = new paper(tag + "_ddr_d_hf", hb);
-    apply_default_style(c3, collisions, -1., 24.);
-    c3->accessory(hf_selection);
+    apply_default_style(c3, collisions, -2., 27.);
+    c3->accessory(std::bind(hf_selection, _1, 0.75));
     c3->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
+    c3->divide(-1, 1);
 
-    for (int64_t i = 0; i < ihf->size(); ++i)
-        c3->add((*pjet_f_ddr_d_hf)[i], system, "na");
+    pjet_f_ddr_d_hf->apply([&](TH1* h) { c3->add(h, system); });
 
     auto c4 = new paper(tag + "_x_d_pt", hb);
     apply_default_style(c4, collisions, -0.1, 1.5);
-    c4->accessory(photon_pt_selection);
+    c4->accessory(std::bind(pt_selection, _1, 0.75));
     c4->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
+    c4->divide(-1, 1);
 
-    for (int64_t i = 0; i < ipt->size() - 1; ++i)
-        c4->add((*pjet_f_x_d_pt)[i], system, "na");
+    pjet_f_x_d_pt->apply([&](TH1* h) { c4->add(h, system); });
 
     auto c5 = new paper(tag + "_x_d_hf", hb);
     apply_default_style(c5, collisions, -0.1, 1.5);
-    c5->accessory(hf_selection);
+    c5->accessory(std::bind(hf_selection, _1, 0.75));
     c5->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
+    c5->divide(-1, 1);
 
-    for (int64_t i = 0; i < ihf->size(); ++i)
-        c5->add((*pjet_f_x_d_hf)[i], system, "na");
+    pjet_f_x_d_hf->apply([&](TH1* h) { c5->add(h, system); });
 
     auto c6 = new paper(tag + "_dphi_d_pthf", hb);
     apply_default_style(c6, collisions, -0.04, 0.24);
+    c6->accessory(info_text);
     c6->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c6->divide(-1, ihf->size());
 
@@ -280,29 +291,25 @@ int accumulate(char const* config, char const* output) {
 
     auto c7 = new paper(tag + "_x_d_pthf", hb);
     apply_default_style(c7, collisions, -0.1, 1.5);
+    c7->accessory(info_text);
     c7->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c7->divide(-1, ihf->size());
 
-    pjet_f_x->apply([&](TH1* h) { c7->add(h, system, "na"); });
+    pjet_f_x->apply([&](TH1* h) { c7->add(h, system); });
 
     auto c8 = new paper(tag + "_ddr_d_pthf", hb);
-    apply_default_style(c8, collisions, -1., 24.);
+    apply_default_style(c8, collisions, -2., 27.);
+    c8->accessory(info_text);
     c8->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c8->divide(-1, ihf->size());
 
-    pjet_f_ddr_d_pthf->apply([&](TH1* h) { c8->add(h, system, "na"); });
+    pjet_f_ddr_d_pthf->apply([&](TH1* h) { c8->add(h, system); });
 
     hb->set_binary("system");
     hb->sketch();
 
-    c1->draw("pdf");
-    c2->draw("pdf");
-    c3->draw("pdf");
-    c4->draw("pdf");
-    c5->draw("pdf");
-    c6->draw("pdf");
-    c7->draw("pdf");
-    c8->draw("pdf");
+    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8 })
+        c->draw("pdf");
 
     fout->Close();
 
