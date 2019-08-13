@@ -91,18 +91,36 @@ int accumulate(char const* config, char const* output) {
     TFile* fout = new TFile(output, "recreate");
 
     /* load histograms */
-    auto nevt = new history(f, label + "_raw_nevt"s);
+    auto nevt = std::make_unique<history>(
+        f, label + "_raw_nevt"s);
 
-    auto pjet_es_f_dphi = new history(f, label + "_raw_sub_pjet_es_f_dphi"s);
-    auto pjet_wta_f_dphi = new history(f, label + "_raw_sub_pjet_wta_f_dphi"s);
-    auto pjet_f_x = new history(f, label + "_raw_sub_pjet_f_x"s);
-    auto pjet_f_ddr = new history(f, label + "_raw_sub_pjet_f_ddr"s);
+    auto pjet_es_f_dphi = std::make_unique<history>(
+        f, label + "_raw_sub_pjet_es_f_dphi"s);
+    auto pjet_wta_f_dphi = std::make_unique<history>(
+        f, label + "_raw_sub_pjet_wta_f_dphi"s);
+    auto pjet_f_x = std::make_unique<history>(
+        f, label + "_raw_sub_pjet_f_x"s);
+    auto pjet_f_ddr = std::make_unique<history>(
+        f, label + "_raw_sub_pjet_f_ddr"s);
 
     /* rescale by number of signal photons (events) */
     pjet_es_f_dphi->multiply(*nevt);
     pjet_wta_f_dphi->multiply(*nevt);
     pjet_f_x->multiply(*nevt);
     pjet_f_ddr->multiply(*nevt);
+
+    /* discard overflow photon pt bin */
+    auto discard = [](std::unique_ptr<history>& h, int64_t axis) {
+        auto shape = h->shape();
+        shape[axis] = shape[axis] - 1;
+        h = h->shrink("s", shape, std::vector<int64_t>(h->dims(), 0));
+    };
+
+    discard(nevt, 0);
+    discard(pjet_es_f_dphi, 0);
+    discard(pjet_wta_f_dphi, 0);
+    discard(pjet_f_x, 0);
+    discard(pjet_f_ddr, 0);
 
     /* integrate histograms */
     auto nevt_d_pt = nevt->sum(1);
