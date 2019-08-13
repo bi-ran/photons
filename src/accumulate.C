@@ -136,6 +136,8 @@ int accumulate(char const* config, char const* output) {
     auto pjet_f_ddr_d_hf = pjet_f_ddr_d_pthf->sum(0);
 
     /* normalise by number of signal photons (events) */
+    pjet_f_ddr->divide(*nevt);
+
     pjet_es_f_dphi->divide(*nevt);
     pjet_wta_f_dphi->divide(*nevt);
     pjet_f_ddr_d_pthf->divide(*nevt);
@@ -151,6 +153,7 @@ int accumulate(char const* config, char const* output) {
     /* scale by bin width */
     scale_bin_width(
         pjet_f_x,
+        pjet_f_ddr,
         pjet_f_ddr_d_pthf,
         pjet_f_x_d_pt,
         pjet_f_x_d_hf,
@@ -165,6 +168,7 @@ int accumulate(char const* config, char const* output) {
 
     /* normalise to unity */
     normalise_to_unity(
+        pjet_f_ddr,
         pjet_f_ddr_d_pthf,
         pjet_f_ddr_d_pt,
         pjet_f_ddr_d_hf);
@@ -181,6 +185,7 @@ int accumulate(char const* config, char const* output) {
     pjet_es_f_dphi->save(tag);
     pjet_wta_f_dphi->save(tag);
     pjet_f_x->save(tag);
+    pjet_f_ddr->save(tag);
     pjet_f_ddr_d_pthf->save(tag);
 
     pjet_es_f_dphi_d_pt->save(tag);
@@ -226,12 +231,15 @@ int accumulate(char const* config, char const* output) {
     auto hb = new pencil();
     hb->category("system", "PbPb", "pp");
     hb->category("axis", "na", "wta", "es");
+    hb->category("xjg", "out", "left", "right");
 
     hb->alias("na", "");
     hb->alias("es", "E-Scheme");
     hb->alias("wta", "WTA");
+    hb->alias("out", "");
 
     hb->ditto("es", "na");
+    hb->ditto("right", "out");
 
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
@@ -305,10 +313,22 @@ int accumulate(char const* config, char const* output) {
 
     pjet_f_ddr_d_pthf->apply([&](TH1* h) { c8->add(h, system); });
 
+    auto c9 = new paper(tag + "_ddr_d_pthfx", hb);
+    apply_default_style(c9, collisions, -2., 27.);
+    c9->accessory(info_text);
+    c9->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
+    c9->divide(-1, ihf->size());
+
+    nevt->apply([&](TH1*, int64_t index) {
+        auto is = nevt->indices_for(index);
+        c9->add((*pjet_f_ddr)[x{is[0], is[1], 1}], system, "left");
+        c9->stack((*pjet_f_ddr)[x{is[0], is[1], 2}], system, "right");
+    });
+
     hb->set_binary("system");
     hb->sketch();
 
-    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8 })
+    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9 })
         c->draw("pdf");
 
     fout->Close();
