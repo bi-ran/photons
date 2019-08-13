@@ -126,14 +126,21 @@ int accumulate(char const* config, char const* output) {
     auto nevt_d_pt = nevt->sum(1);
     auto nevt_d_hf = nevt->sum(0);
 
+    auto pjet_f_ddr_d_pthf = pjet_f_ddr->sum(2);
+
     auto pjet_es_f_dphi_d_pt = pjet_es_f_dphi->sum(1);
     auto pjet_wta_f_dphi_d_pt = pjet_wta_f_dphi->sum(1);
     auto pjet_f_x_d_pt = pjet_f_x->sum(1);
     auto pjet_f_x_d_hf = pjet_f_x->sum(0);
-    auto pjet_f_ddr_d_pt = pjet_f_ddr->sum(1, 1);
-    auto pjet_f_ddr_d_hf = pjet_f_ddr->sum(0, 1);
+    auto pjet_f_ddr_d_pt = pjet_f_ddr_d_pthf->sum(1);
+    auto pjet_f_ddr_d_hf = pjet_f_ddr_d_pthf->sum(0);
 
     /* normalise by number of signal photons (events) */
+    pjet_es_f_dphi->divide(*nevt);
+    pjet_wta_f_dphi->divide(*nevt);
+    pjet_f_ddr_d_pthf->divide(*nevt);
+    pjet_f_x->divide(*nevt);
+
     pjet_es_f_dphi_d_pt->divide(*nevt_d_pt);
     pjet_wta_f_dphi_d_pt->divide(*nevt_d_pt);
     pjet_f_x_d_pt->divide(*nevt_d_pt);
@@ -143,25 +150,39 @@ int accumulate(char const* config, char const* output) {
 
     /* scale by bin width */
     scale_bin_width(
+        pjet_f_x,
+        pjet_f_ddr_d_pthf,
         pjet_f_x_d_pt,
         pjet_f_x_d_hf,
         pjet_f_ddr_d_pt,
         pjet_f_ddr_d_hf);
 
     scale_ia_bin_width(
+        pjet_es_f_dphi,
+        pjet_wta_f_dphi,
         pjet_es_f_dphi_d_pt,
         pjet_wta_f_dphi_d_pt);
 
     /* normalise to unity */
     normalise_to_unity(
+        pjet_f_ddr_d_pthf,
         pjet_f_ddr_d_pt,
         pjet_f_ddr_d_hf);
 
     normalise_ia_to_unity(
+        pjet_es_f_dphi,
+        pjet_wta_f_dphi,
         pjet_es_f_dphi_d_pt,
         pjet_wta_f_dphi_d_pt);
 
     /* save histograms */
+    nevt->save(tag);
+
+    pjet_es_f_dphi->save(tag);
+    pjet_wta_f_dphi->save(tag);
+    pjet_f_x->save(tag);
+    pjet_f_ddr_d_pthf->save(tag);
+
     pjet_es_f_dphi_d_pt->save(tag);
     pjet_wta_f_dphi_d_pt->save(tag);
     pjet_f_x_d_pt->save(tag);
@@ -247,7 +268,31 @@ int accumulate(char const* config, char const* output) {
     for (int64_t i = 0; i < ihf->size(); ++i)
         c5->add((*pjet_f_x_d_hf)[i], system, "na");
 
-    hb->set_binary("type");
+    auto c6 = new paper(tag + "_dphi_d_pthf", hb);
+    apply_default_style(c6, collisions, -0.04, 0.24);
+    c6->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
+    c6->divide(-1, ihf->size());
+
+    nevt->apply([&](TH1*, int64_t index) {
+        c6->add((*pjet_es_f_dphi)[index], system, "es");
+        c6->stack((*pjet_wta_f_dphi)[index], system, "wta");
+    });
+
+    auto c7 = new paper(tag + "_x_d_pthf", hb);
+    apply_default_style(c7, collisions, -0.1, 1.5);
+    c7->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
+    c7->divide(-1, ihf->size());
+
+    pjet_f_x->apply([&](TH1* h) { c7->add(h, system, "na"); });
+
+    auto c8 = new paper(tag + "_ddr_d_pthf", hb);
+    apply_default_style(c8, collisions, -1., 24.);
+    c8->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
+    c8->divide(-1, ihf->size());
+
+    pjet_f_ddr_d_pthf->apply([&](TH1* h) { c8->add(h, system, "na"); });
+
+    hb->set_binary("system");
     hb->sketch();
 
     c1->draw("pdf");
@@ -255,6 +300,9 @@ int accumulate(char const* config, char const* output) {
     c3->draw("pdf");
     c4->draw("pdf");
     c5->draw("pdf");
+    c6->draw("pdf");
+    c7->draw("pdf");
+    c8->draw("pdf");
 
     fout->Close();
 
