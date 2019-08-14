@@ -221,9 +221,8 @@ int64_t inosculate(char const* config, char const* output) {
     hb->alias("bb", "EB #otimes EB");
 
     auto c1 = new paper(tag + "_mass", hb);
-    apply_default_style(c1,"PbPb #sqrt{s} = 5.02 TeV"s, 0., 1.);
+    apply_default_style(c1,"PbPb #sqrt{s} = 5.02 TeV"s);
     c1->legend(std::bind(coordinates, 0.135, 0.4, 0.75, 0.04));
-    c1->format(simple_formatter);
     c1->accessory(info_text);
     c1->divide(icent->size(), 1);
 

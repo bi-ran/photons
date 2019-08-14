@@ -77,15 +77,25 @@ auto default_legend_style = [](TLegend* l, int font, float size) {
     l->SetTextSize(size);
 };
 
-void apply_default_style(paper* p, std::string const& system,
-                         double min, double max) {
+template <typename T>
+void apply_default_style(paper* p, std::string const& text, T format) {
     using namespace std::placeholders;
 
+    p->format(format);
     p->format(graph_formatter);
-    p->format(std::bind(default_formatter, _1, min, max));
-    p->decorate(std::bind(default_decorator, system));
+    p->decorate(std::bind(default_decorator, text));
     p->legend(std::bind(coordinates, 0.45, 0.9, 0.87, 0.04));
     p->style(std::bind(default_legend_style, _1, 43, 12));
+}
+
+void apply_default_style(paper* p, std::string const& text) {
+    apply_default_style(p, text, simple_formatter);
+}
+
+void apply_default_style(paper* p, std::string const& text,
+                         double min, double max) {
+    apply_default_style(p, text, std::bind(
+        default_formatter, std::placeholders::_1, min, max));
 }
 
 auto line_at = [&](int64_t, float val, float low, float high) {

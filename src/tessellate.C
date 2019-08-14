@@ -228,13 +228,6 @@ int tessellate(char const* config, char const* output) {
     hb->alias("sig", "PYTHIA8 + HYDJET");
     hb->alias("bkg", "noniso. data");
 
-    auto formatter = [](TH1* obj) {
-        obj->SetStats(0);
-        obj->SetMarkerSize(0.84);
-        obj->GetXaxis()->CenterTitle();
-        obj->GetYaxis()->CenterTitle();
-    };
-
     auto info_text = [&](int64_t index) {
         TLatex* text = new TLatex();
         text->SetTextFont(43);
@@ -253,8 +246,7 @@ int tessellate(char const* config, char const* output) {
     };
 
     auto c1 = new paper(tag + "_purity", hb);
-    apply_default_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s, 0., 1.);
-    c1->format(formatter);
+    apply_default_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s);
     c1->accessory(info_text);
     c1->divide(ipt->size(), -1);
 

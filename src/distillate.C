@@ -215,8 +215,7 @@ int distillate(char const* config, char const* output) {
     hb->alias("mc", "AllQCDPhoton");
 
     auto c1 = new paper(tag + "_dpthf_jesr_fits", hb);
-    apply_default_style(c1, system_info, 0., 1.);
-    c1->format(simple_formatter);
+    apply_default_style(c1, system_info);
     c1->accessory(pt_hf_selection);
     c1->divide(ipt->size(), -1);
 
@@ -246,8 +245,7 @@ int distillate(char const* config, char const* output) {
     });
 
     auto c2 = new paper(tag + "_dhf_f_pt_jesr", hb);
-    apply_default_style(c2, system_info, 0., 1.);
-    c2->format(simple_formatter);
+    apply_default_style(c2, system_info);
     c2->accessory(hf_selection);
     c2->accessory(guide_lines);
     c2->divide(ihf->size(), -1);
@@ -287,8 +285,7 @@ int distillate(char const* config, char const* output) {
     });
 
     auto c3 = new paper(tag + "_detahf_jesr_fits", hb);
-    apply_default_style(c3, system_info, 0., 1.);
-    c3->format(simple_formatter);
+    apply_default_style(c3, system_info);
     c3->accessory(eta_hf_selection);
     c3->divide(ieta->size(), -1);
 
@@ -318,8 +315,7 @@ int distillate(char const* config, char const* output) {
     });
 
     auto c4 = new paper(tag + "_dhf_f_eta_jesr", hb);
-    apply_default_style(c4, system_info, 0., 1.);
-    c4->format(simple_formatter);
+    apply_default_style(c4, system_info);
     c4->accessory(hf_selection);
     c4->divide(ihf->size(), -1);
 
@@ -336,15 +332,13 @@ int distillate(char const* config, char const* output) {
 
     for (int64_t i = 0; i < ieta->size(); ++i) {
         c5[i] = new paper(tag + "_jesr_fits_s" + std::to_string(i), hb);
-        apply_default_style(c5[i], system_info, 0., 1.);
-        c5[i]->format(simple_formatter);
+        apply_default_style(c5[i], system_info);
         c5[i]->accessory(pt_hf_selection);
         c5[i]->accessory(std::bind(eta_info, _1, i, 2));
         c5[i]->divide(ipt->size(), -1);
 
         c6[i] = new paper(tag + "_f_pt_jesr_s" + std::to_string(i), hb);
-        apply_default_style(c6[i], system_info, 0., 1.);
-        c6[i]->format(simple_formatter);
+        apply_default_style(c6[i], system_info);
         c6[i]->accessory(hf_selection);
         c6[i]->accessory(std::bind(eta_info, _1, i, 1));
         c6[i]->divide(ihf->size(), -1);
