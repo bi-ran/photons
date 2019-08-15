@@ -130,8 +130,8 @@ int populate(char const* config, char const* output) {
 
     /* options */
     auto heavyion = conf->get<bool>("heavyion");
-    auto generator_isolation = conf->get<bool>("generator_isolation");
-    auto electron_rejection = conf->get<bool>("electron_rejection");
+    auto gen_iso = conf->get<bool>("generator_isolation");
+    auto ele_rej = conf->get<bool>("electron_rejection");
 
     /* selections */
     auto const photon_pt_min = conf->get<float>("photon_pt_min");
@@ -243,7 +243,7 @@ int populate(char const* config, char const* output) {
         if (heavyion && within_hem_failure_region(pjt, leading)) { continue; }
 
         /* isolation requirement */
-        if (generator_isolation) {
+        if (gen_iso) {
             float gen_index = (*pjt->pho_genMatchedIndex)[leading];
             if (gen_index == -1) { continue; }
 
@@ -261,7 +261,7 @@ int populate(char const* config, char const* output) {
         auto photon_phi = convert_radian((*pjt->phoPhi)[leading]);
 
         /* electron rejection */
-        if (electron_rejection) {
+        if (ele_rej) {
             bool electron_match = false;
             for (int64_t j = 0; j < pjt->nEle; ++j) {
                 auto deta = photon_eta - (*pjt->eleEta)[j];
