@@ -19,6 +19,7 @@
 #include "TF1.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TRandom3.h"
 #include "TTree.h"
 
 #include <algorithm>
@@ -36,6 +37,10 @@ float weight_for(std::vector<int32_t> const& divisions,
             ++index;
 
     return weights[index];
+}
+
+float jer(std::vector<float> const& csn, float pt) {
+    return std::sqrt((csn[1] - csn[4]) / pt + (csn[2] - csn[5]) / (pt * pt));
 }
 
 int regulate(char const* config, char const* output) {
@@ -61,12 +66,15 @@ int regulate(char const* config, char const* output) {
     auto direction = conf->get<bool>("direction");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto residual = conf->get<std::string>("residual");
+    auto csn = conf->get<std::vector<float>>("csn");
 
     auto pthat = conf->get<std::vector<int32_t>>("pthat");
     auto pthatw = conf->get<std::vector<float>>("pthatw");
     auto vzw = conf->get<std::vector<float>>("vzw");
 
     auto ihf = std::make_shared<interval>(dhf);
+
+    for (auto& v : csn) { v = v * v; }
 
     /* load forest */
     auto forest = new train(files);
@@ -115,6 +123,8 @@ int regulate(char const* config, char const* output) {
             fres[index] = h->GetFunction(
                 ("f_es_dhf_f_pt_"s + std::to_string(index)).data()); });
     }
+
+    auto rng = new TRandom3(144);
 
     /* boom! */
     int64_t nentries = forest->count();
@@ -171,14 +181,17 @@ int regulate(char const* config, char const* output) {
 
             float corr = JEC->GetCorrectedPT();
             float cres = (apply_residual) ? fres[hf_x]->Eval(corr) : 1.f;
-            cres = cres > 0.8 ? 1. / cres : 1.25;
+
+            corr /= cres > 0.8 ? cres : 0.8;
 
             if (!jeu.empty()) {
                 auto unc = JEU->GetUncertainty();
-                cres *= direction ? (1. + unc.second) : (1. - unc.first);
+                corr *= direction ? (1. + unc.second) : (1. - unc.first);
             }
 
-            (*tree_pj->jtpt)[j] = corr * cres;
+            if (!csn.empty()) { corr *= rng->Gaus(1., jer(csn, corr)); }
+
+            (*tree_pj->jtpt)[j] = corr;
         }
 
         tout->Fill();
