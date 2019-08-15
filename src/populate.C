@@ -199,11 +199,11 @@ int populate(char const* config, char const* output) {
 
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
-    auto pjt = new pjtree(false, false, t, { 1, 1, 1, 1, 1, 0 });
+    auto pjt = new pjtree(gen_iso, false, t, { 1, 1, 1, 1, 1, 0 });
 
     TFile* fm = new TFile(mb.data(), "read");
     TTree* tm = (TTree*)fm->Get("pj");
-    auto pjtm = new pjtree(false, false, tm, { 1, 1, 1, 1, 1, 0});
+    auto pjtm = new pjtree(gen_iso, false, tm, { 1, 1, 1, 1, 1, 0});
 
     TFile* fout = new TFile(output, "recreate");
 
@@ -244,7 +244,7 @@ int populate(char const* config, char const* output) {
 
         /* isolation requirement */
         if (gen_iso) {
-            float gen_index = (*pjt->pho_genMatchedIndex)[leading];
+            auto gen_index = (*pjt->pho_genMatchedIndex)[leading];
             if (gen_index == -1) { continue; }
 
             float isolation = (*pjt->mcCalIsoDR04)[gen_index];
