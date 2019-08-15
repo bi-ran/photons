@@ -43,10 +43,6 @@
 #define B_VAL_EVT_EXT(ACTION, ...)                                          \
     ACTION(float,           weight,                     ## __VA_ARGS__)     \
 
-#define B_VEC_JET_EXT(ACTION, ...)                                          \
-    ACTION(sv<float>,       jtpt_up,                    ## __VA_ARGS__)     \
-    ACTION(sv<float>,       jtpt_down,                  ## __VA_ARGS__)     \
-
 enum tt { evt, egm, pho, ele, jet, trg, ntt };
 
 class pjtree {
@@ -76,7 +72,6 @@ class pjtree {
         }
 
         B_VAL_EVT_EXT(SETMONE)
-        B_VEC_JET_EXT(ALLOCOBJ)
 
         branch(t);
     }
@@ -106,7 +101,6 @@ class pjtree {
         }
 
         B_VAL_EVT_EXT(SETZERO)
-        B_VEC_JET_EXT(SETZERO)
 
         read(t);
     }
@@ -127,8 +121,6 @@ class pjtree {
         if (_hlt) {
             B_VEC_TRG(CLEAROBJ)
         }
-
-        B_VEC_JET_EXT(CLEAROBJ)
     }
 
     void copy(event* tevt, eggen* tegg, photons* tpho, electrons* tele,
@@ -190,7 +182,6 @@ class pjtree {
     B_VAL_JET_GEN(DECLVAL)
     B_VEC_JET_GEN(DECLPTR)
     B_VEC_JET_REF(DECLPTR)
-    B_VEC_JET_EXT(DECLPTR)
     B_VEC_TRG(DECLPTR)
 
   private:
@@ -231,8 +222,6 @@ class pjtree {
                 B_VEC_JET_GEN(BRANCHPTR, t)
                 B_VEC_JET_REF(BRANCHPTR, t)
             }
-
-            B_VEC_JET_EXT(BRANCHPTR, t)
         }
 
         if (_flags[tt::trg]) {
@@ -279,8 +268,6 @@ class pjtree {
                 B_VEC_JET_GEN(SETVALADDR, t)
                 B_VEC_JET_REF(SETVALADDR, t)
             }
-
-            B_VEC_JET_EXT(SETVALADDR, t)
         }
 
         if (_flags[tt::trg]) {

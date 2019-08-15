@@ -58,6 +58,7 @@ int regulate(char const* config, char const* output) {
     auto algo = conf->get<std::string>("algo");
     auto jecs = conf->get<std::vector<std::string>>("jecs");
     auto jeu = conf->get<std::string>("jeu");
+    auto direction = conf->get<bool>("direction");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto residual = conf->get<std::string>("residual");
 
@@ -170,12 +171,14 @@ int regulate(char const* config, char const* output) {
 
             float corr = JEC->GetCorrectedPT();
             float cres = (apply_residual) ? fres[hf_x]->Eval(corr) : 1.f;
-            cres = cres > 0.8 ? cres : 0.8;
-            (*tree_pj->jtpt)[j] = corr / cres;
+            cres = cres > 0.8 ? 1. / cres : 1.25;
 
-            auto unc = JEU->GetUncertainty();
-            tree_pj->jtpt_up->push_back(corr / cres * (1. - unc.first));
-            tree_pj->jtpt_down->push_back(corr / cres * (1. + unc.second));
+            if (!jeu.empty()) {
+                auto unc = JEU->GetUncertainty();
+                cres *= direction ? (1. + unc.second) : (1. - unc.first);
+            }
+
+            (*tree_pj->jtpt)[j] = corr * cres;
         }
 
         tout->Fill();
