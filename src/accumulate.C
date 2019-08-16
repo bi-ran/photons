@@ -244,7 +244,7 @@ int accumulate(char const* config, char const* output) {
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
     auto c1 = new paper(tag + "_dphi_d_pt", hb);
-    apply_default_style(c1, collisions, -0.04, 0.24);
+    apply_style(c1, collisions, -0.04, 0.24);
     c1->accessory(std::bind(pt_selection, _1, 0.75));
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c1->divide(-1, 1);
@@ -255,7 +255,7 @@ int accumulate(char const* config, char const* output) {
     });
 
     auto c2 = new paper(tag + "_ddr_d_pt", hb);
-    apply_default_style(c2, collisions, -2., 27.);
+    apply_style(c2, collisions, -2., 27.);
     c2->accessory(std::bind(pt_selection, _1, 0.75));
     c2->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c2->divide(-1, 1);
@@ -263,7 +263,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_ddr_d_pt->apply([&](TH1* h) { c2->add(h, system); });
 
     auto c3 = new paper(tag + "_ddr_d_hf", hb);
-    apply_default_style(c3, collisions, -2., 27.);
+    apply_style(c3, collisions, -2., 27.);
     c3->accessory(std::bind(hf_selection, _1, 0.75));
     c3->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c3->divide(-1, 1);
@@ -271,7 +271,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_ddr_d_hf->apply([&](TH1* h) { c3->add(h, system); });
 
     auto c4 = new paper(tag + "_x_d_pt", hb);
-    apply_default_style(c4, collisions, -0.1, 1.5);
+    apply_style(c4, collisions, -0.1, 1.5);
     c4->accessory(std::bind(pt_selection, _1, 0.75));
     c4->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c4->divide(-1, 1);
@@ -279,7 +279,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_x_d_pt->apply([&](TH1* h) { c4->add(h, system); });
 
     auto c5 = new paper(tag + "_x_d_hf", hb);
-    apply_default_style(c5, collisions, -0.1, 1.5);
+    apply_style(c5, collisions, -0.1, 1.5);
     c5->accessory(std::bind(hf_selection, _1, 0.75));
     c5->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c5->divide(-1, 1);
@@ -287,7 +287,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_x_d_hf->apply([&](TH1* h) { c5->add(h, system); });
 
     auto c6 = new paper(tag + "_dphi_d_pthf", hb);
-    apply_default_style(c6, collisions, -0.04, 0.24);
+    apply_style(c6, collisions, -0.04, 0.24);
     c6->accessory(info_text);
     c6->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c6->divide(-1, ihf->size());
@@ -298,7 +298,7 @@ int accumulate(char const* config, char const* output) {
     });
 
     auto c7 = new paper(tag + "_x_d_pthf", hb);
-    apply_default_style(c7, collisions, -0.1, 1.5);
+    apply_style(c7, collisions, -0.1, 1.5);
     c7->accessory(info_text);
     c7->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c7->divide(-1, ihf->size());
@@ -306,7 +306,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_x->apply([&](TH1* h) { c7->add(h, system); });
 
     auto c8 = new paper(tag + "_ddr_d_pthf", hb);
-    apply_default_style(c8, collisions, -2., 27.);
+    apply_style(c8, collisions, -2., 27.);
     c8->accessory(info_text);
     c8->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c8->divide(-1, ihf->size());
@@ -314,7 +314,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_ddr_d_pthf->apply([&](TH1* h) { c8->add(h, system); });
 
     auto c9 = new paper(tag + "_ddr_d_pthfx", hb);
-    apply_default_style(c9, collisions, -2., 27.);
+    apply_style(c9, collisions, -2., 27.);
     c9->accessory(info_text);
     c9->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c9->divide(-1, ihf->size());

@@ -142,25 +142,25 @@ int jubilate(char const* config, char const* output) {
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
     auto c1 = new paper(tag + "_mixing_dphi_es_d_pthf", hb);
-    apply_default_style(c1, collisions, -0.04, 0.4);
+    apply_style(c1, collisions, -0.04, 0.4);
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c1->accessory(info_text);
     c1->divide(-1 , ihf->size());
 
     auto c2 = new paper(tag + "_mixing_dphi_wta_d_pthf", hb);
-    apply_default_style(c2, collisions, -0.04, 0.4);
+    apply_style(c2, collisions, -0.04, 0.4);
     c2->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c2->accessory(info_text);
     c2->divide(-1 , ihf->size());
 
     auto c3 = new paper(tag + "_mixing_x_d_pthf", hb);
-    apply_default_style(c3, collisions, -0.1, 2.0);
+    apply_style(c3, collisions, -0.1, 2.0);
     c3->accessory(std::bind(line_at, _1, 0.f, dx[0], dx[1]));
     c3->accessory(info_text);
     c3->divide(-1 , ihf->size());
 
     auto c4 = new paper(tag + "_mixing_ddr_d_pthf", hb);
-    apply_default_style(c4, collisions, -1., 24.);
+    apply_style(c4, collisions, -1., 24.);
     c4->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c4->accessory(info_text);
     c4->divide(-1 , ihf->size());

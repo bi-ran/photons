@@ -79,8 +79,7 @@ int obnubilate(char const* config, char const* output) {
         auto stub = "_"s + figure;
 
         c = new paper(tag + "_var"s + stub, hb);
-
-        apply_default_style(c, system + " #sqrt{s_{NN}} = 5.02 TeV",
+        apply_style(c, system + " #sqrt{s_{NN}} = 5.02 TeV",
             std::bind(shader, _1, range));
         c->divide(cols, -1);
 

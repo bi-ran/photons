@@ -2,14 +2,14 @@
 #define LAMBDAS_H
 
 #include <array>
+#include <functional>
 #include <string>
 
+#include "TGraph.h"
 #include "TH1.h"
 #include "TLatex.h"
 #include "TLegend.h"
 #include "TLine.h"
-
-#include "../git/paper-and-pencil/include/paper.h"
 
 auto _for_content = [](TH1* h, float (*f)(float)) {
     for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
@@ -31,7 +31,7 @@ auto graph_formatter = [](TGraph* obj) {
     obj->GetYaxis()->CenterTitle();
 };
 
-auto simple_formatter = [](TH1* obj) {
+auto hist_formatter = [](TH1* obj) {
     obj->SetStats(0);
     obj->SetMarkerSize(0.84);
     obj->GetXaxis()->CenterTitle();
@@ -39,11 +39,8 @@ auto simple_formatter = [](TH1* obj) {
 };
 
 auto default_formatter = [](TH1* obj, double min, double max) {
-    obj->SetStats(0);
-    obj->SetMarkerSize(0.84);
+    hist_formatter(obj);
     obj->SetAxisRange(min, max, "Y");
-    obj->GetXaxis()->CenterTitle();
-    obj->GetYaxis()->CenterTitle();
 };
 
 auto default_decorator = [](std::string const& system) {
@@ -77,31 +74,33 @@ auto default_legend_style = [](TLegend* l, int font, float size) {
     l->SetTextSize(size);
 };
 
-template <typename T>
-void apply_default_style(paper* p, std::string const& text, T format) {
+auto line_at = [&](int64_t, float val, float low, float high) {
+    TLine* l1 = new TLine(low, val, high, val);
+    l1->SetLineStyle(7);
+    l1->Draw();
+};
+
+template <typename T, typename U>
+void apply_style(T p, std::string const& text, U formatter) {
     using namespace std::placeholders;
 
-    p->format(format);
+    p->format(formatter);
     p->format(graph_formatter);
     p->decorate(std::bind(default_decorator, text));
     p->legend(std::bind(coordinates, 0.45, 0.9, 0.87, 0.04));
     p->style(std::bind(default_legend_style, _1, 43, 12));
 }
 
-void apply_default_style(paper* p, std::string const& text) {
-    apply_default_style(p, text, simple_formatter);
+template <typename T>
+void apply_style(T p, std::string const& text, double min, double max) {
+    using namespace std::placeholders;
+
+    apply_style(p, text, std::bind(default_formatter, _1, min, max));
 }
 
-void apply_default_style(paper* p, std::string const& text,
-                         double min, double max) {
-    apply_default_style(p, text, std::bind(
-        default_formatter, std::placeholders::_1, min, max));
+template <typename T>
+void apply_style(T p, std::string const& text) {
+    apply_style(p, text, hist_formatter);
 }
-
-auto line_at = [&](int64_t, float val, float low, float high) {
-    TLine* l1 = new TLine(low, val, high, val);
-    l1->SetLineStyle(7);
-    l1->Draw();
-};
 
 #endif /* LAMBDAS_H */

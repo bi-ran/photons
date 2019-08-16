@@ -103,7 +103,7 @@ int emulate(char const* config, char const* output) {
     auto system_tag = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
     auto c1 = new paper(tag + "_vz", hb);
-    apply_default_style(c1, system_tag, 0., 0.04);
+    apply_style(c1, system_tag, 0., 0.04);
     c1->jewellery([&](TH1* h, int64_t index) {
         if (index == 3) {
             fweight->Draw("same");

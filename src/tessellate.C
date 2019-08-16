@@ -246,7 +246,7 @@ int tessellate(char const* config, char const* output) {
     };
 
     auto c1 = new paper(tag + "_purity", hb);
-    apply_default_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s);
+    apply_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s);
     c1->accessory(info_text);
     c1->divide(ipt->size(), -1);
 

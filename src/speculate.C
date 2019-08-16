@@ -105,7 +105,7 @@ int speculate(char const* config, char const* output) {
     hb->alias("aa", "PbPb");
 
     auto c1 = new paper(tag + "_efficiency", hb);
-    apply_default_style(c1, system + " #sqrt{s} = 5.02 TeV"s, 0., 1.2);
+    apply_style(c1, system + " #sqrt{s} = 5.02 TeV"s, 0., 1.2);
     c1->accessory(std::bind(line_at, _1, 1., rpt.front(), rpt.back()));
 
     c1->add(frame);
