@@ -37,6 +37,7 @@ int obnubilate(char const* config, char const* output) {
     auto figures = conf->get<std::vector<std::string>>("figures");
     auto columns = conf->get<std::vector<int32_t>>("columns");
     auto ranges = conf->get<std::vector<float>>("ranges");
+    auto groups = conf->get<std::vector<int32_t>>("groups");
 
     /* open input files */
     TH1::AddDirectory(false);
@@ -83,44 +84,59 @@ int obnubilate(char const* config, char const* output) {
             std::bind(shader, _1, range));
         c->divide(cols, -1);
 
-        auto base = new history(f, tag + "_"s + label + stub);
+        auto base = new history(f, tag + "_"s + label + stub, "base");
 
-        std::vector<history*> groups(inputs.size(), nullptr);
-        zip([&](auto& group, auto file, auto const& label) {
-            group = new history(file, tag + "_"s + label + stub, "diff");
-        }, groups, files, labels);
+        std::vector<history*> sets;
+
+        std::vector<history*> batches(inputs.size(), nullptr);
+        zip([&](auto& batch, auto file, auto const& label) {
+            batch = new history(file, tag + "_"s + label + stub, "batch");
+        }, batches, files, labels);
 
         auto total = new history(*base, "total");
         total->apply([](TH1* h) { h->Reset("MICES"); });
-        for (auto const& group : groups) {
-            group->add(*base, -1);
-            group->apply(_square);
-            total->add(*group, 1);
-            group->apply(_sqrt);
+
+        for (auto const& batch : batches) {
+            batch->add(*base, -1);
+            batch->apply(_square);
         }
+
+        zip([&](auto const& batch, auto group) {
+            if (group == static_cast<int32_t>(sets.size())) {
+                sets.push_back(new history(*batch, "set"));
+            } else {
+                sets[group]->apply([&](TH1* h, int64_t i) {
+                    _for_content_index(h, [&](double val, int64_t b) -> float {
+                        return std::max(val, (*batch)[i]->GetBinContent(b));
+                    }); });
+            }
+
+            batch->apply(_sqrt);
+        }, batches, groups);
+
+        for (auto const& set : sets)
+            total->add(*set, 1);
 
         total->apply(_sqrt);
 
-        auto ratio = new history(*total, "ratio");
-        ratio->apply([&](TH1* h, int64_t index) {
-            h->Divide((*base)[index]); });
-
         /* add plots */
         auto style = [&](TH1* h) { c->adjust(h, "hist", "f"); };
+
         total->apply([&](TH1* h) { c->add(h, "total"); style(h); });
-        zip([&](auto& group, auto const& label) {
-            group->apply([&](TH1* h, int64_t index) {
+        zip([&](auto& batch, auto const& label) {
+            batch->apply([&](TH1* h, int64_t index) {
                 c->stack(index + 1, h, label); style(h);
             });
-        }, groups, labels);
+
+            batch->save(tag);
+        }, batches, labels);
 
         /* save histograms */
-        for (auto const& group : groups)
-            group->save("var");
+        for (auto const& set : sets)
+            set->save(tag);
 
         base->save(tag);
         total->save(tag);
-        ratio->save(tag);
     }, figures, columns, ranges, cs);
 
     /* draw plots */
