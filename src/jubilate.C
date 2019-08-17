@@ -134,8 +134,10 @@ int jubilate(char const* config, char const* output) {
     };
 
     auto hb = new pencil();
-    hb->category("system", "pp", "PbPb");
+    hb->category("system", "pp", "aa");
     hb->category("type", "raw", "mix");
+
+    hb->alias("aa", "PbPb");
 
     hb->set_binary("type");
 
