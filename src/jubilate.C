@@ -134,10 +134,8 @@ int jubilate(char const* config, char const* output) {
     };
 
     auto hb = new pencil();
-    hb->category("system", "pp", "aa");
+    hb->category("system", "pp", "PbPb");
     hb->category("type", "raw", "mix");
-
-    hb->alias("aa", "PbPb");
 
     hb->set_binary("type");
 
@@ -168,17 +166,17 @@ int jubilate(char const* config, char const* output) {
     c4->divide(-1 , ihf->size());
 
     for (int64_t i = 0; i < nevt->size(); ++i) {
-        c1->add((*pjet_es_f_dphi)[i], tag, "raw");
-        c1->stack((*mix_pjet_es_f_dphi)[i], tag, "mix");
+        c1->add((*pjet_es_f_dphi)[i], system, "raw");
+        c1->stack((*mix_pjet_es_f_dphi)[i], system, "mix");
 
-        c2->add((*pjet_wta_f_dphi)[i], tag, "raw");
-        c2->stack((*mix_pjet_wta_f_dphi)[i], tag, "mix");
+        c2->add((*pjet_wta_f_dphi)[i], system, "raw");
+        c2->stack((*mix_pjet_wta_f_dphi)[i], system, "mix");
 
-        c3->add((*pjet_f_x)[i], tag, "raw");
-        c3->stack((*mix_pjet_f_x)[i], tag, "mix");
+        c3->add((*pjet_f_x)[i], system, "raw");
+        c3->stack((*mix_pjet_f_x)[i], system, "mix");
 
-        c4->add((*pjet_f_ddr_d_pthf)[i], tag, "raw");
-        c4->stack((*mix_pjet_f_ddr_d_pthf)[i], tag, "mix");
+        c4->add((*pjet_f_ddr_d_pthf)[i], system, "raw");
+        c4->stack((*mix_pjet_f_ddr_d_pthf)[i], system, "mix");
     }
 
     hb->sketch();
@@ -186,6 +184,7 @@ int jubilate(char const* config, char const* output) {
     for (auto const& c : { c1, c2, c3, c4 })
         c->draw("pdf");
 
+    /* save output */
     TFile* fout = new TFile(output, "recreate");
 
     fout->Close();

@@ -50,17 +50,15 @@ int congratulate(char const* config, char const* output) {
     auto ihf = std::make_shared<interval>(dhf);
     auto ix = std::make_shared<interval>(dx);
 
+    /* manage memory manually */
+    TH1::AddDirectory(false);
+    TH1::SetDefaultSumw2();
+
     /* open input files */
     std::vector<TFile*> files(inputs.size(), nullptr);
     zip([&](auto& file, auto const& input) {
         file = new TFile(input.data(), "read");
     }, files, inputs);
-
-    /* manage memory manually */
-    TH1::AddDirectory(false);
-    TH1::SetDefaultSumw2();
-
-    TFile* fout = new TFile(output, "recreate");
 
     /* load histograms */
     std::vector<std::string> tags = {
@@ -250,6 +248,8 @@ int congratulate(char const* config, char const* output) {
         a->draw("pdf");
         s->draw("pdf");
     }, figures, xmins, xmaxs, ymins, ymaxs, oflows);
+
+    TFile* fout = new TFile(output, "recreate");
 
     fout->Close();
 

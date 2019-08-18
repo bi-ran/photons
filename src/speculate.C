@@ -100,19 +100,16 @@ int speculate(char const* config, char const* output) {
 
     /* draw efficiency */
     auto hb = new pencil();
-    hb->category("sample", "pp", "aa");
-
-    hb->alias("aa", "PbPb");
+    hb->category("sample", "pp", "PbPb");
 
     auto c1 = new paper(tag + "_efficiency", hb);
     apply_style(c1, system + " #sqrt{s} = 5.02 TeV"s, 0., 1.2);
     c1->accessory(std::bind(line_at, _1, 1., rpt.front(), rpt.back()));
 
     c1->add(frame);
-    c1->stack(eff, tag);
+    c1->stack(eff, system);
 
     hb->sketch();
-    
     c1->draw("pdf");
 
     /* save output */

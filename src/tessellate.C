@@ -163,8 +163,10 @@ int tessellate(char const* config, char const* output) {
 
     auto data = conf->get<std::string>("data");
     auto signal = conf->get<std::string>("signal");
-    auto heavyion = conf->get<bool>("heavyion");
+    auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
+
+    auto heavyion = conf->get<bool>("heavyion");
 
     auto pt_min = conf->get<float>("pt_min");
     auto eta_max = conf->get<float>("eta_max");
@@ -189,6 +191,7 @@ int tessellate(char const* config, char const* output) {
     auto rsee = std::make_shared<interval>("#sigma_{#eta#eta}",
         see_nbins, see_low, see_high);
 
+    auto incl = std::make_shared<interval>(1, 0., 1.);
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
 
@@ -201,6 +204,14 @@ int tessellate(char const* config, char const* output) {
     auto see_bkg = std::make_unique<memory>("sigma_ieta_ieta_bkg"s,
         "counts", rsee, mpthf);
 
+    auto purity = std::make_unique<memory>("pthf"s,
+        "purity"s, incl, mpthf);
+
+    /* manage memory manually */
+    TH1::AddDirectory(false);
+    TH1::SetDefaultSumw2();
+
+    /* load inputs */
     TFile* fd = new TFile(data.data(), "read");
     TTree* td = (TTree*)fd->Get("pj");
     auto pd = new pjtree(false, false, td, { 1, 0, 1, 0, 0, 0 });
@@ -208,11 +219,6 @@ int tessellate(char const* config, char const* output) {
     TFile* fs = new TFile(signal.data(), "read");
     TTree* ts = (TTree*)fs->Get("pj");
     auto ps = new pjtree(true, false, ts, { 1, 1, 1, 0, 0, 0 });
-
-    TFile* fout = new TFile(output, "recreate");
-
-    TH1::AddDirectory(false);
-    TH1::SetDefaultSumw2();
 
     fill_data(see_data, see_bkg, mpthf, td, pd, heavyion,
               pt_min, eta_max, hovere_max, iso_max, noniso_min, noniso_max,
@@ -225,18 +231,31 @@ int tessellate(char const* config, char const* output) {
     auto hb = new pencil();
     hb->category("type", "data", "sig", "bkg");
 
-    hb->alias("sig", "PYTHIA8 + HYDJET");
+    hb->alias("sig", "PYTHIA8");
     hb->alias("bkg", "noniso. data");
 
+    hb->style("sig", [](TH1* h) {
+        h->SetLineColor(kPink);
+        h->SetFillColor(kOrange + 7);
+        h->SetFillStyle(3004);
+    });
+
+    hb->style("bkg", [](TH1* h) {
+        h->SetLineColor(kGreen + 4);
+        h->SetFillColor(kGreen + 1);
+        h->SetFillStyle(3001);
+    });
+
     auto info_text = [&](int64_t index) {
+        auto indices = mpthf->indices_for(index - 1);
+        auto pt_x = indices[0];
+        auto hf_x = indices[1];
+
+        char buffer[128] = { '\0' };
         TLatex* text = new TLatex();
         text->SetTextFont(43);
         text->SetTextSize(12);
 
-        auto pt_x = (index - 1) % ipt->size();
-        auto hf_x = (index - 1) / ipt->size();
-
-        char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{#gamma} < %0.f",
             (*ipt)[pt_x], (*ipt)[pt_x + 1]);
         text->DrawLatexNDC(0.54, 0.67, buffer);
@@ -245,14 +264,25 @@ int tessellate(char const* config, char const* output) {
         text->DrawLatexNDC(0.54, 0.63, buffer);
     };
 
+    auto purity_text = [&](int64_t index) {
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "purity: %.3f",
+            (*purity)[index - 1]->GetBinContent(1));
+
+        TLatex* text = new TLatex();
+        text->SetTextFont(43);
+        text->SetTextSize(12);
+        text->DrawLatexNDC(0.54, 0.56, buffer);
+    };
+
     auto c1 = new paper(tag + "_purity", hb);
-    apply_style(c1, "PbPb #sqrt{s_{NN}} = 5.02 TeV"s);
+    apply_style(c1, system + " #sqrt{s_{NN}} = 5.02 TeV"s);
     c1->accessory(info_text);
+    c1->accessory(purity_text);
     c1->divide(ipt->size(), -1);
 
     printf("fit templates\n");
 
-    std::vector<float> purities(mpthf->size(), 1.);
     for (int64_t i = 0; i < mpthf->size(); ++i) {
         auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i],
                                  rfit);
@@ -279,46 +309,16 @@ int tessellate(char const* config, char const* output) {
         auto ntot = pfit->Integral(1, pfit->FindBin(see_max));
         auto nbkg = pbkg->Integral(1, pbkg->FindBin(see_max));
 
-        printf("purity: %.3f\n", 1. - nbkg / ntot);
-        purities[i] = 1. - nbkg / ntot;
+        (*purity)[i]->SetBinContent(1, 1. - nbkg / ntot);
+
+        printf("purity: %.3f\n", (*purity)[i]->GetBinContent(1));
     }
 
-    auto purity_text = [&](int64_t index) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "purity: %.3f", purities[index - 1]);
-
-        TLatex* text = new TLatex();
-        text->SetTextFont(43);
-        text->SetTextSize(12);
-        text->DrawLatexNDC(0.54, 0.56, buffer);
-    };
-
-    c1->accessory(purity_text);
-
-    auto sig_style = [](TH1* h) {
-        h->SetLineColor(kPink);
-        h->SetFillColor(kOrange + 7);
-        h->SetFillStyle(3004);
-    };
-
-    auto bkg_style = [](TH1* h) {
-        h->SetLineColor(kGreen + 4);
-        h->SetFillColor(kGreen + 1);
-        h->SetFillStyle(3001);
-    };
-
-    hb->style("sig", sig_style);
-    hb->style("bkg", bkg_style);
     hb->sketch();
-
     c1->draw("pdf");
 
-    /* save purities in history format */
-    auto incl = std::make_shared<interval>(1, 0., 1.);
-    auto purity = std::make_unique<memory>("pthf"s, "purity"s, incl, mpthf);
-
-    for (int64_t i = 0; i < purity->size(); ++i)
-        (*purity)[i]->SetBinContent(1, purities[i]);
+    /* save purities */
+    TFile* fout = new TFile(output, "recreate");
 
     purity->save(tag);
 

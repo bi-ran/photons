@@ -128,82 +128,60 @@ int distillate(char const* config, char const* output) {
     auto set_csn = [&](TF1* f, int64_t hf_x) {
         if (!heavyion || csn.empty()) {
             f->SetParameters(0.08, 0.32, 0.);
-            return;
-        }
-
-        f->SetParameters(csn[0], csn[1], csn[2]);
-        if (hf_x > 0) {
-            f->FixParameter(0, csn[0]);
-            f->FixParameter(1, csn[1]);
+        } else {
+            f->SetParameters(csn[0], csn[1], csn[2]);
+            if (hf_x > 0) {
+                f->FixParameter(0, csn[0]);
+                f->FixParameter(1, csn[1]);
+            }
         }
     };
 
     /* info text */
-    auto eta_info = [&](int64_t, int64_t eta_x, int64_t offset) {
+    auto eta_info = [&](int64_t eta_x, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.1f < #eta < %.1f",
-            (*ieta)[eta_x], (*ieta)[eta_x + 1]);
+            (*ieta)[eta_x - 1], (*ieta)[eta_x]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75 - offset * 0.04, buffer);
+        l->DrawLatexNDC(0.135, pos, buffer);
     };
 
-    auto pt_hf_selection = [&](int64_t index) {
-        auto pt_x = scale_dpthf->indices_for(index - 1)[0];
-        auto hf_x = scale_dpthf->indices_for(index - 1)[1];
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-
+    auto pt_info = [&](int64_t pt_x, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{jet} < %.0f",
-            (*ipt)[pt_x], (*ipt)[pt_x + 1]);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
-
-        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
-        l->DrawLatexNDC(0.135, 0.71, buffer);
-    };
-
-    auto eta_hf_selection = [&](int64_t index) {
-        auto eta_x = scale_detahf->indices_for(index - 1)[0];
-        auto hf_x = scale_detahf->indices_for(index - 1)[1];
+            (*ipt)[pt_x - 1], (*ipt)[pt_x]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.1f < #eta < %.1f",
-            (*ieta)[eta_x], (*ieta)[eta_x + 1]);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
-
-        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
-        l->DrawLatexNDC(0.135, 0.71, buffer);
+        l->DrawLatexNDC(0.135, pos, buffer);
     };
 
-    auto hf_selection = [&](int64_t index) {
-        auto hf_x = (index - 1) % ihf->size();
-
+    auto hf_info = [&](int64_t hf_x, float pos) {
         char buffer[128] = { '\0' };
-        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
+        sprintf(buffer, "%i - %i%%", dcent[hf_x], dcent[hf_x - 1]);
 
         TLatex* l = new TLatex();
         l->SetTextFont(43);
         l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
+        l->DrawLatexNDC(0.135, pos, buffer);
     };
 
-    auto guide_lines = [&](int64_t index) {
-        if (index > ihf->size()) { return; }
+    auto pthf_info = [&](int64_t index) {
+        auto indices = scale_dpthf->indices_for(index - 1);
 
-        for (auto val : es_lines) {
-            TLine* l = new TLine(rpt.front(), val, rpt.back(), val);
-            l->SetLineStyle(7);
-            l->Draw();
-        }
+        pt_info(indices[0] + 1, 0.75);
+        hf_info(indices[1] + 1, 0.71);
+    };
+
+    auto etahf_info = [&](int64_t index) {
+        auto indices = scale_detahf->indices_for(index - 1);
+
+        eta_info(indices[0] + 1, 0.75);
+        hf_info(indices[1] + 1, 0.71);
     };
 
     auto system_info = system + " #sqrt{s_{NN}} = 5.02 TeV";
@@ -216,7 +194,7 @@ int distillate(char const* config, char const* output) {
 
     auto c1 = new paper(tag + "_dpthf_jesr_fits", hb);
     apply_style(c1, system_info);
-    c1->accessory(pt_hf_selection);
+    c1->accessory(pthf_info);
     c1->divide(ipt->size(), -1);
 
     /* fit scale and resolution */
@@ -246,8 +224,7 @@ int distillate(char const* config, char const* output) {
 
     auto c2 = new paper(tag + "_dhf_f_pt_jesr", hb);
     apply_style(c2, system_info);
-    c2->accessory(hf_selection);
-    c2->accessory(guide_lines);
+    c2->accessory(std::bind(hf_info, _1, 0.75));
     c2->divide(ihf->size(), -1);
     c2->set(paper::flags::logx);
 
@@ -286,7 +263,7 @@ int distillate(char const* config, char const* output) {
 
     auto c3 = new paper(tag + "_detahf_jesr_fits", hb);
     apply_style(c3, system_info);
-    c3->accessory(eta_hf_selection);
+    c3->accessory(etahf_info);
     c3->divide(ieta->size(), -1);
 
     /* fit scale and resolution */
@@ -316,7 +293,7 @@ int distillate(char const* config, char const* output) {
 
     auto c4 = new paper(tag + "_dhf_f_eta_jesr", hb);
     apply_style(c4, system_info);
-    c4->accessory(hf_selection);
+    c4->accessory(std::bind(hf_info, _1, 0.75));
     c4->divide(ihf->size(), -1);
 
     es_dhf_f_eta->apply([&](TH1* h) {
@@ -333,14 +310,14 @@ int distillate(char const* config, char const* output) {
     for (int64_t i = 0; i < ieta->size(); ++i) {
         c5[i] = new paper(tag + "_jesr_fits_s" + std::to_string(i), hb);
         apply_style(c5[i], system_info);
-        c5[i]->accessory(pt_hf_selection);
-        c5[i]->accessory(std::bind(eta_info, _1, i, 2));
+        c5[i]->accessory(pthf_info);
+        c5[i]->ornaments(std::bind(eta_info, i + 1, 0.67));
         c5[i]->divide(ipt->size(), -1);
 
         c6[i] = new paper(tag + "_f_pt_jesr_s" + std::to_string(i), hb);
         apply_style(c6[i], system_info);
-        c6[i]->accessory(hf_selection);
-        c6[i]->accessory(std::bind(eta_info, _1, i, 1));
+        c6[i]->accessory(std::bind(hf_info, _1, 0.75));
+        c6[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
         c6[i]->divide(ihf->size(), -1);
         c6[i]->set(paper::flags::logx);
     }
@@ -408,9 +385,9 @@ int distillate(char const* config, char const* output) {
 
     for (auto const& p : { c1, c2, c3, c4 })
         p->draw("pdf");
-
     for (auto const& c : { c5, c6 })
-        for (auto p : c) { p->draw("pdf"); }
+        for (auto p : c)
+            p->draw("pdf");
 
     /* save output */
     TFile* fout = new TFile(output, "recreate");

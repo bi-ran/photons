@@ -39,19 +39,17 @@ int obnubilate(char const* config, char const* output) {
     auto ranges = conf->get<std::vector<float>>("ranges");
     auto groups = conf->get<std::vector<int32_t>>("groups");
 
-    /* open input files */
+    /* manage memory manually */
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
+    /* open input files */
     TFile* f = new TFile(ref.data(), "read");
 
     std::vector<TFile*> files(inputs.size(), nullptr);
     zip([&](auto& file, auto const& input) {
         file = new TFile(input.data(), "read");
     }, files, inputs);
-
-    /* prepare output */
-    TFile* fout = new TFile(output, "recreate");
 
     /* prepare plots */
     auto hb = new pencil();
@@ -74,6 +72,9 @@ int obnubilate(char const* config, char const* output) {
         h->SetFillColorAlpha(col, 0.32);
         h->SetLineWidth(1);
     };
+
+    /* prepare output */
+    TFile* fout = new TFile(output, "recreate");
 
     /* calculate variations */
     zip([&](auto const& figure, auto cols, auto range, auto& c) {

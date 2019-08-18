@@ -90,18 +90,25 @@ int64_t inosculate(char const* config, char const* output) {
         smear_factors.push_back(
             conf->get<std::vector<float>>(type + "_smears"));
 
-    TRandom3* gen = new TRandom3(144);
+    /* manage memory manually */
+    TH1::AddDirectory(false);
+    TH1::SetDefaultSumw2();
 
+    /* load input */
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
     auto p = new pjtree(false, false, t, { 1, 0, 1, 0, 0, 0 });
 
+    /* prepare histograms */
     auto icent = std::make_shared<interval>(cent);
     auto bins = std::make_shared<interval>("mass (GeV/c^{2})"s, 30, 60., 120.);
     std::vector<int64_t> shape = { 1, icent->size() };
 
     auto minv = std::make_unique<history>("mass"s, "counts"s, bins, shape);
 
+    TRandom3* gen = new TRandom3(144);
+
+    /* iterate */
     int64_t nentries = t->GetEntries();
     for (int64_t i = 0; i < nentries; ++i) {
         if (i % 100000 == 0) { printf("entry: %li/%li\n", i, nentries); }
@@ -122,7 +129,6 @@ int64_t inosculate(char const* config, char const* output) {
             if (!pass_claustrophobic_selections(p, j))
                 continue;
 
-            /* double electron invariant mass */
             for (int64_t k = j + 1; k < p->nPho; ++k) {
                 if ((*p->phoEt)[k] < 20)
                     continue;
@@ -134,6 +140,7 @@ int64_t inosculate(char const* config, char const* output) {
                 if (!pass_claustrophobic_selections(p, k))
                     continue;
 
+                /* double electron invariant mass */
                 auto scf = scale_factors[0][cent_x];
                 auto smf = smear_factors[0][cent_x] / 91.1876;
                 auto sf = scf * gen->Gaus(1., smf);
@@ -215,13 +222,14 @@ int64_t inosculate(char const* config, char const* output) {
         fbkg[i][j]->Draw("same");
     };
 
+    /* prepare plots */
     auto hb = new pencil();
     hb->category("type", "bb");
 
     hb->alias("bb", "EB #otimes EB");
 
     auto c1 = new paper(tag + "_mass", hb);
-    apply_style(c1,"PbPb #sqrt{s} = 5.02 TeV"s);
+    apply_style(c1, "PbPb #sqrt{s} = 5.02 TeV"s);
     c1->legend(std::bind(coordinates, 0.135, 0.4, 0.75, 0.04));
     c1->accessory(info_text);
     c1->divide(icent->size(), 1);
@@ -234,11 +242,11 @@ int64_t inosculate(char const* config, char const* output) {
     hb->sketch();
     c1->draw("pdf");
 
+    /* save output */
     TFile* fout = new TFile(output, "recreate");
 
     minv->save(tag);
 
-    fout->Write("", TObject::kOverwrite);
     fout->Close();
 
     return 0;

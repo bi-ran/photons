@@ -63,7 +63,6 @@ int accumulate(char const* config, char const* output) {
     auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
 
-    auto rppt = conf->get<std::vector<float>>("ppt_range");
     auto rdphi = conf->get<std::vector<float>>("dphi_range");
     auto rx = conf->get<std::vector<float>>("x_range");
     auto rdr = conf->get<std::vector<float>>("dr_range");
@@ -81,14 +80,12 @@ int accumulate(char const* config, char const* output) {
     auto ihf = std::make_shared<interval>(dhf);
     auto ix = std::make_shared<interval>(dx);
 
-    /* open input files */
-    TFile* f = new TFile(input.data(), "read");
-
     /* manage memory manually */
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
-    TFile* fout = new TFile(output, "recreate");
+    /* open input files */
+    TFile* f = new TFile(input.data(), "read");
 
     /* load histograms */
     auto nevt = std::make_unique<history>(
@@ -180,6 +177,8 @@ int accumulate(char const* config, char const* output) {
         pjet_wta_f_dphi_d_pt);
 
     /* save histograms */
+    TFile* fout = new TFile(output, "recreate");
+
     nevt->save(tag);
 
     pjet_es_f_dphi->save(tag);
@@ -195,10 +194,12 @@ int accumulate(char const* config, char const* output) {
     pjet_f_ddr_d_pt->save(tag);
     pjet_f_ddr_d_hf->save(tag);
 
+    fout->Close();
+
     /* draw plots */
     printf("painting..\n");
 
-    auto pt_selection = [&](int64_t index, float pos) {
+    auto pt_info = [&](int64_t index, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
             (*ipt)[index - 1], (*ipt)[index]);
@@ -209,7 +210,7 @@ int accumulate(char const* config, char const* output) {
         l->DrawLatexNDC(0.135, pos, buffer);
     };
 
-    auto hf_selection = [&](int64_t index, float pos) {
+    auto hf_info = [&](int64_t index, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%i - %i%%", dcent[index], dcent[index - 1]);
 
@@ -224,8 +225,8 @@ int accumulate(char const* config, char const* output) {
         auto pt_x = indices[0];
         auto hf_x = indices[1];
 
-        pt_selection(pt_x + 1, 0.75);
-        hf_selection(hf_x + 1, 0.71);
+        pt_info(pt_x + 1, 0.75);
+        hf_info(hf_x + 1, 0.71);
     };
 
     auto hb = new pencil();
@@ -245,7 +246,7 @@ int accumulate(char const* config, char const* output) {
 
     auto c1 = new paper(tag + "_dphi_d_pt", hb);
     apply_style(c1, collisions, -0.04, 0.24);
-    c1->accessory(std::bind(pt_selection, _1, 0.75));
+    c1->accessory(std::bind(pt_info, _1, 0.75));
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c1->divide(-1, 1);
 
@@ -256,7 +257,7 @@ int accumulate(char const* config, char const* output) {
 
     auto c2 = new paper(tag + "_ddr_d_pt", hb);
     apply_style(c2, collisions, -2., 27.);
-    c2->accessory(std::bind(pt_selection, _1, 0.75));
+    c2->accessory(std::bind(pt_info, _1, 0.75));
     c2->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c2->divide(-1, 1);
 
@@ -264,7 +265,7 @@ int accumulate(char const* config, char const* output) {
 
     auto c3 = new paper(tag + "_ddr_d_hf", hb);
     apply_style(c3, collisions, -2., 27.);
-    c3->accessory(std::bind(hf_selection, _1, 0.75));
+    c3->accessory(std::bind(hf_info, _1, 0.75));
     c3->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c3->divide(-1, 1);
 
@@ -272,7 +273,7 @@ int accumulate(char const* config, char const* output) {
 
     auto c4 = new paper(tag + "_x_d_pt", hb);
     apply_style(c4, collisions, -0.1, 1.5);
-    c4->accessory(std::bind(pt_selection, _1, 0.75));
+    c4->accessory(std::bind(pt_info, _1, 0.75));
     c4->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c4->divide(-1, 1);
 
@@ -280,7 +281,7 @@ int accumulate(char const* config, char const* output) {
 
     auto c5 = new paper(tag + "_x_d_hf", hb);
     apply_style(c5, collisions, -0.1, 1.5);
-    c5->accessory(std::bind(hf_selection, _1, 0.75));
+    c5->accessory(std::bind(hf_info, _1, 0.75));
     c5->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c5->divide(-1, 1);
 
@@ -328,10 +329,7 @@ int accumulate(char const* config, char const* output) {
     hb->set_binary("system");
     hb->sketch();
 
-    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9 })
-        c->draw("pdf");
-
-    fout->Close();
+    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9 }) { c->draw("pdf"); }
 
     return 0;
 }

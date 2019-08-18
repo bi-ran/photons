@@ -1,3 +1,5 @@
+#include "../include/pjtree.h"
+
 #include "../git/config/include/configurer.h"
 
 #include "../git/history/include/interval.h"
@@ -6,18 +8,13 @@
 
 #include "../git/tricks-and-treats/include/overflow_angles.h"
 
-#include "../include/pjtree.h"
-
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1.h"
 
-#include <cmath>
 #include <memory>
 #include <string>
 #include <vector>
-
-#define FP_TH1_FILL (int (TH1::*)(double))&TH1::Fill
 
 using namespace std::literals::string_literals;
 using namespace std::placeholders;
@@ -81,8 +78,8 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
 
 static int64_t within_hem_failure_region(pjtree* t, int64_t index) {
     return ((*t->phoSCEta)[index] < -1.3
-        && (*t->phoSCPhi)[index] < -0.9
-        && (*t->phoSCPhi)[index] > -1.6);
+        && (*t->phoSCPhi)[index] < -0.87
+        && (*t->phoSCPhi)[index] > -1.57);
 }
 
 static int64_t passes_basic_selections(pjtree* t, int64_t index) {
@@ -117,8 +114,6 @@ static int64_t passes_looseid_barrel(pjtree* t, int64_t index, bool heavyion) {
 }
 
 int populate(char const* config, char const* output) {
-    printf("load config options..\n");
-
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
@@ -143,8 +138,6 @@ int populate(char const* config, char const* output) {
     auto const see_max = conf->get<float>("see_max");
     auto const iso_max = conf->get<float>("iso_max");
 
-    auto rppt = conf->get<std::vector<float>>("ppt_range");
-    auto rjpt = conf->get<std::vector<float>>("jpt_range");
     auto rdphi = conf->get<std::vector<float>>("dphi_range");
     auto rx = conf->get<std::vector<float>>("x_range");
     auto rdr = conf->get<std::vector<float>>("dr_range");
@@ -159,8 +152,6 @@ int populate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    printf("prepare histograms..\n");
-
     auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
@@ -172,9 +163,6 @@ int populate(char const* config, char const* output) {
 
     auto nevt = std::make_unique<memory>("nevt"s, "", incl, mpthf);
     auto nmix = std::make_unique<memory>("nmix"s, "", incl, mpthf);
-
-    auto photon_f_pt = std::make_unique<memory>("photon_f_pt"s,
-        "dN/dp_{T}^{#gamma}", "p_{T}^{#gamma}", rppt, mincl);
 
     auto pjet_es_f_dphi = std::make_unique<memory>("pjet_es_f_dphi"s,
         "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
@@ -195,8 +183,11 @@ int populate(char const* config, char const* output) {
     auto mix_pjet_f_ddr = std::make_unique<memory>("mix_pjet_f_ddr",
         "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthfx);
 
-    printf("iterate..\n");
+    /* manage memory manually */
+    TH1::AddDirectory(false);
+    TH1::SetDefaultSumw2();
 
+    /* load input */
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
     auto pjt = new pjtree(gen_iso, false, t, { 1, 1, 1, 1, 1, 0 });
@@ -205,11 +196,7 @@ int populate(char const* config, char const* output) {
     TTree* tm = (TTree*)fm->Get("pj");
     auto pjtm = new pjtree(gen_iso, false, tm, { 1, 1, 1, 1, 1, 0});
 
-    TFile* fout = new TFile(output, "recreate");
-
-    /* manage memory manually */
-    TH1::AddDirectory(false);
-    TH1::SetDefaultSumw2();
+    printf("iterate..\n");
 
     int64_t nentries = static_cast<int64_t>(t->GetEntries());
     if (entries) { nentries = std::min(nentries, entries); }
@@ -283,8 +270,6 @@ int populate(char const* config, char const* output) {
         double photon_pt = (*pjt->phoEt)[leading];
         auto pt_x = ipt->index_for(photon_pt);
 
-        (*photon_f_pt)(0, FP_TH1_FILL, photon_pt);
-
         double hf = pjt->hiHF;
         auto hf_x = ihf->index_for(hf);
 
@@ -339,10 +324,10 @@ int populate(char const* config, char const* output) {
     sub_pjet_f_ddr->divide(*nevt);
 
     /* save histograms */
+    TFile* fout = new TFile(output, "recreate");
+
     nevt->save(tag);
     nmix->save(tag);
-
-    photon_f_pt->save(tag);
 
     pjet_es_f_dphi->save(tag);
     pjet_wta_f_dphi->save(tag);

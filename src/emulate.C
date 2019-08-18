@@ -36,6 +36,8 @@ int emulate(char const* config, char const* output) {
     auto ivz = std::make_shared<interval>("v_{z}"s,
         static_cast<int64_t>(rvz[0]), rvz[1], rvz[2]);
 
+    /* manange memory manually */
+    TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
     /* merged gen inputs */
@@ -118,7 +120,6 @@ int emulate(char const* config, char const* output) {
     c1->add((*vz)[2]);
 
     hb->sketch();
-
     c1->draw("pdf");
 
     /* save output */

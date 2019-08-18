@@ -1,6 +1,4 @@
 #include "../include/pjtree.h"
-#include "../include/JetCorrector.h"
-#include "../include/JetUncertainty.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -15,6 +13,9 @@
 #include "../git/history/include/history.h"
 
 #include "../git/tricks-and-treats/include/train.h"
+
+#include "../include/JetCorrector.h"
+#include "../include/JetUncertainty.h"
 
 #include "TF1.h"
 #include "TFile.h"

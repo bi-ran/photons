@@ -54,14 +54,14 @@ int fabulate(char const* config, char const* output) {
 
     auto scale = std::make_unique<memory>("scale"s, "counts", ies, mptetahf);
 
+    /* manage memory manually */
+    TH1::AddDirectory(false);
+    TH1::SetDefaultSumw2();
+
     /* load input */
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
     auto p = new pjtree(true, false, t, { 1, 0, 1, 0, 1, 0 });
-
-    /* manage memory manually */
-    TH1::AddDirectory(false);
-    TH1::SetDefaultSumw2();
 
     /* fill histograms */
     auto nentries = static_cast<int64_t>(t->GetEntries());

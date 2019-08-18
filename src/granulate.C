@@ -30,10 +30,11 @@ int granulate(char const* config, char const* output) {
     auto values = conf->get<std::vector<float>>("values");
     auto figures = conf->get<std::vector<std::string>>("figures");
 
-    /* open input files */
+    /* manage memory manually */
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
+    /* load input files */
     TFile* f = new TFile(file.data(), "read");
 
     std::vector<TFile*> frefs(refs.size(), nullptr);
