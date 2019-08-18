@@ -61,9 +61,9 @@ int obnubilate(char const* config, char const* output) {
     auto cs = std::vector<paper*>(figures.size(), nullptr);
 
     /* lambdas */
-    std::function<void(TH1*)> _square = std::bind(_for_content, _1,
+    std::function<void(TH1*)> square_ = std::bind(for_content, _1,
         [](float val) -> float { return val * val; });
-    std::function<void(TH1*)> _sqrt = std::bind(_for_content, _1,
+    std::function<void(TH1*)> sqrt_ = std::bind(for_content, _1,
         [](float val) -> float { return std::sqrt(val); });
 
     auto shader = [&](TH1* h, float max) {
@@ -99,7 +99,7 @@ int obnubilate(char const* config, char const* output) {
 
         for (auto const& batch : batches) {
             batch->add(*base, -1);
-            batch->apply(_square);
+            batch->apply(square_);
         }
 
         zip([&](auto const& batch, auto group) {
@@ -107,18 +107,18 @@ int obnubilate(char const* config, char const* output) {
                 sets.push_back(new history(*batch, "set"));
             } else {
                 sets[group]->apply([&](TH1* h, int64_t i) {
-                    _for_content_index(h, [&](double val, int64_t b) -> float {
-                        return std::max(val, (*batch)[i]->GetBinContent(b));
-                    }); });
+                    for_contents(h, (*batch)[i],
+                        [&](float val1, float val2) -> float {
+                            return std::max(val1, val2); }); });
             }
 
-            batch->apply(_sqrt);
+            batch->apply(sqrt_);
         }, batches, groups);
 
         for (auto const& set : sets)
             total->add(*set, 1);
 
-        total->apply(_sqrt);
+        total->apply(sqrt_);
 
         /* add plots */
         auto style = [&](TH1* h) { c->adjust(h, "hist", "f"); };

@@ -12,17 +12,19 @@
 #include "TLegend.h"
 #include "TLine.h"
 
-auto _for_content = [](TH1* h, std::function<float(float)> f) {
+auto for_content = [](TH1* h, std::function<float(float)> f) {
     for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
         auto val = h->GetBinContent(j);
         h->SetBinContent(j, f(val));
     }
 };
 
-auto _for_content_index = [](TH1* h, std::function<float(float, int64_t)> f) {
-    for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
-        auto val = h->GetBinContent(j);
-        h->SetBinContent(j, f(val, j));
+auto for_contents = [](TH1* h1, TH1* h2,
+                        std::function<float(float, float)> f) {
+    for (int64_t j = 1; j <= h1->GetNbinsX(); ++j) {
+        auto val1 = h1->GetBinContent(j);
+        auto val2 = h2->GetBinContent(j);
+        h1->SetBinContent(j, f(val1, val2));
     }
 };
 

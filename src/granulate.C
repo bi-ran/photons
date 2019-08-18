@@ -66,7 +66,7 @@ int granulate(char const* config, char const* output) {
 
             /* scale uncertainties */
             if (value != 0) { var->apply([&](TH1* h) {
-                _for_content(h, [&](float val) -> float {
+                for_content(h, [&](float val) -> float {
                     return 1. + value * (val - 1.); }); }); }
 
             /* apply uncertainty to base */
