@@ -249,9 +249,7 @@ int congratulate(char const* config, char const* output) {
         s->draw("pdf");
     }, figures, xmins, xmaxs, ymins, ymaxs, oflows);
 
-    TFile* fout = new TFile(output, "recreate");
-
-    fout->Close();
+    in(output, []() {});
 
     return 0;
 }

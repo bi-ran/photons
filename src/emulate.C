@@ -104,15 +104,16 @@ int emulate(char const* config, char const* output) {
 
     auto system_tag = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
-    auto c1 = new paper(tag + "_vz", hb);
-    apply_style(c1, system_tag, 0., 0.04);
-    c1->jewellery([&](TH1* h, int64_t index) {
+    auto ratio_style = [&](TH1* h, int64_t index) {
         if (index == 3) {
             fweight->Draw("same");
             h->SetAxisRange(0.4, 1.6, "Y");
         }
-    });
+    };
 
+    auto c1 = new paper(tag + "_vz", hb);
+    apply_style(c1, system_tag, 0., 0.04);
+    c1->jewellery(ratio_style);
     c1->divide(3, -1);
 
     c1->add((*vz)[0], "data");
@@ -123,12 +124,10 @@ int emulate(char const* config, char const* output) {
     c1->draw("pdf");
 
     /* save output */
-    TFile* fout = new TFile(output, "recreate");
-
-    pthat->save(tag);
-    vz->save(tag);
-
-    fout->Close();
+    in(output, [&]() {
+        pthat->save(tag);
+        vz->save(tag);
+    });
 
     return 0;
 }

@@ -390,27 +390,25 @@ int distillate(char const* config, char const* output) {
             p->draw("pdf");
 
     /* save output */
-    TFile* fout = new TFile(output, "recreate");
+    in(output, [&]() {
+        scale_dpthf->save(tag);
+        scale_detahf->save(tag);
 
-    scale_dpthf->save(tag);
-    scale_detahf->save(tag);
+        es->save(tag);
+        er->save(tag);
+        es_f_pt->save(tag);
+        er_f_pt->save(tag);
 
-    es->save(tag);
-    er->save(tag);
-    es_f_pt->save(tag);
-    er_f_pt->save(tag);
+        es_dpthf->save(tag);
+        er_dpthf->save(tag);
+        es_dhf_f_pt->save(tag);
+        er_dhf_f_pt->save(tag);
 
-    es_dpthf->save(tag);
-    er_dpthf->save(tag);
-    es_dhf_f_pt->save(tag);
-    er_dhf_f_pt->save(tag);
-
-    es_detahf->save(tag);
-    er_detahf->save(tag);
-    es_dhf_f_eta->save(tag);
-    er_dhf_f_eta->save(tag);
-
-    fout->Close();
+        es_detahf->save(tag);
+        er_detahf->save(tag);
+        es_dhf_f_eta->save(tag);
+        er_dhf_f_eta->save(tag);
+    });
 
     return 0;
 }

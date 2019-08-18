@@ -318,15 +318,13 @@ int tessellate(char const* config, char const* output) {
     c1->draw("pdf");
 
     /* save purities */
-    TFile* fout = new TFile(output, "recreate");
+    in(output, [&]() {
+        purity->save(tag);
 
-    purity->save(tag);
-
-    see_data->save(tag);
-    see_sig->save(tag);
-    see_bkg->save(tag);
-
-    fout->Close();
+        see_data->save(tag);
+        see_sig->save(tag);
+        see_bkg->save(tag);
+    });
 
     return 0;
 }

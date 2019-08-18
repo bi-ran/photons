@@ -1,3 +1,4 @@
+#include "../include/lambdas.h"
 #include "../include/pjtree.h"
 
 #include "../git/config/include/configurer.h"
@@ -120,11 +121,7 @@ int fabulate(char const* config, char const* output) {
     }
 
     /* save output */
-    TFile* fout = new TFile(output, "recreate");
-
-    scale->save(tag);
-
-    fout->Close();
+    in(output, [&]() { scale->save(tag); });
 
     return 0;
 }

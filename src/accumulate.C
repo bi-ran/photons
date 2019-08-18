@@ -177,24 +177,22 @@ int accumulate(char const* config, char const* output) {
         pjet_wta_f_dphi_d_pt);
 
     /* save histograms */
-    TFile* fout = new TFile(output, "recreate");
+    in(output, [&]() {
+        nevt->save(tag);
 
-    nevt->save(tag);
+        pjet_es_f_dphi->save(tag);
+        pjet_wta_f_dphi->save(tag);
+        pjet_f_x->save(tag);
+        pjet_f_ddr->save(tag);
+        pjet_f_ddr_d_pthf->save(tag);
 
-    pjet_es_f_dphi->save(tag);
-    pjet_wta_f_dphi->save(tag);
-    pjet_f_x->save(tag);
-    pjet_f_ddr->save(tag);
-    pjet_f_ddr_d_pthf->save(tag);
-
-    pjet_es_f_dphi_d_pt->save(tag);
-    pjet_wta_f_dphi_d_pt->save(tag);
-    pjet_f_x_d_pt->save(tag);
-    pjet_f_x_d_hf->save(tag);
-    pjet_f_ddr_d_pt->save(tag);
-    pjet_f_ddr_d_hf->save(tag);
-
-    fout->Close();
+        pjet_es_f_dphi_d_pt->save(tag);
+        pjet_wta_f_dphi_d_pt->save(tag);
+        pjet_f_x_d_pt->save(tag);
+        pjet_f_x_d_hf->save(tag);
+        pjet_f_ddr_d_pt->save(tag);
+        pjet_f_ddr_d_hf->save(tag);
+    });
 
     /* draw plots */
     printf("painting..\n");

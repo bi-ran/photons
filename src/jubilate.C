@@ -185,9 +185,7 @@ int jubilate(char const* config, char const* output) {
         c->draw("pdf");
 
     /* save output */
-    TFile* fout = new TFile(output, "recreate");
-
-    fout->Close();
+    in(output, []() {});
 
     return 0;
 }

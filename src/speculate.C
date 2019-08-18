@@ -113,13 +113,8 @@ int speculate(char const* config, char const* output) {
     c1->draw("pdf");
 
     /* save output */
-    TFile* fout = new TFile(output, "recreate");
+    in(output, [&]() { counts->save(tag); });
 
-    counts->save(tag);
-
-    fout->Write("", TObject::kOverwrite);
-    fout->Close();
-    
     return 0;
 }
 

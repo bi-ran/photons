@@ -1,3 +1,4 @@
+#include "../include/lambdas.h"
 #include "../include/pjtree.h"
 
 #include "../git/config/include/configurer.h"
@@ -324,27 +325,25 @@ int populate(char const* config, char const* output) {
     sub_pjet_f_ddr->divide(*nevt);
 
     /* save histograms */
-    TFile* fout = new TFile(output, "recreate");
+    in(output, [&]() {
+        nevt->save(tag);
+        nmix->save(tag);
 
-    nevt->save(tag);
-    nmix->save(tag);
+        pjet_es_f_dphi->save(tag);
+        pjet_wta_f_dphi->save(tag);
+        pjet_f_x->save(tag);
+        pjet_f_ddr->save(tag);
 
-    pjet_es_f_dphi->save(tag);
-    pjet_wta_f_dphi->save(tag);
-    pjet_f_x->save(tag);
-    pjet_f_ddr->save(tag);
+        mix_pjet_es_f_dphi->save(tag);
+        mix_pjet_wta_f_dphi->save(tag);
+        mix_pjet_f_x->save(tag);
+        mix_pjet_f_ddr->save(tag);
 
-    mix_pjet_es_f_dphi->save(tag);
-    mix_pjet_wta_f_dphi->save(tag);
-    mix_pjet_f_x->save(tag);
-    mix_pjet_f_ddr->save(tag);
-
-    sub_pjet_es_f_dphi->save(tag);
-    sub_pjet_wta_f_dphi->save(tag);
-    sub_pjet_f_x->save(tag);
-    sub_pjet_f_ddr->save(tag);
-
-    fout->Close();
+        sub_pjet_es_f_dphi->save(tag);
+        sub_pjet_wta_f_dphi->save(tag);
+        sub_pjet_f_x->save(tag);
+        sub_pjet_f_ddr->save(tag);
+    });
 
     printf("destroying objects..\n");
 

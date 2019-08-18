@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 
+#include "TFile.h"
 #include "TGraph.h"
 #include "TH1.h"
 #include "TLatex.h"
@@ -23,6 +24,10 @@ auto _for_content_index = [](TH1* h, std::function<float(float, int64_t)> f) {
         auto val = h->GetBinContent(j);
         h->SetBinContent(j, f(val, j));
     }
+};
+
+auto in = [](std::string const& name, std::function<void()> f) {
+    auto fout = new TFile(name.data(), "recreate"); f(); fout->Close();
 };
 
 auto graph_formatter = [](TGraph* obj) {

@@ -243,11 +243,7 @@ int64_t inosculate(char const* config, char const* output) {
     c1->draw("pdf");
 
     /* save output */
-    TFile* fout = new TFile(output, "recreate");
-
-    minv->save(tag);
-
-    fout->Close();
+    in(output, [&]() { minv->save(tag); });
 
     return 0;
 }
