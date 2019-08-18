@@ -12,21 +12,14 @@
 #include "TLegend.h"
 #include "TLine.h"
 
-auto for_content = [](TH1* h, std::function<float(float)> f) {
-    for (int64_t j = 1; j <= h->GetNbinsX(); ++j) {
-        auto val = h->GetBinContent(j);
-        h->SetBinContent(j, f(val));
+template<typename... T>
+void for_contents(std::function<float(std::array<double, sizeof...(T) + 1>)> f,
+                  TH1* h, T... hs) {
+    for (int64_t i = 1; i < h->GetNbinsX(); ++i) {
+        double val = h->GetBinContent(i);
+        h->SetBinContent(i, f({val, hs->GetBinContent(i)...}));
     }
-};
-
-auto for_contents = [](TH1* h1, TH1* h2,
-                        std::function<float(float, float)> f) {
-    for (int64_t j = 1; j <= h1->GetNbinsX(); ++j) {
-        auto val1 = h1->GetBinContent(j);
-        auto val2 = h2->GetBinContent(j);
-        h1->SetBinContent(j, f(val1, val2));
-    }
-};
+}
 
 auto in = [](std::string const& name, std::function<void()> f) {
     auto fout = new TFile(name.data(), "recreate"); f(); fout->Close();

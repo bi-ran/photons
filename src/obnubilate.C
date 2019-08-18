@@ -61,10 +61,12 @@ int obnubilate(char const* config, char const* output) {
     auto cs = std::vector<paper*>(figures.size(), nullptr);
 
     /* lambdas */
-    std::function<void(TH1*)> square_ = std::bind(for_content, _1,
-        [](float val) -> float { return val * val; });
-    std::function<void(TH1*)> sqrt_ = std::bind(for_content, _1,
-        [](float val) -> float { return std::sqrt(val); });
+    std::function<void(TH1*)> square_ = [](TH1* h) {
+        for_contents([](std::array<double, 1> v) {
+            return v[0] * v[0]; }, h); };
+    std::function<void(TH1*)> sqrt_ = [](TH1* h) {
+        for_contents([](std::array<double, 1> v) {
+            return std::sqrt(v[0]); }, h); };
 
     auto shader = [&](TH1* h, float max) {
         default_formatter(h, 0., max);
@@ -107,9 +109,9 @@ int obnubilate(char const* config, char const* output) {
                 sets.push_back(new history(*batch, "set"));
             } else {
                 sets[group]->apply([&](TH1* h, int64_t i) {
-                    for_contents(h, (*batch)[i],
-                        [&](float val1, float val2) -> float {
-                            return std::max(val1, val2); }); });
+                    for_contents([](std::array<double, 2> v) -> float {
+                        return std::max(v[0], v[1]);
+                    }, h, (*batch)[i]); });
             }
 
             batch->apply(sqrt_);

@@ -66,8 +66,8 @@ int granulate(char const* config, char const* output) {
 
             /* scale uncertainties */
             if (value != 0) { var->apply([&](TH1* h) {
-                for_content(h, [&](float val) -> float {
-                    return 1. + value * (val - 1.); }); }); }
+                for_contents([&](std::array<double, 1> val) -> float {
+                    return 1. + value * (val[0] - 1.); }, h); }); }
 
             /* apply uncertainty to base */
             var->apply([&](TH1* h, int64_t index) {
