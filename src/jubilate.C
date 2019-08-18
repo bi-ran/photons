@@ -10,6 +10,7 @@
 #include "../git/paper-and-pencil/include/pencil.h"
 
 #include "../git/tricks-and-treats/include/overflow_angles.h"
+#include "../git/tricks-and-treats/include/trunk.h"
 
 #include "TFile.h"
 #include "TH1.h"

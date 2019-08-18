@@ -12,19 +12,6 @@
 #include "TLegend.h"
 #include "TLine.h"
 
-template<typename... T>
-void for_contents(std::function<float(std::array<double, sizeof...(T) + 1>)> f,
-                  TH1* h, T... hs) {
-    for (int64_t i = 1; i < h->GetNbinsX(); ++i) {
-        double val = h->GetBinContent(i);
-        h->SetBinContent(i, f({val, hs->GetBinContent(i)...}));
-    }
-}
-
-auto in = [](std::string const& name, std::function<void()> f) {
-    auto fout = new TFile(name.data(), "recreate"); f(); fout->Close();
-};
-
 auto graph_formatter = [](TGraph* obj) {
     obj->SetMarkerSize(0.84);
     obj->GetXaxis()->CenterTitle();

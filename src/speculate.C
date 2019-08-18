@@ -10,6 +10,7 @@
 #include "../git/paper-and-pencil/include/pencil.h"
 
 #include "../git/tricks-and-treats/include/train.h"
+#include "../git/tricks-and-treats/include/trunk.h"
 
 #include "TFile.h"
 #include "TGraphAsymmErrors.h"

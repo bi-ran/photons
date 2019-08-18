@@ -9,6 +9,7 @@
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
 
+#include "../git/tricks-and-treats/include/trunk.h"
 #include "../git/tricks-and-treats/include/zip.h"
 
 #include "TF1.h"

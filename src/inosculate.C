@@ -10,6 +10,7 @@
 #include "../git/paper-and-pencil/include/pencil.h"
 
 #include "../git/tricks-and-treats/include/maglev.h"
+#include "../git/tricks-and-treats/include/trunk.h"
 
 #include "TF1.h"
 #include "TFile.h"

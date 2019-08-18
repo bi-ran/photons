@@ -1,9 +1,8 @@
-#include "../include/lambdas.h"
-
 #include "../git/config/include/configurer.h"
 
 #include "../git/history/include/history.h"
 
+#include "../git/tricks-and-treats/include/trunk.h"
 #include "../git/tricks-and-treats/include/zip.h"
 
 #include "TFile.h"
