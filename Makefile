@@ -6,7 +6,7 @@ LDFLAGS   += -lconf -L./git/config/lib \
 	     -lhist -L./git/history/lib \
 	     -lpp -L./git/paper-and-pencil/lib \
 	     -ltt -L./git/tricks-and-treats/lib
-RLDFLAGS  := -lEG
+RLDFLAGS  := -lEG -lTMVA
 
 BINDIR = ./bin
 BLDDIR = ./build
