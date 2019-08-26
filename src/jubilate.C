@@ -43,7 +43,6 @@ int jubilate(char const* config, char const* output) {
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
-    auto dx = conf->get<std::vector<float>>("x_diff");
 
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
@@ -52,7 +51,6 @@ int jubilate(char const* config, char const* output) {
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
-    auto ix = std::make_shared<interval>(dx);
 
     /* load history objects */
     TFile* f = new TFile(input.data(), "read");
@@ -75,10 +73,6 @@ int jubilate(char const* config, char const* output) {
     auto mix_pjet_f_ddr = std::make_unique<history>(
         f, "raw_mix_pjet_f_ddr");
 
-    /* integrate out unwanted axes */
-    auto pjet_f_ddr_d_pthf = pjet_f_ddr->sum(2);
-    auto mix_pjet_f_ddr_d_pthf = mix_pjet_f_ddr->sum(2);
-
     /* shrink to remove overflow photon pt bin */
     auto shape = nevt->shape();
     shape[0] = shape[0] - 1;
@@ -90,29 +84,29 @@ int jubilate(char const* config, char const* output) {
     wrap(pjet_es_f_dphi);
     wrap(pjet_wta_f_dphi);
     wrap(pjet_f_x);
-    wrap(pjet_f_ddr_d_pthf);
+    wrap(pjet_f_ddr);
     wrap(mix_pjet_es_f_dphi);
     wrap(mix_pjet_wta_f_dphi);
     wrap(mix_pjet_f_x);
-    wrap(mix_pjet_f_ddr_d_pthf);
+    wrap(mix_pjet_f_ddr);
 
     /* normalise by number of photons */
     pjet_es_f_dphi->divide(*nevt);
     pjet_wta_f_dphi->divide(*nevt);
     pjet_f_x->divide(*nevt);
-    pjet_f_ddr_d_pthf->divide(*nevt);
+    pjet_f_ddr->divide(*nevt);
 
     mix_pjet_es_f_dphi->divide(*nevt);
     mix_pjet_wta_f_dphi->divide(*nevt);
     mix_pjet_f_x->divide(*nevt);
-    mix_pjet_f_ddr_d_pthf->divide(*nevt);
+    mix_pjet_f_ddr->divide(*nevt);
 
     /* scale by bin width */
     scale_bin_width(
         pjet_f_x,
-        pjet_f_ddr_d_pthf,
+        pjet_f_ddr,
         mix_pjet_f_x,
-        mix_pjet_f_ddr_d_pthf);
+        mix_pjet_f_ddr);
 
     /* draw figures */
     auto info_text = [&](int64_t index) {
@@ -156,7 +150,7 @@ int jubilate(char const* config, char const* output) {
 
     auto c3 = new paper(tag + "_mixing_x_d_pthf", hb);
     apply_style(c3, collisions, -0.1, 2.0);
-    c3->accessory(std::bind(line_at, _1, 0.f, dx[0], dx[1]));
+    c3->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     c3->accessory(info_text);
     c3->divide(-1 , ihf->size());
 
@@ -176,8 +170,8 @@ int jubilate(char const* config, char const* output) {
         c3->add((*pjet_f_x)[i], system, "raw");
         c3->stack((*mix_pjet_f_x)[i], system, "mix");
 
-        c4->add((*pjet_f_ddr_d_pthf)[i], system, "raw");
-        c4->stack((*mix_pjet_f_ddr_d_pthf)[i], system, "mix");
+        c4->add((*pjet_f_ddr)[i], system, "raw");
+        c4->stack((*mix_pjet_f_ddr)[i], system, "mix");
     }
 
     hb->sketch();

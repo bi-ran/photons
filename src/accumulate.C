@@ -70,7 +70,6 @@ int accumulate(char const* config, char const* output) {
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
-    auto dx = conf->get<std::vector<float>>("x_diff");
 
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
@@ -79,7 +78,6 @@ int accumulate(char const* config, char const* output) {
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
-    auto ix = std::make_shared<interval>(dx);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -124,22 +122,18 @@ int accumulate(char const* config, char const* output) {
     auto nevt_d_pt = nevt->sum(1);
     auto nevt_d_hf = nevt->sum(0);
 
-    auto pjet_f_ddr_d_pthf = pjet_f_ddr->sum(2);
-
     auto pjet_es_f_dphi_d_pt = pjet_es_f_dphi->sum(1);
     auto pjet_wta_f_dphi_d_pt = pjet_wta_f_dphi->sum(1);
     auto pjet_f_x_d_pt = pjet_f_x->sum(1);
     auto pjet_f_x_d_hf = pjet_f_x->sum(0);
-    auto pjet_f_ddr_d_pt = pjet_f_ddr_d_pthf->sum(1);
-    auto pjet_f_ddr_d_hf = pjet_f_ddr_d_pthf->sum(0);
+    auto pjet_f_ddr_d_pt = pjet_f_ddr->sum(1);
+    auto pjet_f_ddr_d_hf = pjet_f_ddr->sum(0);
 
     /* normalise by number of signal photons (events) */
-    pjet_f_ddr->divide(*nevt);
-
     pjet_es_f_dphi->divide(*nevt);
     pjet_wta_f_dphi->divide(*nevt);
-    pjet_f_ddr_d_pthf->divide(*nevt);
     pjet_f_x->divide(*nevt);
+    pjet_f_ddr->divide(*nevt);
 
     pjet_es_f_dphi_d_pt->divide(*nevt_d_pt);
     pjet_wta_f_dphi_d_pt->divide(*nevt_d_pt);
@@ -152,7 +146,6 @@ int accumulate(char const* config, char const* output) {
     scale_bin_width(
         pjet_f_x,
         pjet_f_ddr,
-        pjet_f_ddr_d_pthf,
         pjet_f_x_d_pt,
         pjet_f_x_d_hf,
         pjet_f_ddr_d_pt,
@@ -167,7 +160,6 @@ int accumulate(char const* config, char const* output) {
     /* normalise to unity */
     normalise_to_unity(
         pjet_f_ddr,
-        pjet_f_ddr_d_pthf,
         pjet_f_ddr_d_pt,
         pjet_f_ddr_d_hf);
 
@@ -185,7 +177,6 @@ int accumulate(char const* config, char const* output) {
         pjet_wta_f_dphi->save(tag);
         pjet_f_x->save(tag);
         pjet_f_ddr->save(tag);
-        pjet_f_ddr_d_pthf->save(tag);
 
         pjet_es_f_dphi_d_pt->save(tag);
         pjet_wta_f_dphi_d_pt->save(tag);
@@ -231,15 +222,12 @@ int accumulate(char const* config, char const* output) {
     auto hb = new pencil();
     hb->category("system", "PbPb", "pp");
     hb->category("axis", "na", "wta", "es");
-    hb->category("xjg", "out", "left", "right");
 
     hb->alias("na", "");
     hb->alias("es", "E-Scheme");
     hb->alias("wta", "WTA");
-    hb->alias("out", "");
 
     hb->ditto("es", "na");
-    hb->ditto("right", "out");
 
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
@@ -311,24 +299,12 @@ int accumulate(char const* config, char const* output) {
     c8->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     c8->divide(-1, ihf->size());
 
-    pjet_f_ddr_d_pthf->apply([&](TH1* h) { c8->add(h, system); });
-
-    auto c9 = new paper(tag + "_ddr_d_pthfx", hb);
-    apply_style(c9, collisions, -2., 27.);
-    c9->accessory(info_text);
-    c9->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
-    c9->divide(-1, ihf->size());
-
-    nevt->apply([&](TH1*, int64_t index) {
-        auto is = nevt->indices_for(index);
-        c9->add((*pjet_f_ddr)[x{is[0], is[1], 1}], system, "left");
-        c9->stack((*pjet_f_ddr)[x{is[0], is[1], 2}], system, "right");
-    });
+    pjet_f_ddr->apply([&](TH1* h) { c8->add(h, system); });
 
     hb->set_binary("system");
     hb->sketch();
 
-    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9 }) { c->draw("pdf"); }
+    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8 }) { c->draw("pdf"); }
 
     return 0;
 }

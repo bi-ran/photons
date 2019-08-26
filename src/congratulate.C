@@ -43,13 +43,11 @@ int congratulate(char const* config, char const* output) {
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
-    auto dx = conf->get<std::vector<float>>("x_diff");
 
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
-    auto ix = std::make_shared<interval>(dx);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

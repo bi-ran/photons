@@ -27,8 +27,7 @@ void scale(double factor, std::unique_ptr<T>&... args) {
 
 void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_pt, float photon_eta, int64_t photon_phi,
-               int64_t pt_x, int64_t hf_x, int64_t pthf_x,
-               std::shared_ptr<interval>& ix,
+               int64_t pthf_x,
                std::unique_ptr<memory>& nevt,
                std::unique_ptr<memory>& pjet_es_f_dphi,
                std::unique_ptr<memory>& pjet_wta_f_dphi,
@@ -63,17 +62,13 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         /* require back-to-back jets */
         if (photon_jet_dphi < 0.875_pi) { continue; }
 
-        double pjet_x = jet_pt / photon_pt;
-        (*pjet_f_x)[pthf_x]->Fill(pjet_x);
-
-        /* calculate index */
-        auto x_x = ix->index_for(pjet_x);
+        (*pjet_f_x)[pthf_x]->Fill(jet_pt / photon_pt);
 
         double jt_deta = jet_eta - jet_wta_eta;
         double jt_dphi = revert_radian(jet_phi - jet_wta_phi);
         double jt_dr = jt_deta * jt_deta + jt_dphi * jt_dphi;
 
-        (*pjet_f_ddr)[x{pt_x, hf_x, x_x}]->Fill(std::sqrt(jt_dr));
+        (*pjet_f_ddr)[pthf_x]->Fill(std::sqrt(jt_dr));
     }
 }
 
@@ -145,7 +140,6 @@ int populate(char const* config, char const* output) {
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
-    auto dx = conf->get<std::vector<float>>("x_diff");
 
     /* convert to integral angle units (cast to double) */
     convert_in_place_pi(rdphi);
@@ -156,11 +150,9 @@ int populate(char const* config, char const* output) {
     auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
     auto ipt = std::make_shared<interval>(dpt);
     auto ihf = std::make_shared<interval>(dhf);
-    auto ix = std::make_shared<interval>(dx);
 
     auto mincl = std::make_shared<multival>(*incl);
     auto mpthf = std::make_shared<multival>(dpt, dhf);
-    auto mpthfx = std::make_shared<multival>(dpt, dhf, dx);
 
     auto nevt = std::make_unique<memory>("nevt"s, "", incl, mpthf);
     auto nmix = std::make_unique<memory>("nmix"s, "", incl, mpthf);
@@ -180,9 +172,9 @@ int populate(char const* config, char const* output) {
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
 
     auto pjet_f_ddr = std::make_unique<memory>("pjet_f_ddr"s,
-        "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthfx);
+        "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthf);
     auto mix_pjet_f_ddr = std::make_unique<memory>("mix_pjet_f_ddr",
-        "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthfx);
+        "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -277,8 +269,7 @@ int populate(char const* config, char const* output) {
         auto pthf_x = mpthf->index_for(x{pt_x, hf_x});
 
         fill_axes(pjt, jet_pt_min, jet_eta_abs,
-                  photon_pt, photon_eta, photon_phi,
-                  pt_x, hf_x, pthf_x, ix,
+                  photon_pt, photon_eta, photon_phi, pthf_x,
                   nevt, pjet_es_f_dphi, pjet_wta_f_dphi,
                   pjet_f_x, pjet_f_ddr);
 
@@ -290,8 +281,7 @@ int populate(char const* config, char const* output) {
             if (std::abs(pjtm->hiHF / pjt->hiHF - 1.) > 0.1) { continue; }
 
             fill_axes(pjtm, jet_pt_min, jet_eta_abs,
-                      photon_pt, photon_eta, photon_phi,
-                      pt_x, hf_x, pthf_x, ix,
+                      photon_pt, photon_eta, photon_phi, pthf_x,
                       nmix, mix_pjet_es_f_dphi, mix_pjet_wta_f_dphi,
                       mix_pjet_f_x, mix_pjet_f_ddr);
 
