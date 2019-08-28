@@ -27,6 +27,7 @@ int distillate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
+    auto object = conf->get<std::string>("object");
     auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
 
@@ -44,8 +45,9 @@ int distillate(char const* config, char const* output) {
     auto remove = conf->get<std::vector<int64_t>>("remove");
     auto csn = conf->get<std::vector<float>>("csn");
 
-    auto es_range = conf->get<std::vector<float>>("es_range");
-    auto es_lines = conf->get<std::vector<float>>("es_lines");
+    auto s_range = conf->get<std::vector<float>>("s_range");
+    auto s_lines = conf->get<std::vector<float>>("s_lines");
+    auto r_range = conf->get<std::vector<float>>("r_range");
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -53,7 +55,7 @@ int distillate(char const* config, char const* output) {
 
     /* load input */
     TFile* f = new TFile(input.data(), "read");
-    auto scale = new history(f, tag + "_scale");
+    auto obj = new history(f, tag + "_" + object);
 
     /* prepare histograms */
     auto ival = std::make_shared<interval>(1, 0., 1.);
@@ -67,35 +69,35 @@ int distillate(char const* config, char const* output) {
     auto etahf_shape = x{ ieta->size(), ihf->size() };
 
     /* fully differential (pt, eta, hf) */
-    auto es = new history("es"s, "", ival, scale->shape());
-    auto er = new history("er"s, "", ival, scale->shape());
+    auto s = new history("s"s, "", ival, obj->shape());
+    auto r = new history("r"s, "", ival, obj->shape());
 
-    auto es_f_pt = std::make_unique<history>("es_f_pt"s,
+    auto s_f_pt = std::make_unique<history>("s_f_pt"s,
         "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, etahf_shape);
-    auto er_f_pt = std::make_unique<history>("er_f_pt"s,
+    auto r_f_pt = std::make_unique<history>("r_f_pt"s,
         "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, etahf_shape);
 
     /* differential in pt, hf */
-    auto scale_dpthf = scale->sum(1);
+    auto obj_dpthf = obj->sum(1);
 
-    auto es_dpthf = new history("es_dpthf", "", ival, pthf_shape);
-    auto er_dpthf = new history("er_dpthf", "", ival, pthf_shape);
+    auto s_dpthf = new history("s_dpthf", "", ival, pthf_shape);
+    auto r_dpthf = new history("r_dpthf", "", ival, pthf_shape);
 
-    auto es_dhf_f_pt = std::make_unique<history>("es_dhf_f_pt"s,
+    auto s_dhf_f_pt = std::make_unique<history>("s_dhf_f_pt"s,
         "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, hf_shape);
-    auto er_dhf_f_pt = std::make_unique<history>("er_dhf_f_pt"s,
+    auto r_dhf_f_pt = std::make_unique<history>("r_dhf_f_pt"s,
         "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, hf_shape);
 
     /* differential in eta, hf */
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
-    auto scale_detahf = scale->shrink("valid", resize, remove)->sum(0);
+    auto obj_detahf = obj->shrink("valid", resize, remove)->sum(0);
 
-    auto es_detahf = new history("es_detahf", "", ival, etahf_shape);
-    auto er_detahf = new history("er_detahf", "", ival, etahf_shape);
+    auto s_detahf = new history("s_detahf", "", ival, etahf_shape);
+    auto r_detahf = new history("r_detahf", "", ival, etahf_shape);
 
-    auto es_dhf_f_eta = std::make_unique<history>("es_dhf_f_eta"s,
+    auto s_dhf_f_eta = std::make_unique<history>("s_dhf_f_eta"s,
         "reco p_{T}/gen p_{T}", "jet #eta", reta, hf_shape);
-    auto er_dhf_f_eta = std::make_unique<history>("er_dhf_f_eta"s,
+    auto r_dhf_f_eta = std::make_unique<history>("r_dhf_f_eta"s,
         "#sigma(p_{T})/p_{T}", "jet #eta", reta, hf_shape);
 
     /* load fitting parameters */
@@ -173,14 +175,14 @@ int distillate(char const* config, char const* output) {
     };
 
     auto pthf_info = [&](int64_t index) {
-        auto indices = scale_dpthf->indices_for(index - 1);
+        auto indices = obj_dpthf->indices_for(index - 1);
 
         pt_info(indices[0] + 1, 0.75);
         hf_info(indices[1] + 1, 0.71);
     };
 
     auto etahf_info = [&](int64_t index) {
-        auto indices = scale_detahf->indices_for(index - 1);
+        auto indices = obj_detahf->indices_for(index - 1);
 
         eta_info(indices[0] + 1, 0.75);
         hf_info(indices[1] + 1, 0.71);
@@ -194,47 +196,47 @@ int distillate(char const* config, char const* output) {
 
     hb->alias("mc", "AllQCDPhoton");
 
-    auto c1 = new paper(tag + "_dpthf_jesr_fits", hb);
+    auto c1 = new paper(tag + "_dpthf_sr_fits", hb);
     apply_style(c1, system_info);
     c1->accessory(pthf_info);
     c1->divide(ipt->size(), -1);
 
-    /* fit scale and resolution */
-    scale_dpthf->apply([&](TH1* h, int64_t index) {
-        auto indices = scale_dpthf->indices_for(index);
+    /* fit obj and resolution */
+    obj_dpthf->apply([&](TH1* h, int64_t index) {
+        auto indices = obj_dpthf->indices_for(index);
         auto pt_x = indices[0];
         auto hf_x = indices[1];
 
-        auto label = "f_scale_dpthf_"s + std::to_string(index);
+        auto label = "f_obj_dpthf_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "gaus", 0, 2);
         h->Fit(label.data(), "WLMQ", "", flp[hf_x][pt_x], fhp[hf_x][pt_x]);
 
-        (*es_dpthf)[index]->SetBinContent(1, f->GetParameter(1));
-        (*es_dpthf)[index]->SetBinError(1, f->GetParError(1));
-        (*er_dpthf)[index]->SetBinContent(1, f->GetParameter(2));
-        (*er_dpthf)[index]->SetBinError(1, f->GetParError(2));
+        (*s_dpthf)[index]->SetBinContent(1, f->GetParameter(1));
+        (*s_dpthf)[index]->SetBinError(1, f->GetParError(1));
+        (*r_dpthf)[index]->SetBinContent(1, f->GetParameter(2));
+        (*r_dpthf)[index]->SetBinError(1, f->GetParError(2));
 
         ++pt_x;
 
-        (*es_dhf_f_pt)[hf_x]->SetBinContent(pt_x, f->GetParameter(1));
-        (*es_dhf_f_pt)[hf_x]->SetBinError(pt_x, f->GetParError(1));
-        (*er_dhf_f_pt)[hf_x]->SetBinContent(pt_x, f->GetParameter(2));
-        (*er_dhf_f_pt)[hf_x]->SetBinError(pt_x, f->GetParError(2));
+        (*s_dhf_f_pt)[hf_x]->SetBinContent(pt_x, f->GetParameter(1));
+        (*s_dhf_f_pt)[hf_x]->SetBinError(pt_x, f->GetParError(1));
+        (*r_dhf_f_pt)[hf_x]->SetBinContent(pt_x, f->GetParameter(2));
+        (*r_dhf_f_pt)[hf_x]->SetBinError(pt_x, f->GetParError(2));
 
         c1->add(h, "mc");
     });
 
-    auto c2 = new paper(tag + "_dhf_f_pt_jesr", hb);
+    auto c2 = new paper(tag + "_dhf_f_pt_sr", hb);
     apply_style(c2, system_info);
     c2->accessory(std::bind(hf_info, _1, 0.75));
     c2->divide(ihf->size(), -1);
     c2->set(paper::flags::logx);
 
-    es_dhf_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(es_range[0], es_range[1], "Y");
+    s_dhf_f_pt->apply([&](TH1* h, int64_t index) {
+        h->SetAxisRange(s_range[0], s_range[1], "Y");
 
         if (fit) {
-            auto label = "f_es_dhf_f_pt_"s + std::to_string(index);
+            auto label = "f_s_dhf_f_pt_"s + std::to_string(index);
             TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
             f->SetParameters(1.1, 1.2, 4.8);
             h->Fit(label.data(), "MEQ", "", 30, rpt.back());
@@ -243,11 +245,11 @@ int distillate(char const* config, char const* output) {
         c2->add(h, "mc");
     });
 
-    er_dhf_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(0., 1., "Y");
+    r_dhf_f_pt->apply([&](TH1* h, int64_t index) {
+        h->SetAxisRange(r_range[0], r_range[1], "Y");
 
         if (fit) {
-            auto label = "f_er_dhf_f_pt_"s + std::to_string(index);
+            auto label = "f_r_dhf_f_pt_"s + std::to_string(index);
             TF1* f = new TF1(label.data(),
                 "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
             set_csn(f, index);
@@ -263,60 +265,60 @@ int distillate(char const* config, char const* output) {
         c2->add(h, "mc");
     });
 
-    auto c3 = new paper(tag + "_detahf_jesr_fits", hb);
+    auto c3 = new paper(tag + "_detahf_sr_fits", hb);
     apply_style(c3, system_info);
     c3->accessory(etahf_info);
     c3->divide(ieta->size(), -1);
 
-    /* fit scale and resolution */
-    scale_detahf->apply([&](TH1* h, int64_t index) {
-        auto indices = scale_detahf->indices_for(index);
+    /* fit mean and resolution */
+    obj_detahf->apply([&](TH1* h, int64_t index) {
+        auto indices = obj_detahf->indices_for(index);
         auto eta_x = indices[0];
         auto hf_x = indices[1];
 
-        auto label = "f_scale_detahf_"s + std::to_string(index);
+        auto label = "f_obj_detahf_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "gaus", 0, 2);
         h->Fit(label.data(), "WLMQ", "", fle[hf_x][eta_x], fhe[hf_x][eta_x]);
 
-        (*es_detahf)[index]->SetBinContent(1, f->GetParameter(1));
-        (*es_detahf)[index]->SetBinError(1, f->GetParError(1));
-        (*er_detahf)[index]->SetBinContent(1, f->GetParameter(2));
-        (*er_detahf)[index]->SetBinError(1, f->GetParError(2));
+        (*s_detahf)[index]->SetBinContent(1, f->GetParameter(1));
+        (*s_detahf)[index]->SetBinError(1, f->GetParError(1));
+        (*r_detahf)[index]->SetBinContent(1, f->GetParameter(2));
+        (*r_detahf)[index]->SetBinError(1, f->GetParError(2));
 
         ++eta_x;
 
-        (*es_dhf_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(1));
-        (*es_dhf_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(1));
-        (*er_dhf_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(2));
-        (*er_dhf_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(2));
+        (*s_dhf_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(1));
+        (*s_dhf_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(1));
+        (*r_dhf_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(2));
+        (*r_dhf_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(2));
 
         c3->add(h, "mc");
     });
 
-    auto c4 = new paper(tag + "_dhf_f_eta_jesr", hb);
+    auto c4 = new paper(tag + "_dhf_f_eta_sr", hb);
     apply_style(c4, system_info);
     c4->accessory(std::bind(hf_info, _1, 0.75));
     c4->divide(ihf->size(), -1);
 
-    es_dhf_f_eta->apply([&](TH1* h) {
-        h->SetAxisRange(es_range[0], es_range[1], "Y");
+    s_dhf_f_eta->apply([&](TH1* h) {
+        h->SetAxisRange(s_range[0], s_range[1], "Y");
         c4->add(h, "mc"); });
 
-    er_dhf_f_eta->apply([&](TH1* h) {
-        h->SetAxisRange(0., 1., "Y");
+    r_dhf_f_eta->apply([&](TH1* h) {
+        h->SetAxisRange(r_range[0], r_range[1], "Y");
         c4->add(h, "mc"); });
 
     auto c5 = std::vector<paper*>(ieta->size());
     auto c6 = std::vector<paper*>(ieta->size());
 
     for (int64_t i = 0; i < ieta->size(); ++i) {
-        c5[i] = new paper(tag + "_jesr_fits_s" + std::to_string(i), hb);
+        c5[i] = new paper(tag + "_sr_fits_s" + std::to_string(i), hb);
         apply_style(c5[i], system_info);
         c5[i]->accessory(pthf_info);
         c5[i]->ornaments(std::bind(eta_info, i + 1, 0.67));
         c5[i]->divide(ipt->size(), -1);
 
-        c6[i] = new paper(tag + "_f_pt_jesr_s" + std::to_string(i), hb);
+        c6[i] = new paper(tag + "_f_pt_sr_s" + std::to_string(i), hb);
         apply_style(c6[i], system_info);
         c6[i]->accessory(std::bind(hf_info, _1, 0.75));
         c6[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
@@ -324,52 +326,52 @@ int distillate(char const* config, char const* output) {
         c6[i]->set(paper::flags::logx);
     }
 
-    /* fit scale and resolution */
-    scale->apply([&](TH1* h, int64_t index) {
-        auto indices = scale->indices_for(index);
+    /* fit mean and resolution */
+    obj->apply([&](TH1* h, int64_t index) {
+        auto indices = obj->indices_for(index);
         auto pt_x = indices[0];
         auto eta_x = indices[1];
         auto hf_x = indices[2];
 
-        auto label = "f_scale_"s + std::to_string(index);
+        auto label = "f_obj_"s + std::to_string(index);
         TF1* f = new TF1(label.data(), "gaus", 0, 2);
         h->Fit(label.data(), "WLMQ", "",
             fl[hf_x][eta_x][pt_x], fh[hf_x][eta_x][pt_x]);
 
-        (*es)[index]->SetBinContent(1, f->GetParameter(1));
-        (*es)[index]->SetBinError(1, f->GetParError(1));
-        (*er)[index]->SetBinContent(1, f->GetParameter(2));
-        (*er)[index]->SetBinError(1, f->GetParError(2));
+        (*s)[index]->SetBinContent(1, f->GetParameter(1));
+        (*s)[index]->SetBinError(1, f->GetParError(1));
+        (*r)[index]->SetBinContent(1, f->GetParameter(2));
+        (*r)[index]->SetBinError(1, f->GetParError(2));
 
         ++pt_x;
 
-        (*es_f_pt)[x{eta_x, hf_x}]->SetBinContent(pt_x, f->GetParameter(1));
-        (*es_f_pt)[x{eta_x, hf_x}]->SetBinError(pt_x, f->GetParError(1));
-        (*er_f_pt)[x{eta_x, hf_x}]->SetBinContent(pt_x, f->GetParameter(2));
-        (*er_f_pt)[x{eta_x, hf_x}]->SetBinError(pt_x, f->GetParError(2));
+        (*s_f_pt)[x{eta_x, hf_x}]->SetBinContent(pt_x, f->GetParameter(1));
+        (*s_f_pt)[x{eta_x, hf_x}]->SetBinError(pt_x, f->GetParError(1));
+        (*r_f_pt)[x{eta_x, hf_x}]->SetBinContent(pt_x, f->GetParameter(2));
+        (*r_f_pt)[x{eta_x, hf_x}]->SetBinError(pt_x, f->GetParError(2));
 
         c5[eta_x]->add(h, "mc");
     });
 
-    es_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(es_range[0], es_range[1], "Y");
+    s_f_pt->apply([&](TH1* h, int64_t index) {
+        h->SetAxisRange(s_range[0], s_range[1], "Y");
 
         if (fit) {
-            auto label = "f_es_f_pt_"s + std::to_string(index);
+            auto label = "f_s_f_pt_"s + std::to_string(index);
             TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
             f->SetParameters(1.1, 1.2, 4.8);
             h->Fit(label.data(), "MEQ", "", 30, rpt.back());
         }
 
-        auto eta_x = es_f_pt->indices_for(index)[0];
+        auto eta_x = s_f_pt->indices_for(index)[0];
         c6[eta_x]->add(h, "mc");
     });
 
-    er_f_pt->apply([&](TH1* h, int64_t index) {
-        h->SetAxisRange(0., 1., "Y");
+    r_f_pt->apply([&](TH1* h, int64_t index) {
+        h->SetAxisRange(r_range[0], r_range[1], "Y");
 
         if (fit) {
-            auto label = "f_er_f_pt_"s + std::to_string(index);
+            auto label = "f_r_f_pt_"s + std::to_string(index);
             TF1* f = new TF1(label.data(),
                 "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
             set_csn(f, index);
@@ -379,7 +381,7 @@ int distillate(char const* config, char const* output) {
             csn[2] = f->GetParameter(2);
         }
 
-        auto eta_x = er_f_pt->indices_for(index)[0];
+        auto eta_x = r_f_pt->indices_for(index)[0];
         c6[eta_x]->add(h, "mc");
     });
 
@@ -393,23 +395,23 @@ int distillate(char const* config, char const* output) {
 
     /* save output */
     in(output, [&]() {
-        scale_dpthf->save(tag);
-        scale_detahf->save(tag);
+        obj_dpthf->save(tag);
+        obj_detahf->save(tag);
 
-        es->save(tag);
-        er->save(tag);
-        es_f_pt->save(tag);
-        er_f_pt->save(tag);
+        s->save(tag);
+        r->save(tag);
+        s_f_pt->save(tag);
+        r_f_pt->save(tag);
 
-        es_dpthf->save(tag);
-        er_dpthf->save(tag);
-        es_dhf_f_pt->save(tag);
-        er_dhf_f_pt->save(tag);
+        s_dpthf->save(tag);
+        r_dpthf->save(tag);
+        s_dhf_f_pt->save(tag);
+        r_dhf_f_pt->save(tag);
 
-        es_detahf->save(tag);
-        er_detahf->save(tag);
-        es_dhf_f_eta->save(tag);
-        er_dhf_f_eta->save(tag);
+        s_detahf->save(tag);
+        r_detahf->save(tag);
+        s_dhf_f_eta->save(tag);
+        r_dhf_f_eta->save(tag);
     });
 
     return 0;
