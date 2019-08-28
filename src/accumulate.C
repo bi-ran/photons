@@ -26,25 +26,9 @@ using namespace std::literals::string_literals;
 using namespace std::placeholders;
 
 template <typename... T>
-void scale_bin_width(std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
-        obj->Scale(1., "width"); }), 0)... };
-}
-
-template <typename... T>
 void normalise_to_unity(std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
         obj->Scale(1. / obj->Integral("width")); }), 0)... };
-}
-
-template <typename... T>
-void scale_ia_bin_width(std::unique_ptr<T>&... args) {
-    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
-        for (int64_t i = 1; i <= obj->GetNbinsX(); ++i) {
-            auto width = revert_radian(obj->GetBinWidth(i));
-            obj->SetBinContent(i, obj->GetBinContent(i) / width);
-        }
-    }), 0)... };
 }
 
 template <typename... T>
@@ -146,21 +130,6 @@ int accumulate(char const* config, char const* output) {
     pjet_f_x_d_hf->divide(*nevt_d_hf);
     pjet_f_ddr_d_pt->divide(*nevt_d_pt);
     pjet_f_ddr_d_hf->divide(*nevt_d_hf);
-
-    /* scale by bin width */
-    scale_bin_width(
-        pjet_f_x,
-        pjet_f_ddr,
-        pjet_f_x_d_pt,
-        pjet_f_x_d_hf,
-        pjet_f_ddr_d_pt,
-        pjet_f_ddr_d_hf);
-
-    scale_ia_bin_width(
-        pjet_es_f_dphi,
-        pjet_wta_f_dphi,
-        pjet_es_f_dphi_d_pt,
-        pjet_wta_f_dphi_d_pt);
 
     /* normalise to unity */
     normalise_to_unity(

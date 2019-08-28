@@ -27,6 +27,22 @@ void scale(double factor, std::unique_ptr<T>&... args) {
 }
 
 template <typename... T>
+void scale_bin_width(std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
+        obj->Scale(1., "width"); }), 0)... };
+}
+
+template <typename... T>
+void scale_ia_bin_width(std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
+        for (int64_t i = 1; i <= obj->GetNbinsX(); ++i) {
+            auto width = revert_radian(obj->GetBinWidth(i));
+            obj->SetBinContent(i, obj->GetBinContent(i) / width);
+        }
+    }), 0)... };
+}
+
+template <typename... T>
 void title(std::function<void(TH1*)> f, std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->apply(f), 0)... };
 }
@@ -163,30 +179,32 @@ int populate(char const* config, char const* output) {
     auto mincl = std::make_shared<multival>(*incl);
     auto mpthf = std::make_shared<multival>(dpt, dhf);
 
+    auto irdphi = std::make_shared<interval>("#Delta#phi^{#gammaj}", rdphi);
+
     auto nevt = std::make_unique<memory>("nevt"s, "", incl, mpthf);
     auto nmix = std::make_unique<memory>("nmix"s, "", incl, mpthf);
 
     auto pjet_es_f_dphi = std::make_unique<memory>("pjet_es_f_dphi"s,
-        "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
     auto pjet_wta_f_dphi = std::make_unique<memory>("pjet_wta_f_dphi"s,
-        "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
     auto pjet_f_x = std::make_unique<memory>("pjet_f_x"s,
-        "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
+        "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
     auto pjet_f_ddr = std::make_unique<memory>("pjet_f_ddr"s,
-        "dN/d#deltaj", "#deltaj", rdr, mpthf);
+        "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
     auto pjet_f_jpt = std::make_unique<memory>("pjet_f_jpt"s,
-        "dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
+        "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
     auto mix_pjet_es_f_dphi = std::make_unique<memory>("mix_pjet_es_f_dphi"s,
-        "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
     auto mix_pjet_wta_f_dphi = std::make_unique<memory>("mix_pjet_wta_f_dphi"s,
-        "dN/d#Delta#phi^{#gammaj}", "#Delta#phi^{#gammaj}", rdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
     auto mix_pjet_f_x = std::make_unique<memory>("mix_pjet_f_x"s,
-        "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
+        "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
     auto mix_pjet_f_ddr = std::make_unique<memory>("mix_pjet_f_ddr",
-        "dN/d#deltaj", "#deltaj", rdr, mpthf);
+        "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
     auto mix_pjet_f_jpt = std::make_unique<memory>("mix_pjet_f_jpt"s,
-        "dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
+        "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -310,6 +328,21 @@ int populate(char const* config, char const* output) {
             mix_pjet_f_x,
             mix_pjet_f_jpt);
 
+    /* scale by bin width */
+    scale_bin_width(
+        pjet_f_x,
+        pjet_f_ddr,
+        pjet_f_jpt,
+        mix_pjet_f_x,
+        mix_pjet_f_ddr,
+        mix_pjet_f_jpt);
+
+    scale_ia_bin_width(
+        pjet_es_f_dphi,
+        pjet_wta_f_dphi,
+        mix_pjet_es_f_dphi,
+        mix_pjet_wta_f_dphi);
+
     /* normalise by number of photons (events) */
     pjet_es_f_dphi->divide(*nevt);
     pjet_wta_f_dphi->divide(*nevt);
@@ -322,18 +355,6 @@ int populate(char const* config, char const* output) {
     mix_pjet_f_x->divide(*nevt);
     mix_pjet_f_ddr->divide(*nevt);
     mix_pjet_f_jpt->divide(*nevt);
-
-    title(std::bind(prefix_axis, _1, "1/N^{#gamma}"),
-        pjet_es_f_dphi,
-        pjet_wta_f_dphi,
-        pjet_f_x,
-        pjet_f_ddr,
-        pjet_f_jpt,
-        mix_pjet_es_f_dphi,
-        mix_pjet_wta_f_dphi,
-        mix_pjet_f_x,
-        mix_pjet_f_ddr,
-        mix_pjet_f_jpt);
 
     /* subtract histograms */
     auto sub_pjet_es_f_dphi = new memory(*pjet_es_f_dphi, "sub");
