@@ -23,6 +23,13 @@ static bool in_hem_failure_region(float eta, float phi) {
     return (eta < -1.242 && -1.72 < phi && phi < -0.72);
 }
 
+static float dr2(float eta1, float eta2, float phi1, float phi2) {
+    auto deta = eta1 - eta2;
+    auto dphi = revert_radian(convert_radian(phi1) - convert_radian(phi2));
+
+    return deta * deta + dphi * dphi;
+}
+
 int fabulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
@@ -35,6 +42,7 @@ int fabulate(char const* config, char const* output) {
     auto eta_max = conf->get<float>("eta_max");
 
     auto res = conf->get<std::vector<float>>("es_range");
+    auto rdr = conf->get<std::vector<float>>("dr_range");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto deta = conf->get<std::vector<float>>("eta_diff");
@@ -46,6 +54,8 @@ int fabulate(char const* config, char const* output) {
     /* prepare histograms */
     auto ies = std::make_shared<interval>("energy scale"s,
         static_cast<int64_t>(res[0]), res[1], res[2]);
+    auto idr = std::make_shared<interval>("angular distance"s,
+        static_cast<int64_t>(rdr[0]), rdr[1], rdr[2]);
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ieta = std::make_shared<interval>(deta);
@@ -54,6 +64,7 @@ int fabulate(char const* config, char const* output) {
     auto mptetahf = std::make_shared<multival>(dpt, deta, dhf);
 
     auto scale = std::make_unique<memory>("scale"s, "counts", ies, mptetahf);
+    auto angle = std::make_unique<memory>("angle"s, "counts", idr, mptetahf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -74,7 +85,6 @@ int fabulate(char const* config, char const* output) {
         if (p->hiHF <= hf_min) { continue; }
 
         std::vector<int64_t> exclusion;
-
         for (int64_t j = 0; j < p->nMC; ++j) {
             auto pid = (*p->mcPID)[j];
             auto mpid = (*p->mcMomPID)[j];
@@ -98,14 +108,9 @@ int fabulate(char const* config, char const* output) {
 
             bool match = false;
             for (auto const& index : exclusion) {
-                auto photon_phi = convert_radian((*p->mcPhi)[index]);
-                auto gen_phi = convert_radian((*p->genphi)[j]);
-
-                auto deta = (*p->mcEta)[index] - (*p->geneta)[j];
-                auto dphi = revert_radian(photon_phi - gen_phi);
-                auto dr2 = deta * deta + dphi * dphi;
-
-                if (dr2 < 0.01) { match = true; break; }
+                if (dr2((*p->mcEta)[index], (*p->geneta)[j],
+                        (*p->mcPhi)[index], (*p->genphi)[j]) < 0.01) {
+                    match = true; break; }
             }
 
             if (match == true) { continue; }
@@ -113,15 +118,21 @@ int fabulate(char const* config, char const* output) {
             if (heavyion && in_hem_failure_region(gen_eta, (*p->refphi)[j]))
                 continue;
 
-            auto reco_pt = (*p->jtpt)[j];
+            auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
 
-            (*scale)[v{gen_pt, gen_eta, p->hiHF}]->Fill(
-                reco_pt / gen_pt, p->weight);
+            (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
+            (*angle)[index]->Fill(std::sqrt(dr2(
+                (*p->jteta)[j], (*p->refeta)[j],
+                (*p->jtphi)[j], (*p->refphi)[j])),
+                p->weight);
         }
     }
 
     /* save output */
-    in(output, [&]() { scale->save(tag); });
+    in(output, [&]() {
+        scale->save(tag);
+        angle->save(tag);
+    });
 
     return 0;
 }
