@@ -109,6 +109,10 @@ int jubilate(char const* config, char const* output) {
         mix_pjet_f_ddr);
 
     /* draw figures */
+    auto redraw_dphi_axis = [&](TH1* h, int64_t) {
+        transform_axis(h, [](int64_t val) -> float {
+            return std::abs(revert_radian(val)); }); };
+
     auto info_text = [&](int64_t index) {
         auto indices = nevt->indices_for(index - 1);
         auto pt_x = indices[0];
@@ -140,12 +144,14 @@ int jubilate(char const* config, char const* output) {
     apply_style(c1, collisions, -0.04, 0.4);
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c1->accessory(info_text);
+    c1->jewellery(redraw_dphi_axis);
     c1->divide(-1 , ihf->size());
 
     auto c2 = new paper(tag + "_mixing_dphi_wta_d_pthf", hb);
     apply_style(c2, collisions, -0.04, 0.4);
     c2->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c2->accessory(info_text);
+    c2->jewellery(redraw_dphi_axis);
     c2->divide(-1 , ihf->size());
 
     auto c3 = new paper(tag + "_mixing_x_d_pthf", hb);

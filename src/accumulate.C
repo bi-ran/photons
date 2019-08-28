@@ -189,6 +189,10 @@ int accumulate(char const* config, char const* output) {
     /* draw plots */
     printf("painting..\n");
 
+    auto redraw_dphi_axis = [&](TH1* h, int64_t) {
+        transform_axis(h, [](int64_t val) -> float {
+            return std::abs(revert_radian(val)); }); };
+
     auto pt_info = [&](int64_t index, float pos) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
@@ -235,6 +239,7 @@ int accumulate(char const* config, char const* output) {
     apply_style(c1, collisions, -0.04, 0.24);
     c1->accessory(std::bind(pt_info, _1, 0.75));
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
+    c1->jewellery(redraw_dphi_axis);
     c1->divide(-1, 1);
 
     nevt_d_pt->apply([&](TH1*, int64_t index) {
@@ -278,6 +283,7 @@ int accumulate(char const* config, char const* output) {
     apply_style(c6, collisions, -0.04, 0.24);
     c6->accessory(info_text);
     c6->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
+    c6->jewellery(redraw_dphi_axis);
     c6->divide(-1, ihf->size());
 
     nevt->apply([&](TH1*, int64_t index) {

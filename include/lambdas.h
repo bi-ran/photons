@@ -6,11 +6,24 @@
 #include <string>
 
 #include "TFile.h"
+#include "TGaxis.h"
 #include "TGraph.h"
 #include "TH1.h"
 #include "TLatex.h"
 #include "TLegend.h"
 #include "TLine.h"
+
+auto transform_axis = [](TH1* obj, std::function<float(int64_t)> f) {
+    obj->GetXaxis()->SetLabelOffset(999);
+    obj->GetXaxis()->SetTickLength(0);
+
+    auto xmin = obj->GetBinLowEdge(1);
+    auto xmax = obj->GetBinLowEdge(obj->GetNbinsX() + 1);
+    auto ymin = obj->GetMinimumStored();
+
+    auto axis = new TGaxis(xmin, ymin, xmax, ymin, f(xmin), f(xmax));
+    axis->Draw();
+};
 
 auto graph_formatter = [](TGraph* obj) {
     obj->SetMarkerSize(0.84);
