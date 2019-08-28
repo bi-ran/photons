@@ -25,6 +25,15 @@ auto transform_axis = [](TH1* obj, std::function<float(int64_t)> f) {
     axis->Draw();
 };
 
+auto rename_axis = [](TH1* obj, std::string const& title) {
+    obj->GetYaxis()->SetTitle(title.data());
+};
+
+auto prefix_axis = [](TH1* obj, std::string const& prefix) {
+    auto title = obj->GetYaxis()->GetTitle();
+    rename_axis(obj, prefix + title);
+};
+
 auto graph_formatter = [](TGraph* obj) {
     obj->SetMarkerSize(0.84);
     obj->GetXaxis()->CenterTitle();

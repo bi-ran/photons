@@ -1,3 +1,4 @@
+#include "../include/lambdas.h"
 #include "../include/pjtree.h"
 
 #include "../git/config/include/configurer.h"
@@ -23,6 +24,11 @@ using namespace std::placeholders;
 template <typename... T>
 void scale(double factor, std::unique_ptr<T>&... args) {
     (void)(int [sizeof...(T)]) { (args->scale(factor), 0)... };
+}
+
+template <typename... T>
+void title(std::function<void(TH1*)> f, std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply(f), 0)... };
 }
 
 void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
@@ -172,9 +178,9 @@ int populate(char const* config, char const* output) {
         "dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
 
     auto pjet_f_ddr = std::make_unique<memory>("pjet_f_ddr"s,
-        "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthf);
+        "dN/d#deltaj", "#deltaj", rdr, mpthf);
     auto mix_pjet_f_ddr = std::make_unique<memory>("mix_pjet_f_ddr",
-        "dN/d#Deltar^{jj}", "#Deltar^{jj}", rdr, mpthf);
+        "dN/d#deltaj", "#deltaj", rdr, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -297,6 +303,27 @@ int populate(char const* config, char const* output) {
             mix_pjet_f_ddr,
             mix_pjet_f_x);
 
+    /* normalise by number of photons (events) */
+    pjet_es_f_dphi->divide(*nevt);
+    pjet_wta_f_dphi->divide(*nevt);
+    pjet_f_x->divide(*nevt);
+    pjet_f_ddr->divide(*nevt);
+
+    mix_pjet_es_f_dphi->divide(*nevt);
+    mix_pjet_wta_f_dphi->divide(*nevt);
+    mix_pjet_f_x->divide(*nevt);
+    mix_pjet_f_ddr->divide(*nevt);
+
+    title(std::bind(prefix_axis, _1, "1/N^{#gamma}"),
+        pjet_es_f_dphi,
+        pjet_wta_f_dphi,
+        pjet_f_x,
+        pjet_f_ddr,
+        mix_pjet_es_f_dphi,
+        mix_pjet_wta_f_dphi,
+        mix_pjet_f_x,
+        mix_pjet_f_ddr);
+
     /* subtract histograms */
     auto sub_pjet_es_f_dphi = new memory(*pjet_es_f_dphi, "sub");
     auto sub_pjet_wta_f_dphi = new memory(*pjet_wta_f_dphi, "sub");
@@ -307,12 +334,6 @@ int populate(char const* config, char const* output) {
     *sub_pjet_wta_f_dphi -= *mix_pjet_wta_f_dphi;
     *sub_pjet_f_x -= *mix_pjet_f_x;
     *sub_pjet_f_ddr -= *mix_pjet_f_ddr;
-
-    /* normalise by number of photons (events) */
-    sub_pjet_es_f_dphi->divide(*nevt);
-    sub_pjet_wta_f_dphi->divide(*nevt);
-    sub_pjet_f_x->divide(*nevt);
-    sub_pjet_f_ddr->divide(*nevt);
 
     /* save histograms */
     in(output, [&]() {

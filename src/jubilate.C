@@ -90,17 +90,6 @@ int jubilate(char const* config, char const* output) {
     wrap(mix_pjet_f_x);
     wrap(mix_pjet_f_ddr);
 
-    /* normalise by number of photons */
-    pjet_es_f_dphi->divide(*nevt);
-    pjet_wta_f_dphi->divide(*nevt);
-    pjet_f_x->divide(*nevt);
-    pjet_f_ddr->divide(*nevt);
-
-    mix_pjet_es_f_dphi->divide(*nevt);
-    mix_pjet_wta_f_dphi->divide(*nevt);
-    mix_pjet_f_x->divide(*nevt);
-    mix_pjet_f_ddr->divide(*nevt);
-
     /* scale by bin width */
     scale_bin_width(
         pjet_f_x,

@@ -56,6 +56,11 @@ void normalise_ia_to_unity(std::unique_ptr<T>&... args) {
     }), 0)... };
 }
 
+template <typename... T>
+void title(std::function<void(TH1*)> f, std::unique_ptr<T>&... args) {
+    (void)(int [sizeof...(T)]) { (args->apply(f), 0)... };
+}
+
 int accumulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
@@ -164,6 +169,17 @@ int accumulate(char const* config, char const* output) {
         pjet_f_ddr_d_hf);
 
     normalise_ia_to_unity(
+        pjet_es_f_dphi,
+        pjet_wta_f_dphi,
+        pjet_es_f_dphi_d_pt,
+        pjet_wta_f_dphi_d_pt);
+
+    title(std::bind(rename_axis, _1, "1/N^{#gammaj}dN/d#deltaj"),
+        pjet_f_ddr,
+        pjet_f_ddr_d_pt,
+        pjet_f_ddr_d_hf);
+
+    title(std::bind(rename_axis, _1, "1/N^{#gammaj}dN/d#Delta#phi^{#gammaj}"),
         pjet_es_f_dphi,
         pjet_wta_f_dphi,
         pjet_es_f_dphi_d_pt,
