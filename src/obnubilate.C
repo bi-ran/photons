@@ -40,6 +40,12 @@ int obnubilate(char const* config, char const* output) {
     auto ranges = conf->get<std::vector<float>>("ranges");
     auto groups = conf->get<std::vector<int32_t>>("groups");
 
+    auto info = conf->get<std::string>("info");
+
+    auto dpt = conf->get<std::vector<float>>("pt_diff");
+    auto dhf = conf->get<std::vector<float>>("hf_diff");
+    auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
+
     /* manage memory manually */
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
@@ -74,6 +80,36 @@ int obnubilate(char const* config, char const* output) {
         auto col = h->GetLineColor();
         h->SetFillColorAlpha(col, 0.32);
         h->SetLineWidth(1);
+    };
+
+    auto pt_info = [&](int64_t index, float pos) {
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
+            dpt[index - 1], dpt[index]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, pos, buffer);
+    };
+
+    auto hf_info = [&](int64_t index, float pos) {
+        char buffer[128] = { '\0' };
+        sprintf(buffer, "%i - %i%%", dcent[index], dcent[index - 1]);
+
+        TLatex* l = new TLatex();
+        l->SetTextFont(43);
+        l->SetTextSize(12);
+        l->DrawLatexNDC(0.135, pos, buffer);
+    };
+
+    auto info_text = [&](int64_t index, history* h) {
+        auto indices = h->indices_for(index - 1);
+        auto pt_x = indices[0];
+        auto hf_x = indices[1];
+
+        pt_info(pt_x + 1, 0.75);
+        hf_info(hf_x + 1, 0.71);
     };
 
     /* prepare output */
@@ -134,6 +170,11 @@ int obnubilate(char const* config, char const* output) {
 
             batch->save(tag);
         }, batches, labels);
+
+        /* add info text */
+        if (info == "pt") { c->accessory(std::bind(pt_info, _1, 0.75)); }
+        if (info == "hf") { c->accessory(std::bind(hf_info, _1, 0.75)); }
+        if (info == "pthf") { c->accessory(std::bind(info_text, _1, base)); }
 
         /* save histograms */
         for (auto const& set : sets)
