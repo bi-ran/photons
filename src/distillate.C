@@ -28,6 +28,7 @@ int distillate(char const* config, char const* output) {
 
     auto input = conf->get<std::string>("input");
     auto object = conf->get<std::string>("object");
+    auto label = conf->get<std::string>("label");
     auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
 
@@ -68,14 +69,16 @@ int distillate(char const* config, char const* output) {
     auto pthf_shape = x{ ipt->size(), ihf->size() };
     auto etahf_shape = x{ ieta->size(), ihf->size() };
 
+    auto title = "#sigma("s + label + ")";
+
     /* fully differential (pt, eta, hf) */
     auto s = new history("s"s, "", ival, obj->shape());
     auto r = new history("r"s, "", ival, obj->shape());
 
     auto s_f_pt = std::make_unique<history>("s_f_pt"s,
-        "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, etahf_shape);
+        label.data(), "jet p_{T}", rpt, etahf_shape);
     auto r_f_pt = std::make_unique<history>("r_f_pt"s,
-        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, etahf_shape);
+        title.data(), "jet p_{T}", rpt, etahf_shape);
 
     /* differential in pt, hf */
     auto obj_dpthf = obj->sum(1);
@@ -84,9 +87,9 @@ int distillate(char const* config, char const* output) {
     auto r_dpthf = new history("r_dpthf", "", ival, pthf_shape);
 
     auto s_dhf_f_pt = std::make_unique<history>("s_dhf_f_pt"s,
-        "reco p_{T}/gen p_{T}", "jet p_{T}", rpt, hf_shape);
+        label.data(), "jet p_{T}", rpt, hf_shape);
     auto r_dhf_f_pt = std::make_unique<history>("r_dhf_f_pt"s,
-        "#sigma(p_{T})/p_{T}", "jet p_{T}", rpt, hf_shape);
+        title.data(), "jet p_{T}", rpt, hf_shape);
 
     /* differential in eta, hf */
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
@@ -96,9 +99,9 @@ int distillate(char const* config, char const* output) {
     auto r_detahf = new history("r_detahf", "", ival, etahf_shape);
 
     auto s_dhf_f_eta = std::make_unique<history>("s_dhf_f_eta"s,
-        "reco p_{T}/gen p_{T}", "jet #eta", reta, hf_shape);
+        label.data(), "jet #eta", reta, hf_shape);
     auto r_dhf_f_eta = std::make_unique<history>("r_dhf_f_eta"s,
-        "#sigma(p_{T})/p_{T}", "jet #eta", reta, hf_shape);
+        title.data(), "jet #eta", reta, hf_shape);
 
     /* load fitting parameters */
     auto fl = new std::vector<float>*[ihf->size()];
@@ -188,6 +191,7 @@ int distillate(char const* config, char const* output) {
         hf_info(indices[1] + 1, 0.71);
     };
 
+    auto tag_object = tag + "_" + object;
     auto system_info = system + " #sqrt{s_{NN}} = 5.02 TeV";
 
     /* draw plots */
@@ -196,7 +200,7 @@ int distillate(char const* config, char const* output) {
 
     hb->alias("mc", "AllQCDPhoton");
 
-    auto c1 = new paper(tag + "_dpthf_sr_fits", hb);
+    auto c1 = new paper(tag_object + "_dpthf_sr_fits", hb);
     apply_style(c1, system_info);
     c1->accessory(pthf_info);
     c1->divide(ipt->size(), -1);
@@ -226,7 +230,7 @@ int distillate(char const* config, char const* output) {
         c1->add(h, "mc");
     });
 
-    auto c2 = new paper(tag + "_dhf_f_pt_s", hb);
+    auto c2 = new paper(tag_object + "_dhf_f_pt_s", hb);
     apply_style(c2, system_info);
     c2->accessory(std::bind(hf_info, _1, 0.75));
     c2->divide(ihf->size(), -1);
@@ -245,7 +249,7 @@ int distillate(char const* config, char const* output) {
         c2->add(h, "mc");
     });
 
-    auto c3 = new paper(tag + "_dhf_f_pt_r", hb);
+    auto c3 = new paper(tag_object + "_dhf_f_pt_r", hb);
     apply_style(c3, system_info);
     c3->accessory(std::bind(hf_info, _1, 0.75));
     c3->divide(ihf->size(), -1);
@@ -261,6 +265,7 @@ int distillate(char const* config, char const* output) {
             set_csn(f, index);
             h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
+            csn[0] = f->GetParameter(0);
             csn[1] = f->GetParameter(1);
             csn[2] = f->GetParameter(2);
 
@@ -271,7 +276,7 @@ int distillate(char const* config, char const* output) {
         c3->add(h, "mc");
     });
 
-    auto c4 = new paper(tag + "_detahf_sr_fits", hb);
+    auto c4 = new paper(tag_object + "_detahf_sr_fits", hb);
     apply_style(c4, system_info);
     c4->accessory(etahf_info);
     c4->divide(ieta->size(), -1);
@@ -301,7 +306,7 @@ int distillate(char const* config, char const* output) {
         c4->add(h, "mc");
     });
 
-    auto c5 = new paper(tag + "_dhf_f_eta_s", hb);
+    auto c5 = new paper(tag_object + "_dhf_f_eta_s", hb);
     apply_style(c5, system_info);
     c5->accessory(std::bind(hf_info, _1, 0.75));
     c5->divide(ihf->size(), -1);
@@ -310,7 +315,7 @@ int distillate(char const* config, char const* output) {
         h->SetAxisRange(s_range[0], s_range[1], "Y");
         c5->add(h, "mc"); });
 
-    auto c6 = new paper(tag + "_dhf_f_eta_r", hb);
+    auto c6 = new paper(tag_object + "_dhf_f_eta_r", hb);
     apply_style(c6, system_info);
     c6->accessory(std::bind(hf_info, _1, 0.75));
     c6->divide(ihf->size(), -1);
@@ -324,20 +329,20 @@ int distillate(char const* config, char const* output) {
     auto c9 = std::vector<paper*>(ieta->size());
 
     for (int64_t i = 0; i < ieta->size(); ++i) {
-        c7[i] = new paper(tag + "_sr_fits_s" + std::to_string(i), hb);
+        c7[i] = new paper(tag_object + "_sr_fits_s" + std::to_string(i), hb);
         apply_style(c7[i], system_info);
         c7[i]->accessory(pthf_info);
         c7[i]->ornaments(std::bind(eta_info, i + 1, 0.67));
         c7[i]->divide(ipt->size(), -1);
 
-        c8[i] = new paper(tag + "_f_pt_s_s" + std::to_string(i), hb);
+        c8[i] = new paper(tag_object + "_f_pt_s_s" + std::to_string(i), hb);
         apply_style(c8[i], system_info);
         c8[i]->accessory(std::bind(hf_info, _1, 0.75));
         c8[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
         c8[i]->divide(ihf->size(), -1);
         c8[i]->set(paper::flags::logx);
 
-        c9[i] = new paper(tag + "_f_pt_r_s" + std::to_string(i), hb);
+        c9[i] = new paper(tag_object + "_f_pt_r_s" + std::to_string(i), hb);
         apply_style(c9[i], system_info);
         c9[i]->accessory(std::bind(hf_info, _1, 0.75));
         c9[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
@@ -414,23 +419,23 @@ int distillate(char const* config, char const* output) {
 
     /* save output */
     in(output, [&]() {
-        obj_dpthf->save(tag);
-        obj_detahf->save(tag);
+        obj_dpthf->save(tag_object);
+        obj_detahf->save(tag_object);
 
-        s->save(tag);
-        r->save(tag);
-        s_f_pt->save(tag);
-        r_f_pt->save(tag);
+        s->save(tag_object);
+        r->save(tag_object);
+        s_f_pt->save(tag_object);
+        r_f_pt->save(tag_object);
 
-        s_dpthf->save(tag);
-        r_dpthf->save(tag);
-        s_dhf_f_pt->save(tag);
-        r_dhf_f_pt->save(tag);
+        s_dpthf->save(tag_object);
+        r_dpthf->save(tag_object);
+        s_dhf_f_pt->save(tag_object);
+        r_dhf_f_pt->save(tag_object);
 
-        s_detahf->save(tag);
-        r_detahf->save(tag);
-        s_dhf_f_eta->save(tag);
-        r_dhf_f_eta->save(tag);
+        s_detahf->save(tag_object);
+        r_detahf->save(tag_object);
+        s_dhf_f_eta->save(tag_object);
+        r_dhf_f_eta->save(tag_object);
     });
 
     return 0;
