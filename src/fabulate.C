@@ -73,7 +73,7 @@ int fabulate(char const* config, char const* output) {
     /* load input */
     TFile* f = new TFile(input.data(), "read");
     TTree* t = (TTree*)f->Get("pj");
-    auto p = new pjtree(true, false, t, { 1, 0, 1, 0, 1, 0 });
+    auto p = new pjtree(true, false, t, { 1, 1, 1, 0, 1, 0 });
 
     /* fill histograms */
     auto nentries = static_cast<int64_t>(t->GetEntries());
