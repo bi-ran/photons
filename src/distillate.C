@@ -226,7 +226,7 @@ int distillate(char const* config, char const* output) {
         c1->add(h, "mc");
     });
 
-    auto c2 = new paper(tag + "_dhf_f_pt_sr", hb);
+    auto c2 = new paper(tag + "_dhf_f_pt_s", hb);
     apply_style(c2, system_info);
     c2->accessory(std::bind(hf_info, _1, 0.75));
     c2->divide(ihf->size(), -1);
@@ -245,6 +245,12 @@ int distillate(char const* config, char const* output) {
         c2->add(h, "mc");
     });
 
+    auto c3 = new paper(tag + "_dhf_f_pt_r", hb);
+    apply_style(c3, system_info);
+    c3->accessory(std::bind(hf_info, _1, 0.75));
+    c3->divide(ihf->size(), -1);
+    c3->set(paper::flags::logx);
+
     r_dhf_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(r_range[0], r_range[1], "Y");
 
@@ -262,13 +268,13 @@ int distillate(char const* config, char const* output) {
                 dcent[index + 1], dcent[index], csn[0], csn[1], csn[2]);
         }
 
-        c2->add(h, "mc");
+        c3->add(h, "mc");
     });
 
-    auto c3 = new paper(tag + "_detahf_sr_fits", hb);
-    apply_style(c3, system_info);
-    c3->accessory(etahf_info);
-    c3->divide(ieta->size(), -1);
+    auto c4 = new paper(tag + "_detahf_sr_fits", hb);
+    apply_style(c4, system_info);
+    c4->accessory(etahf_info);
+    c4->divide(ieta->size(), -1);
 
     /* fit mean and resolution */
     obj_detahf->apply([&](TH1* h, int64_t index) {
@@ -292,38 +298,51 @@ int distillate(char const* config, char const* output) {
         (*r_dhf_f_eta)[hf_x]->SetBinContent(eta_x, f->GetParameter(2));
         (*r_dhf_f_eta)[hf_x]->SetBinError(eta_x, f->GetParError(2));
 
-        c3->add(h, "mc");
+        c4->add(h, "mc");
     });
 
-    auto c4 = new paper(tag + "_dhf_f_eta_sr", hb);
-    apply_style(c4, system_info);
-    c4->accessory(std::bind(hf_info, _1, 0.75));
-    c4->divide(ihf->size(), -1);
+    auto c5 = new paper(tag + "_dhf_f_eta_s", hb);
+    apply_style(c5, system_info);
+    c5->accessory(std::bind(hf_info, _1, 0.75));
+    c5->divide(ihf->size(), -1);
 
     s_dhf_f_eta->apply([&](TH1* h) {
         h->SetAxisRange(s_range[0], s_range[1], "Y");
-        c4->add(h, "mc"); });
+        c5->add(h, "mc"); });
+
+    auto c6 = new paper(tag + "_dhf_f_eta_r", hb);
+    apply_style(c6, system_info);
+    c6->accessory(std::bind(hf_info, _1, 0.75));
+    c6->divide(ihf->size(), -1);
 
     r_dhf_f_eta->apply([&](TH1* h) {
         h->SetAxisRange(r_range[0], r_range[1], "Y");
-        c4->add(h, "mc"); });
+        c6->add(h, "mc"); });
 
-    auto c5 = std::vector<paper*>(ieta->size());
-    auto c6 = std::vector<paper*>(ieta->size());
+    auto c7 = std::vector<paper*>(ieta->size());
+    auto c8 = std::vector<paper*>(ieta->size());
+    auto c9 = std::vector<paper*>(ieta->size());
 
     for (int64_t i = 0; i < ieta->size(); ++i) {
-        c5[i] = new paper(tag + "_sr_fits_s" + std::to_string(i), hb);
-        apply_style(c5[i], system_info);
-        c5[i]->accessory(pthf_info);
-        c5[i]->ornaments(std::bind(eta_info, i + 1, 0.67));
-        c5[i]->divide(ipt->size(), -1);
+        c7[i] = new paper(tag + "_sr_fits_s" + std::to_string(i), hb);
+        apply_style(c7[i], system_info);
+        c7[i]->accessory(pthf_info);
+        c7[i]->ornaments(std::bind(eta_info, i + 1, 0.67));
+        c7[i]->divide(ipt->size(), -1);
 
-        c6[i] = new paper(tag + "_f_pt_sr_s" + std::to_string(i), hb);
-        apply_style(c6[i], system_info);
-        c6[i]->accessory(std::bind(hf_info, _1, 0.75));
-        c6[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
-        c6[i]->divide(ihf->size(), -1);
-        c6[i]->set(paper::flags::logx);
+        c8[i] = new paper(tag + "_f_pt_s_s" + std::to_string(i), hb);
+        apply_style(c8[i], system_info);
+        c8[i]->accessory(std::bind(hf_info, _1, 0.75));
+        c8[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
+        c8[i]->divide(ihf->size(), -1);
+        c8[i]->set(paper::flags::logx);
+
+        c9[i] = new paper(tag + "_f_pt_r_s" + std::to_string(i), hb);
+        apply_style(c9[i], system_info);
+        c9[i]->accessory(std::bind(hf_info, _1, 0.75));
+        c9[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
+        c9[i]->divide(ihf->size(), -1);
+        c9[i]->set(paper::flags::logx);
     }
 
     /* fit mean and resolution */
@@ -350,7 +369,7 @@ int distillate(char const* config, char const* output) {
         (*r_f_pt)[x{eta_x, hf_x}]->SetBinContent(pt_x, f->GetParameter(2));
         (*r_f_pt)[x{eta_x, hf_x}]->SetBinError(pt_x, f->GetParError(2));
 
-        c5[eta_x]->add(h, "mc");
+        c7[eta_x]->add(h, "mc");
     });
 
     s_f_pt->apply([&](TH1* h, int64_t index) {
@@ -364,7 +383,7 @@ int distillate(char const* config, char const* output) {
         }
 
         auto eta_x = s_f_pt->indices_for(index)[0];
-        c6[eta_x]->add(h, "mc");
+        c8[eta_x]->add(h, "mc");
     });
 
     r_f_pt->apply([&](TH1* h, int64_t index) {
@@ -382,14 +401,14 @@ int distillate(char const* config, char const* output) {
         }
 
         auto eta_x = r_f_pt->indices_for(index)[0];
-        c6[eta_x]->add(h, "mc");
+        c9[eta_x]->add(h, "mc");
     });
 
     hb->sketch();
 
-    for (auto const& p : { c1, c2, c3, c4 })
+    for (auto const& p : { c1, c2, c3, c4, c5, c6 })
         p->draw("pdf");
-    for (auto const& c : { c5, c6 })
+    for (auto const& c : { c7, c8, c9 })
         for (auto p : c)
             p->draw("pdf");
 
