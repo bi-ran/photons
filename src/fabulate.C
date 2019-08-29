@@ -30,6 +30,11 @@ static float dr2(float eta1, float eta2, float phi1, float phi2) {
     return deta * deta + dphi * dphi;
 }
 
+template <typename T>
+static int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 int fabulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
@@ -121,9 +126,10 @@ int fabulate(char const* config, char const* output) {
             auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
 
             (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
-            (*angle)[index]->Fill(std::sqrt(dr2(
-                (*p->jteta)[j], (*p->refeta)[j],
-                (*p->jtphi)[j], (*p->refphi)[j])),
+            (*angle)[index]->Fill(
+                sgn((*p->refeta)[j] * (*p->refphi)[j])
+                    * std::sqrt(dr2((*p->jteta)[j], (*p->refeta)[j],
+                                    (*p->jtphi)[j], (*p->refphi)[j])),
                 p->weight);
         }
     }
