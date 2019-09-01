@@ -23,6 +23,31 @@
 using namespace std::literals::string_literals;
 using namespace std::placeholders;
 
+template <typename T>
+void info_text(int64_t index, float pos, std::string const& format,
+               std::vector<T> const& edges, bool reverse) {
+    char buffer[128] = { '\0' };
+
+    auto lower = reverse ? edges[index] : edges[index - 1];
+    auto upper = reverse ? edges[index - 1] : edges[index];
+    sprintf(buffer, format.data(), lower, upper);
+
+    TLatex* l = new TLatex();
+    l->SetTextFont(43);
+    l->SetTextSize(12);
+    l->DrawLatexNDC(0.135, pos, buffer);
+}
+
+template <typename T, typename... U>
+void stack_text(int64_t index, float position, float spacing, T* shape,
+                std::function<U>... args) {
+    auto indices = shape->indices_for(index - 1);
+    auto it = std::begin(indices);
+
+    (void)(int [sizeof...(U)]) {
+        (args(*(it++) + 1, position -= spacing), 0)... };
+}
+
 void mold(TF1* f, std::vector<double> const& value,
           std::vector<int32_t> const& exact,
           std::vector<int32_t> const& limit,
@@ -164,51 +189,20 @@ int distillate(char const* config, char const* output) {
     };
 
     /* info text */
-    auto eta_info = [&](int64_t eta_x, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.1f < #eta < %.1f",
-            (*ieta)[eta_x - 1], (*ieta)[eta_x]);
+    std::function<void(int64_t, float)> eta_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.1f < #eta < %.1f", deta, false); };
 
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{jet} < %.0f", dpt, false); };
 
-    auto pt_info = [&](int64_t pt_x, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.0f < p_{T}^{jet} < %.0f",
-            (*ipt)[pt_x - 1], (*ipt)[pt_x]);
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
-
-    auto hf_info = [&](int64_t hf_x, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%i - %i%%", dcent[hf_x], dcent[hf_x - 1]);
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
 
     auto pthf_info = [&](int64_t index) {
-        auto indices = obj_dpthf->indices_for(index - 1);
-
-        pt_info(indices[0] + 1, 0.75);
-        hf_info(indices[1] + 1, 0.71);
-    };
+        stack_text(index, 0.75, 0.04, obj_dpthf.get(), pt_info, hf_info); };
 
     auto etahf_info = [&](int64_t index) {
-        auto indices = obj_detahf->indices_for(index - 1);
-
-        eta_info(indices[0] + 1, 0.75);
-        hf_info(indices[1] + 1, 0.71);
-    };
+        stack_text(index, 0.75, 0.04, obj_detahf.get(), eta_info, hf_info); };
 
     auto tag_object = tag + "_" + object;
     auto system_info = system + " #sqrt{s_{NN}} = 5.02 TeV";
