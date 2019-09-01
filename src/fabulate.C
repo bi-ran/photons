@@ -126,11 +126,9 @@ int fabulate(char const* config, char const* output) {
             auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
 
             (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
-            (*angle)[index]->Fill(
-                sgn((*p->refeta)[j] * (*p->refphi)[j])
-                    * std::sqrt(dr2((*p->jteta)[j], (*p->refeta)[j],
-                                    (*p->jtphi)[j], (*p->refphi)[j])),
-                p->weight);
+            (*angle)[index]->Fill(dr2((*p->jteta)[j], (*p->refeta)[j],
+                                      (*p->jtphi)[j], (*p->refphi)[j])
+                                  * sgn((*p->refeta)[j]), p->weight);
         }
     }
 
