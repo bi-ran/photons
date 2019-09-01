@@ -248,25 +248,16 @@ int tessellate(char const* config, char const* output) {
         h->SetFillStyle(3001);
     });
 
-    auto info_text = [&](int64_t index) {
-        auto indices = mpthf->indices_for(index - 1);
-        auto pt_x = indices[0];
-        auto hf_x = indices[1];
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{#gamma} < %.0f", dpt, false); };
 
-        char buffer[128] = { '\0' };
-        TLatex* text = new TLatex();
-        text->SetTextFont(43);
-        text->SetTextSize(12);
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
 
-        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %0.f",
-            (*ipt)[pt_x], (*ipt)[pt_x + 1]);
-        text->DrawLatexNDC(0.54, 0.67, buffer);
+    auto pthf_info = [&](int64_t index) {
+        stack_text(index, 0.75, 0.04, mpthf.get(), pt_info, hf_info); };
 
-        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
-        text->DrawLatexNDC(0.54, 0.63, buffer);
-    };
-
-    auto purity_text = [&](int64_t index) {
+    auto purity_info = [&](int64_t index) {
         char buffer[128] = { '\0' };
         sprintf(buffer, "purity: %.3f",
             (*purity)[index - 1]->GetBinContent(1));
@@ -279,8 +270,8 @@ int tessellate(char const* config, char const* output) {
 
     auto c1 = new paper(tag + "_purity", hb);
     apply_style(c1, system + " #sqrt{s_{NN}} = 5.02 TeV"s);
-    c1->accessory(info_text);
-    c1->accessory(purity_text);
+    c1->accessory(pthf_info);
+    c1->accessory(purity_info);
     c1->divide(ipt->size(), -1);
 
     printf("fit templates\n");

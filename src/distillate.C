@@ -23,31 +23,6 @@
 using namespace std::literals::string_literals;
 using namespace std::placeholders;
 
-template <typename T>
-void info_text(int64_t index, float pos, std::string const& format,
-               std::vector<T> const& edges, bool reverse) {
-    char buffer[128] = { '\0' };
-
-    auto lower = reverse ? edges[index] : edges[index - 1];
-    auto upper = reverse ? edges[index - 1] : edges[index];
-    sprintf(buffer, format.data(), lower, upper);
-
-    TLatex* l = new TLatex();
-    l->SetTextFont(43);
-    l->SetTextSize(12);
-    l->DrawLatexNDC(0.135, pos, buffer);
-}
-
-template <typename T, typename... U>
-void stack_text(int64_t index, float position, float spacing, T* shape,
-                std::function<U>... args) {
-    auto indices = shape->indices_for(index - 1);
-    auto it = std::begin(indices);
-
-    (void)(int [sizeof...(U)]) {
-        (args(*(it++) + 1, position -= spacing), 0)... };
-}
-
 void mold(TF1* f, std::vector<double> const& value,
           std::vector<int32_t> const& exact,
           std::vector<int32_t> const& limit,

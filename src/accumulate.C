@@ -201,35 +201,14 @@ int accumulate(char const* config, char const* output) {
         transform_axis(h, [](int64_t val) -> float {
             return std::abs(revert_radian(val)); }); };
 
-    auto pt_info = [&](int64_t index, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
-            (*ipt)[index - 1], (*ipt)[index]);
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{#gamma} < %.0f", dpt, false); };
 
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
 
-    auto hf_info = [&](int64_t index, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%i - %i%%", dcent[index], dcent[index - 1]);
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
-
-    auto info_text = [&](int64_t index) {
-        auto indices = nevt->indices_for(index - 1);
-        auto pt_x = indices[0];
-        auto hf_x = indices[1];
-
-        pt_info(pt_x + 1, 0.75);
-        hf_info(hf_x + 1, 0.71);
-    };
+    auto pthf_info = [&](int64_t index) {
+        stack_text(index, 0.75, 0.04, nevt.get(), pt_info, hf_info); };
 
     auto hb = new pencil();
     hb->category("system", "PbPb", "pp");
@@ -317,7 +296,7 @@ int accumulate(char const* config, char const* output) {
 
     auto c9 = new paper(tag + "_dphi_d_pthf", hb);
     apply_style(c9, collisions, -0.04, 0.24);
-    c9->accessory(info_text);
+    c9->accessory(pthf_info);
     c9->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
     c9->jewellery(redraw_dphi_axis);
     c9->divide(-1, ihf->size());
@@ -329,7 +308,7 @@ int accumulate(char const* config, char const* output) {
 
     auto ca = new paper(tag + "_x_d_pthf", hb);
     apply_style(ca, collisions, -0.1, 1.5);
-    ca->accessory(info_text);
+    ca->accessory(pthf_info);
     ca->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
     ca->divide(-1, ihf->size());
 
@@ -337,7 +316,7 @@ int accumulate(char const* config, char const* output) {
 
     auto cb = new paper(tag + "_ddr_d_pthf", hb);
     apply_style(cb, collisions, -2., 27.);
-    cb->accessory(info_text);
+    cb->accessory(pthf_info);
     cb->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
     cb->divide(-1, ihf->size());
 
@@ -345,7 +324,7 @@ int accumulate(char const* config, char const* output) {
 
     auto cc = new paper(tag + "_jpt_d_pthf", hb);
     apply_style(cc, collisions, -0.001, 0.02);
-    cc->accessory(info_text);
+    cc->accessory(pthf_info);
     cc->accessory(std::bind(line_at, _1, 0.f, rjpt[0], rjpt[1]));
     cc->divide(-1, ihf->size());
 

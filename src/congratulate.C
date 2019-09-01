@@ -110,38 +110,17 @@ int congratulate(char const* config, char const* output) {
         info->DrawLatexNDC(0.89, 0.92, system.data());
     };
 
-    auto pt_info = [&](int64_t index, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
-            (*ipt)[index - 1], (*ipt)[index]);
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{#gamma} < %.0f", dpt, false); };
 
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(20);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
 
-    auto hf_info = [&](int64_t index, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%i - %i%%", dcent[index], dcent[index - 1]);
+    auto pp_info = [&](int64_t index, history* h) {
+        stack_text(index, 0.75, 0.04, h, pt_info); };
 
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(20);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
-
-    auto pp_text = [&](int64_t index) {
-        pt_info(index, 0.67);
-    };
-
-    auto aa_text = [&](int64_t index) {
-        auto pt_x = (index - 1) % (ipt->size() - 1);
-        auto hf_x = (index - 1) / (ipt->size() - 1);
-
-        pt_info(pt_x + 1, 0.67);
-        hf_info(hf_x + 1, 0.60);
-    };
+    auto aa_info = [&](int64_t index, history* h) {
+        stack_text(index, 0.75, 0.04, h, pt_info, hf_info); };
 
     zip([&](auto const& figure, auto xmin, auto xmax, auto ymin, auto ymax,
             auto integral) {
@@ -196,7 +175,7 @@ int congratulate(char const* config, char const* output) {
         apply_style(p, "", ymin, ymax);
         p->decorate(std::bind(decorator, "pp 320 pb^{-1}"));
         p->accessory(std::bind(line_at, _1, 0.f, xmin, xmax));
-        p->accessory(pp_text);
+        p->accessory(std::bind(pp_info, _1, hists[0]));
         p->jewellery(box);
         p->divide(-1, 1);
 
@@ -204,7 +183,7 @@ int congratulate(char const* config, char const* output) {
         apply_style(a, "", ymin, ymax);
         a->decorate(std::bind(decorator, "PbPb 1.6 nb^{-1}"));
         a->accessory(std::bind(line_at, _1, 0.f, xmin, xmax));
-        a->accessory(aa_text);
+        a->accessory(std::bind(aa_info, _1, hists[1]));
         a->jewellery(box);
         a->divide(-1, ihf->size());
 
@@ -212,7 +191,7 @@ int congratulate(char const* config, char const* output) {
         apply_style(s, "", ymin, ymax);
         s->decorate(std::bind(decorator, "pp 320 pb^{-1}, PbPb 1.6 nb^{-1}"));
         s->accessory(std::bind(line_at, _1, 0.f, xmin, xmax));
-        s->accessory(aa_text);
+        s->accessory(std::bind(aa_info, _1, hists[1]));
         s->jewellery(box);
         s->divide(-1, ihf->size());
 

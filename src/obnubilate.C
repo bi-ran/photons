@@ -82,35 +82,14 @@ int obnubilate(char const* config, char const* output) {
         h->SetLineWidth(1);
     };
 
-    auto pt_info = [&](int64_t index, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
-            dpt[index - 1], dpt[index]);
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{#gamma} < %.0f", dpt, false); };
 
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
 
-    auto hf_info = [&](int64_t index, float pos) {
-        char buffer[128] = { '\0' };
-        sprintf(buffer, "%i - %i%%", dcent[index], dcent[index - 1]);
-
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-        l->DrawLatexNDC(0.135, pos, buffer);
-    };
-
-    auto info_text = [&](int64_t index, history* h) {
-        auto indices = h->indices_for(index - 1);
-        auto pt_x = indices[0];
-        auto hf_x = indices[1];
-
-        pt_info(pt_x + 1, 0.75);
-        hf_info(hf_x + 1, 0.71);
-    };
+    auto pthf_info = [&](int64_t index, history* h) {
+        stack_text(index, 0.75, 0.04, h, pt_info, hf_info); };
 
     /* prepare output */
     TFile* fout = new TFile(output, "recreate");
@@ -174,7 +153,7 @@ int obnubilate(char const* config, char const* output) {
         /* add info text */
         if (info == "pt") { c->accessory(std::bind(pt_info, _1, 0.75)); }
         if (info == "hf") { c->accessory(std::bind(hf_info, _1, 0.75)); }
-        if (info == "pthf") { c->accessory(std::bind(info_text, _1, base)); }
+        if (info == "pthf") { c->accessory(std::bind(pthf_info, _1, base)); }
 
         /* save histograms */
         for (auto const& set : sets)

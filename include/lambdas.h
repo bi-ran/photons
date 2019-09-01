@@ -112,4 +112,29 @@ void apply_style(T p, std::string const& text) {
     apply_style(p, text, hist_formatter);
 }
 
+template <typename T>
+void info_text(int64_t index, float pos, std::string const& format,
+               std::vector<T> const& edges, bool reverse) {
+    char buffer[128] = { '\0' };
+
+    auto lower = reverse ? edges[index] : edges[index - 1];
+    auto upper = reverse ? edges[index - 1] : edges[index];
+    sprintf(buffer, format.data(), lower, upper);
+
+    TLatex* l = new TLatex();
+    l->SetTextFont(43);
+    l->SetTextSize(13);
+    l->DrawLatexNDC(0.135, pos, buffer);
+}
+
+template <typename T, typename... U>
+void stack_text(int64_t index, float position, float spacing, T* shape,
+                std::function<U>... args) {
+    auto indices = shape->indices_for(index - 1);
+    auto it = std::begin(indices);
+
+    (void)(int [sizeof...(U)]) {
+        (args(*(it++) + 1, position -= spacing), 0)... };
+}
+
 #endif /* LAMBDAS_H */

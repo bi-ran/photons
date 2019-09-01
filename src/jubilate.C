@@ -102,24 +102,14 @@ int jubilate(char const* config, char const* output) {
         transform_axis(h, [](int64_t val) -> float {
             return std::abs(revert_radian(val)); }); };
 
-    auto info_text = [&](int64_t index) {
-        auto indices = nevt->indices_for(index - 1);
-        auto pt_x = indices[0];
-        auto hf_x = indices[1];
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{#gamma} < %.0f", dpt, false); };
 
-        char buffer[128] = { '\0' };
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
 
-        TLatex* l = new TLatex();
-        l->SetTextFont(43);
-        l->SetTextSize(12);
-
-        sprintf(buffer, "%.0f < p_{T}^{#gamma} < %.0f",
-            (*ipt)[pt_x], (*ipt)[pt_x + 1]);
-        l->DrawLatexNDC(0.135, 0.75, buffer);
-
-        sprintf(buffer, "%i - %i%%", dcent[hf_x + 1], dcent[hf_x]);
-        l->DrawLatexNDC(0.135, 0.71, buffer);
-    };
+    auto pthf_info = [&](int64_t index) {
+        stack_text(index, 0.75, 0.04, nevt.get(), pt_info, hf_info); };
 
     auto hb = new pencil();
     hb->category("system", "pp", "PbPb");
@@ -132,27 +122,27 @@ int jubilate(char const* config, char const* output) {
     auto c1 = new paper(tag + "_mixing_dphi_es_d_pthf", hb);
     apply_style(c1, collisions, -0.04, 0.4);
     c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
-    c1->accessory(info_text);
+    c1->accessory(pthf_info);
     c1->jewellery(redraw_dphi_axis);
     c1->divide(-1 , ihf->size());
 
     auto c2 = new paper(tag + "_mixing_dphi_wta_d_pthf", hb);
     apply_style(c2, collisions, -0.04, 0.4);
     c2->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
-    c2->accessory(info_text);
+    c2->accessory(pthf_info);
     c2->jewellery(redraw_dphi_axis);
     c2->divide(-1 , ihf->size());
 
     auto c3 = new paper(tag + "_mixing_x_d_pthf", hb);
     apply_style(c3, collisions, -0.1, 2.0);
     c3->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
-    c3->accessory(info_text);
+    c3->accessory(pthf_info);
     c3->divide(-1 , ihf->size());
 
     auto c4 = new paper(tag + "_mixing_ddr_d_pthf", hb);
     apply_style(c4, collisions, -1., 24.);
     c4->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
-    c4->accessory(info_text);
+    c4->accessory(pthf_info);
     c4->divide(-1 , ihf->size());
 
     for (int64_t i = 0; i < nevt->size(); ++i) {

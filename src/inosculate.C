@@ -24,6 +24,7 @@
 #include <vector>
 
 using namespace std::literals::string_literals;
+using namespace std::placeholders;
 
 double f_double_sided_crystal_ball(double* x, double* params) {
     double x0 = x[0];
@@ -79,7 +80,9 @@ int64_t inosculate(char const* config, char const* output) {
     auto input = conf->get<std::string>("input");
     auto tag = conf->get<std::string>("tag");
     auto heavyion = conf->get<bool>("heavyion");
-    auto cent = conf->get<std::vector<float>>("cent");
+
+    auto dhf = conf->get<std::vector<float>>("hf_diff");
+    auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
     std::vector<std::vector<float>> scale_factors;
     for (auto const& type : { "bb"s })
@@ -91,6 +94,8 @@ int64_t inosculate(char const* config, char const* output) {
         smear_factors.push_back(
             conf->get<std::vector<float>>(type + "_smears"));
 
+    auto hf_min = dhf.front();
+
     /* manage memory manually */
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
@@ -101,9 +106,9 @@ int64_t inosculate(char const* config, char const* output) {
     auto p = new pjtree(false, false, t, { 1, 0, 1, 0, 0, 0 });
 
     /* prepare histograms */
-    auto icent = std::make_shared<interval>(cent);
+    auto ihf = std::make_shared<interval>(dhf);
     auto bins = std::make_shared<interval>("mass (GeV/c^{2})"s, 30, 60., 120.);
-    std::vector<int64_t> shape = { 1, icent->size() };
+    std::vector<int64_t> shape = { 1, ihf->size() };
 
     auto minv = std::make_unique<history>("mass"s, "counts"s, bins, shape);
 
@@ -116,7 +121,9 @@ int64_t inosculate(char const* config, char const* output) {
 
         t->GetEntry(i);
 
-        auto cent_x = icent->index_for(p->hiBin);
+        if (p->hiHF <= hf_min) { continue; }
+
+        auto hf_x = ihf->index_for(p->hiHF);
         std::vector<float> masses;
 
         for (int64_t j = 0; j < p->nPho; ++j) {
@@ -142,8 +149,8 @@ int64_t inosculate(char const* config, char const* output) {
                     continue;
 
                 /* double electron invariant mass */
-                auto scf = scale_factors[0][cent_x];
-                auto smf = smear_factors[0][cent_x] / 91.1876;
+                auto scf = scale_factors[0][hf_x];
+                auto smf = smear_factors[0][hf_x] / 91.1876;
                 auto sf = scf * gen->Gaus(1., smf);
 
                 auto mass = std::sqrt(ml_invariant_mass<coords::collider>(
@@ -165,14 +172,14 @@ int64_t inosculate(char const* config, char const* output) {
         float weight = p->Ncoll > 1e-4 ? p->Ncoll / 1000. : 1.;
         std::sort(masses.begin(), masses.end(), [](float a, float b) {
             return std::abs(a - 91.1876) < std::abs(b - 91.1876); });
-        (*minv)[x{0, cent_x}]->Fill(masses[0], weight);
+        (*minv)[x{0, hf_x}]->Fill(masses[0], weight);
     }
 
-    TF1** fits[1] = { new TF1*[icent->size()] };
-    TF1** fbkg[1] = { new TF1*[icent->size()] };
+    TF1** fits[1] = { new TF1*[ihf->size()] };
+    TF1** fbkg[1] = { new TF1*[ihf->size()] };
 
     for (int64_t i = 0; i < 1; ++i) {
-        for (int64_t j = 0; j < icent->size(); ++j) {
+        for (int64_t j = 0; j < ihf->size(); ++j) {
             auto istr = index_to_string(i, j);
 
             fits[i][j] = new TF1(("f_"s + istr).data(),
@@ -201,9 +208,10 @@ int64_t inosculate(char const* config, char const* output) {
     std::vector<std::string> types = { "bb" };
 
     /* lambda to display mean, sigma from fit, background function */
-    auto info_text = [&](int64_t index) {
-        int64_t i = (index - 1) / icent->size();
-        int64_t j = (index - 1) % icent->size();
+    auto fit_info = [&](int64_t index) {
+        auto indices = minv->indices_for(index - 1);
+        auto i = indices[0];
+        auto j = indices[1];
 
         TLatex* info = new TLatex();
         info->SetTextFont(43);
@@ -211,8 +219,6 @@ int64_t inosculate(char const* config, char const* output) {
 
         char buffer[128];
 
-        sprintf(buffer, "%.0f - %.0f%%", cent[j] / 2, cent[j + 1] / 2);
-        info->DrawLatexNDC(0.675, 0.84, buffer);
         auto mean = conf->get<float>("mean_"s + index_to_string(i, j));
         sprintf(buffer, "mean: %.2f", mean);
         info->DrawLatexNDC(0.675, 0.78, buffer);
@@ -223,6 +229,9 @@ int64_t inosculate(char const* config, char const* output) {
         fbkg[i][j]->Draw("same");
     };
 
+    std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%i - %i%%", dcent, true); };
+
     /* prepare plots */
     auto hb = new pencil();
     hb->category("type", "bb");
@@ -232,11 +241,12 @@ int64_t inosculate(char const* config, char const* output) {
     auto c1 = new paper(tag + "_mass", hb);
     apply_style(c1, "PbPb #sqrt{s} = 5.02 TeV"s);
     c1->legend(std::bind(coordinates, 0.135, 0.4, 0.75, 0.04));
-    c1->accessory(info_text);
-    c1->divide(icent->size(), 1);
+    c1->accessory(std::bind(hf_info, _1, 0.75));
+    c1->accessory(fit_info);
+    c1->divide(ihf->size(), 1);
 
     for (int64_t i = 0; i < 1; ++i) {
-        for (int64_t j = 0; j < icent->size(); ++j)
+        for (int64_t j = 0; j < ihf->size(); ++j)
             c1->add((*minv)[x{i, j}], types[i]);
     }
 
