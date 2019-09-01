@@ -128,7 +128,7 @@ int fabulate(char const* config, char const* output) {
             (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
             (*angle)[index]->Fill(dr2((*p->jteta)[j], (*p->refeta)[j],
                                       (*p->jtphi)[j], (*p->refphi)[j])
-                                  * sgn((*p->refeta)[j]), p->weight);
+                                  * sgn((*p->refphi)[j]), p->weight);
         }
     }
 
