@@ -48,6 +48,8 @@ int fabulate(char const* config, char const* output) {
 
     auto res = conf->get<std::vector<float>>("es_range");
     auto rdr = conf->get<std::vector<float>>("dr_range");
+    auto rde = conf->get<std::vector<float>>("de_range");
+    auto rdp = conf->get<std::vector<float>>("dp_range");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto deta = conf->get<std::vector<float>>("eta_diff");
@@ -59,8 +61,12 @@ int fabulate(char const* config, char const* output) {
     /* prepare histograms */
     auto ies = std::make_shared<interval>("energy scale"s,
         static_cast<int64_t>(res[0]), res[1], res[2]);
-    auto idr = std::make_shared<interval>("angular distance"s,
+    auto idr = std::make_shared<interval>("#deltar^{2}"s,
         static_cast<int64_t>(rdr[0]), rdr[1], rdr[2]);
+    auto ide = std::make_shared<interval>("#delta#eta"s,
+        static_cast<int64_t>(rde[0]), rde[1], rde[2]);
+    auto idp = std::make_shared<interval>("#delta#phi"s,
+        static_cast<int64_t>(rdp[0]), rdp[1], rdp[2]);
 
     auto ipt = std::make_shared<interval>(dpt);
     auto ieta = std::make_shared<interval>(deta);
@@ -70,6 +76,8 @@ int fabulate(char const* config, char const* output) {
 
     auto scale = std::make_unique<memory>("scale"s, "counts", ies, mptetahf);
     auto angle = std::make_unique<memory>("angle"s, "counts", idr, mptetahf);
+    auto eta = std::make_unique<memory>("eta"s, "counts", ide, mptetahf);
+    auto phi = std::make_unique<memory>("phi"s, "counts", idp, mptetahf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -125,10 +133,16 @@ int fabulate(char const* config, char const* output) {
 
             auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
 
+            auto deta = (*p->jteta)[j] - (*p->refeta)[j];
+            auto dphi = revert_radian(convert_radian((*p->jtphi)[j])
+                - convert_radian((*p->refphi)[j]));
+
             (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
-            (*angle)[index]->Fill(dr2((*p->jteta)[j], (*p->refeta)[j],
-                                      (*p->jtphi)[j], (*p->refphi)[j])
-                                  * sgn((*p->refphi)[j]), p->weight);
+            (*angle)[index]->Fill(sgn((*p->refphi)[j])
+                * (deta * deta + dphi * dphi), p->weight);
+
+            (*eta)[index]->Fill(deta, p->weight);
+            (*phi)[index]->Fill(dphi, p->weight);
         }
     }
 
@@ -136,6 +150,9 @@ int fabulate(char const* config, char const* output) {
     in(output, [&]() {
         scale->save(tag);
         angle->save(tag);
+
+        eta->save(tag);
+        phi->save(tag);
     });
 
     return 0;
