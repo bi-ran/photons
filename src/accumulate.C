@@ -75,13 +75,18 @@ int accumulate(char const* config, char const* output) {
     TFile* f = new TFile(input.data(), "read");
 
     /* load histograms */
-    auto nevt = new history(f, label + "_raw_nevt"s);
+    auto nevt = new history<TH1F>(f, label + "_raw_nevt"s);
 
-    auto pjet_es_f_dphi = new history(f, label + "_raw_sub_pjet_es_f_dphi"s);
-    auto pjet_wta_f_dphi = new history(f, label + "_raw_sub_pjet_wta_f_dphi"s);
-    auto pjet_f_x = new history(f, label + "_raw_sub_pjet_f_x"s);
-    auto pjet_f_ddr = new history(f, label + "_raw_sub_pjet_f_ddr"s);
-    auto pjet_f_jpt = new history(f, label + "_raw_sub_pjet_f_jpt"s);
+    auto pjet_es_f_dphi = new history<TH1F>(
+        f, label + "_raw_sub_pjet_es_f_dphi"s);
+    auto pjet_wta_f_dphi = new history<TH1F>(
+        f, label + "_raw_sub_pjet_wta_f_dphi"s);
+    auto pjet_f_x = new history<TH1F>(
+        f, label + "_raw_sub_pjet_f_x"s);
+    auto pjet_f_ddr = new history<TH1F>(
+        f, label + "_raw_sub_pjet_f_ddr"s);
+    auto pjet_f_jpt = new history<TH1F>(
+        f, label + "_raw_sub_pjet_f_jpt"s);
 
     /* rescale by number of signal photons (events) */
     pjet_es_f_dphi->multiply(*nevt);
@@ -91,7 +96,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_jpt->multiply(*nevt);
 
     /* discard overflow photon pt bin */
-    auto discard = [](history*& h, int64_t axis) {
+    auto discard = [](history<TH1F>*& h, int64_t axis) {
         auto shape = h->shape();
         shape[axis] = shape[axis] - 1;
         h = h->shrink("s", shape, std::vector<int64_t>(h->dims(), 0));

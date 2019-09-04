@@ -56,23 +56,23 @@ int jubilate(char const* config, char const* output) {
 
     TH1::SetDefaultSumw2();
 
-    auto nevt = new history(f, "raw_nevt");
+    auto nevt = new history<TH1F>(f, "raw_nevt");
 
-    auto pjet_es_f_dphi = new history(f, "raw_pjet_es_f_dphi");
-    auto pjet_wta_f_dphi = new history(f, "raw_pjet_wta_f_dphi");
-    auto pjet_f_x = new history(f, "raw_pjet_f_x");
-    auto pjet_f_ddr = new history(f, "raw_pjet_f_ddr");
+    auto pjet_es_f_dphi = new history<TH1F>(f, "raw_pjet_es_f_dphi");
+    auto pjet_wta_f_dphi = new history<TH1F>(f, "raw_pjet_wta_f_dphi");
+    auto pjet_f_x = new history<TH1F>(f, "raw_pjet_f_x");
+    auto pjet_f_ddr = new history<TH1F>(f, "raw_pjet_f_ddr");
 
-    auto mix_pjet_es_f_dphi = new history(f, "raw_mix_pjet_es_f_dphi");
-    auto mix_pjet_wta_f_dphi = new history(f, "raw_mix_pjet_wta_f_dphi");
-    auto mix_pjet_f_x = new history(f, "raw_mix_pjet_f_x");
-    auto mix_pjet_f_ddr = new history(f, "raw_mix_pjet_f_ddr");
+    auto mix_pjet_es_f_dphi = new history<TH1F>(f, "raw_mix_pjet_es_f_dphi");
+    auto mix_pjet_wta_f_dphi = new history<TH1F>(f, "raw_mix_pjet_wta_f_dphi");
+    auto mix_pjet_f_x = new history<TH1F>(f, "raw_mix_pjet_f_x");
+    auto mix_pjet_f_ddr = new history<TH1F>(f, "raw_mix_pjet_f_ddr");
 
     /* shrink to remove overflow photon pt bin */
     auto shape = nevt->shape();
     shape[0] = shape[0] - 1;
 
-    auto wrap = [&](history*& h) {
+    auto wrap = [&](history<TH1F>*& h) {
         h = h->shrink("s", shape, { 0, 0 }); };
 
     wrap(nevt);

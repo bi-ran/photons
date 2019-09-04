@@ -50,15 +50,15 @@ int granulate(char const* config, char const* output) {
     zip([&](auto const& figure) {
         auto stub = "_"s + figure;
 
-        auto base = new history(f, tag + "_"s + label + stub);
+        auto base = new history<TH1F>(f, tag + "_"s + label + stub);
 
-        std::vector<history*> references(refs.size(), nullptr);
-        std::vector<history*> variations(vars.size(), nullptr);
+        std::vector<history<TH1F>*> references(refs.size(), nullptr);
+        std::vector<history<TH1F>*> variations(vars.size(), nullptr);
 
         zip([&](auto& ref, auto& var, auto fref, auto fvar,
                 auto const& lref, auto const& lvar, auto value) {
-            ref = new history(fref, tag + "_"s + lref + stub);
-            var = new history(fvar, tag + "_"s + lvar + stub);
+            ref = new history<TH1F>(fref, tag + "_"s + lref + stub);
+            var = new history<TH1F>(fvar, tag + "_"s + lvar + stub);
 
             var->apply([&](TH1* h, int64_t index) {
                 h->Divide((*ref)[index]); });

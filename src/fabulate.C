@@ -65,10 +65,10 @@ int fabulate(char const* config, char const* output) {
 
     auto mptetahf = new multival(dpt, deta, dhf);
 
-    auto scale = new memory("scale"s, "counts", ies, mptetahf);
-    auto angle = new memory("angle"s, "counts", idr, mptetahf);
-    auto eta = new memory("eta"s, "counts", ide, mptetahf);
-    auto phi = new memory("phi"s, "counts", idp, mptetahf);
+    auto scale = new memory<TH1F>("scale"s, "counts", ies, mptetahf);
+    auto angle = new memory<TH1F>("angle"s, "counts", idr, mptetahf);
+    auto eta = new memory<TH1F>("eta"s, "counts", ide, mptetahf);
+    auto phi = new memory<TH1F>("phi"s, "counts", idp, mptetahf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

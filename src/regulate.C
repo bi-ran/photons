@@ -119,7 +119,7 @@ int regulate(char const* config, char const* output) {
     TF1** fres = nullptr;
     if (apply_residual) {
         TFile* fh = new TFile(residual.data(), "read");
-        auto hres = new history(fh, tag + "_es_dhf_f_pt");
+        auto hres = new history<TH1F>(fh, tag + "_es_dhf_f_pt");
 
         fres = new TF1*[hres->size()];
         hres->apply([&](TH1* h, int64_t index) {

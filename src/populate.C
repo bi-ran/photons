@@ -50,12 +50,12 @@ void title(std::function<void(TH1*)> f, T*... args) {
 void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_pt, float photon_eta, int64_t photon_phi,
                int64_t pthf_x,
-               memory* nevt,
-               memory* pjet_es_f_dphi,
-               memory* pjet_wta_f_dphi,
-               memory* pjet_f_x,
-               memory* pjet_f_ddr,
-               memory* pjet_f_jpt) {
+               memory<TH1F>* nevt,
+               memory<TH1F>* pjet_es_f_dphi,
+               memory<TH1F>* pjet_wta_f_dphi,
+               memory<TH1F>* pjet_f_x,
+               memory<TH1F>* pjet_f_ddr,
+               memory<TH1F>* pjet_f_jpt) {
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
@@ -180,29 +180,29 @@ int populate(char const* config, char const* output) {
 
     auto irdphi = new interval("#Delta#phi^{#gammaj}", rdphi);
 
-    auto nevt = new memory("nevt"s, "", incl, mpthf);
-    auto nmix = new memory("nmix"s, "", incl, mpthf);
+    auto nevt = new memory<TH1F>("nevt"s, "", incl, mpthf);
+    auto nmix = new memory<TH1F>("nmix"s, "", incl, mpthf);
 
-    auto pjet_es_f_dphi = new memory("pjet_es_f_dphi"s,
+    auto pjet_es_f_dphi = new memory<TH1F>("pjet_es_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto pjet_wta_f_dphi = new memory("pjet_wta_f_dphi"s,
+    auto pjet_wta_f_dphi = new memory<TH1F>("pjet_wta_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto pjet_f_x = new memory("pjet_f_x"s,
+    auto pjet_f_x = new memory<TH1F>("pjet_f_x"s,
         "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
-    auto pjet_f_ddr = new memory("pjet_f_ddr"s,
+    auto pjet_f_ddr = new memory<TH1F>("pjet_f_ddr"s,
         "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
-    auto pjet_f_jpt = new memory("pjet_f_jpt"s,
+    auto pjet_f_jpt = new memory<TH1F>("pjet_f_jpt"s,
         "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
-    auto mix_pjet_es_f_dphi = new memory("mix_pjet_es_f_dphi"s,
+    auto mix_pjet_es_f_dphi = new memory<TH1F>("mix_pjet_es_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto mix_pjet_wta_f_dphi = new memory("mix_pjet_wta_f_dphi"s,
+    auto mix_pjet_wta_f_dphi = new memory<TH1F>("mix_pjet_wta_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto mix_pjet_f_x = new memory("mix_pjet_f_x"s,
+    auto mix_pjet_f_x = new memory<TH1F>("mix_pjet_f_x"s,
         "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
-    auto mix_pjet_f_ddr = new memory("mix_pjet_f_ddr",
+    auto mix_pjet_f_ddr = new memory<TH1F>("mix_pjet_f_ddr",
         "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
-    auto mix_pjet_f_jpt = new memory("mix_pjet_f_jpt"s,
+    auto mix_pjet_f_jpt = new memory<TH1F>("mix_pjet_f_jpt"s,
         "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
     /* manage memory manually */
@@ -356,11 +356,11 @@ int populate(char const* config, char const* output) {
     mix_pjet_f_jpt->divide(*nevt);
 
     /* subtract histograms */
-    auto sub_pjet_es_f_dphi = new memory(*pjet_es_f_dphi, "sub");
-    auto sub_pjet_wta_f_dphi = new memory(*pjet_wta_f_dphi, "sub");
-    auto sub_pjet_f_x = new memory(*pjet_f_x, "sub");
-    auto sub_pjet_f_ddr = new memory(*pjet_f_ddr, "sub");
-    auto sub_pjet_f_jpt = new memory(*pjet_f_jpt, "sub");
+    auto sub_pjet_es_f_dphi = new memory<TH1F>(*pjet_es_f_dphi, "sub");
+    auto sub_pjet_wta_f_dphi = new memory<TH1F>(*pjet_wta_f_dphi, "sub");
+    auto sub_pjet_f_x = new memory<TH1F>(*pjet_f_x, "sub");
+    auto sub_pjet_f_ddr = new memory<TH1F>(*pjet_f_ddr, "sub");
+    auto sub_pjet_f_jpt = new memory<TH1F>(*pjet_f_jpt, "sub");
 
     *sub_pjet_es_f_dphi -= *mix_pjet_es_f_dphi;
     *sub_pjet_wta_f_dphi -= *mix_pjet_wta_f_dphi;

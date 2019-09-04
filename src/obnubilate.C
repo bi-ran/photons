@@ -88,7 +88,7 @@ int obnubilate(char const* config, char const* output) {
     std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
 
-    auto pthf_info = [&](int64_t index, history* h) {
+    auto pthf_info = [&](int64_t index, history<TH1F>* h) {
         stack_text(index, 0.75, 0.04, h, pt_info, hf_info); };
 
     /* prepare output */
@@ -103,16 +103,16 @@ int obnubilate(char const* config, char const* output) {
             std::bind(shader, _1, range));
         c->divide(cols, -1);
 
-        auto base = new history(f, tag + "_"s + label + stub, "base");
+        auto base = new history<TH1F>(f, tag + "_"s + label + stub, "base");
 
-        std::vector<history*> sets;
+        std::vector<history<TH1F>*> sets;
 
-        std::vector<history*> batches(inputs.size(), nullptr);
+        std::vector<history<TH1F>*> batches(inputs.size(), nullptr);
         zip([&](auto& batch, auto file, auto const& label) {
-            batch = new history(file, tag + "_"s + label + stub, "batch");
+            batch = new history<TH1F>(file, tag + "_" + label + stub, "batch");
         }, batches, files, labels);
 
-        auto total = new history(*base, "total");
+        auto total = new history<TH1F>(*base, "total");
         total->apply([](TH1* h) { h->Reset("MICES"); });
 
         for (auto const& batch : batches) {
@@ -122,7 +122,7 @@ int obnubilate(char const* config, char const* output) {
 
         zip([&](auto const& batch, auto group) {
             if (group == static_cast<int32_t>(sets.size())) {
-                sets.push_back(new history(*batch, "set"));
+                sets.push_back(new history<TH1F>(*batch, "set"));
             } else {
                 sets[group]->apply([&](TH1* h, int64_t i) {
                     for_contents([](std::array<double, 2> v) -> float {

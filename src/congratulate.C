@@ -115,22 +115,22 @@ int congratulate(char const* config, char const* output) {
     std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
 
-    auto pp_info = [&](int64_t index, history* h) {
+    auto pp_info = [&](int64_t index, history<TH1F>* h) {
         stack_text(index, 0.75, 0.04, h, pt_info); };
 
-    auto aa_info = [&](int64_t index, history* h) {
+    auto aa_info = [&](int64_t index, history<TH1F>* h) {
         stack_text(index, 0.75, 0.04, h, pt_info, hf_info); };
 
     zip([&](auto const& figure, auto xmin, auto xmax, auto ymin, auto ymax,
             auto integral) {
         /* get histograms */
-        std::vector<history*> hists(6, nullptr);
-        std::vector<history*> systs(6, nullptr);
+        std::vector<history<TH1F>*> hists(6, nullptr);
+        std::vector<history<TH1F>*> systs(6, nullptr);
 
         zip([&](auto& hist, auto& syst, auto const file,
                 auto const& base_stub, auto const& syst_stub) {
-            hist = new history(file, base_stub + figure);
-            syst = new history(file, syst_stub + figure);
+            hist = new history<TH1F>(file, base_stub + figure);
+            syst = new history<TH1F>(file, syst_stub + figure);
         }, hists, systs, files, base_stubs, syst_stubs);
 
         /* link histograms, uncertainties */

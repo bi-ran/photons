@@ -31,8 +31,8 @@ int manipulate(char const* config, char const* output) {
     /* load input */
     TFile* fp = new TFile(purity.data(), "read");
 
-    auto purities = new history(fp, type);
-    auto impurities = new history(*purities, "im"s);
+    auto purities = new history<TH1F>(fp, type);
+    auto impurities = new history<TH1F>(*purities, "im"s);
 
     purities->apply([](TH1* h) {
         auto purity = h->GetBinContent(1);
@@ -53,10 +53,10 @@ int manipulate(char const* config, char const* output) {
 
     /* load histograms and perform purity subtraction */
     for (auto const& label : labels) {
-        std::vector<history*> histograms(groups.size(), nullptr);
+        std::vector<history<TH1F>*> histograms(groups.size(), nullptr);
         zip([&](auto const file, auto const& group, auto& hist) {
             auto name = group + "_"s + label;
-            hist = new history(file, name);
+            hist = new history<TH1F>(file, name);
 
             auto factors = group.find("raw") != std::string::npos
                 ? purities : impurities;

@@ -75,7 +75,7 @@ int distillate(char const* config, char const* output) {
 
     /* load input */
     TFile* f = new TFile(input.data(), "read");
-    auto obj = new history(f, tag + "_" + object);
+    auto obj = new history<TH1F>(f, tag + "_" + object);
 
     /* prepare histograms */
     auto ival = new interval(1, 0., 1.);
@@ -91,35 +91,35 @@ int distillate(char const* config, char const* output) {
     auto title = "#sigma("s + label + ")";
 
     /* fully differential (pt, eta, hf) */
-    auto s = new history("s"s, "", ival, obj->shape());
-    auto r = new history("r"s, "", ival, obj->shape());
+    auto s = new history<TH1F>("s"s, "", ival, obj->shape());
+    auto r = new history<TH1F>("r"s, "", ival, obj->shape());
 
-    auto s_f_pt = new history("s_f_pt"s,
+    auto s_f_pt = new history<TH1F>("s_f_pt"s,
         label.data(), "jet p_{T}", rpt, etahf_shape);
-    auto r_f_pt = new history("r_f_pt"s,
+    auto r_f_pt = new history<TH1F>("r_f_pt"s,
         title.data(), "jet p_{T}", rpt, etahf_shape);
 
     /* differential in pt, hf */
     auto obj_dpthf = obj->sum(1);
 
-    auto s_dpthf = new history("s_dpthf", "", ival, pthf_shape);
-    auto r_dpthf = new history("r_dpthf", "", ival, pthf_shape);
+    auto s_dpthf = new history<TH1F>("s_dpthf", "", ival, pthf_shape);
+    auto r_dpthf = new history<TH1F>("r_dpthf", "", ival, pthf_shape);
 
-    auto s_dhf_f_pt = new history("s_dhf_f_pt"s,
+    auto s_dhf_f_pt = new history<TH1F>("s_dhf_f_pt"s,
         label.data(), "jet p_{T}", rpt, hf_shape);
-    auto r_dhf_f_pt = new history("r_dhf_f_pt"s,
+    auto r_dhf_f_pt = new history<TH1F>("r_dhf_f_pt"s,
         title.data(), "jet p_{T}", rpt, hf_shape);
 
     /* differential in eta, hf */
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
     auto obj_detahf = obj->shrink("valid", resize, remove)->sum(0);
 
-    auto s_detahf = new history("s_detahf", "", ival, etahf_shape);
-    auto r_detahf = new history("r_detahf", "", ival, etahf_shape);
+    auto s_detahf = new history<TH1F>("s_detahf", "", ival, etahf_shape);
+    auto r_detahf = new history<TH1F>("r_detahf", "", ival, etahf_shape);
 
-    auto s_dhf_f_eta = new history("s_dhf_f_eta"s,
+    auto s_dhf_f_eta = new history<TH1F>("s_dhf_f_eta"s,
         label.data(), "jet #eta", reta, hf_shape);
-    auto r_dhf_f_eta = new history("r_dhf_f_eta"s,
+    auto r_dhf_f_eta = new history<TH1F>("r_dhf_f_eta"s,
         title.data(), "jet #eta", reta, hf_shape);
 
     /* load fitting parameters */

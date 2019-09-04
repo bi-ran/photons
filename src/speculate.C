@@ -46,7 +46,7 @@ int speculate(char const* config, char const* output) {
     TTree* t = (TTree*)f->Get("pj");
     auto p = new pjtree(false, true, t, { 1, 0, 1, 0, 0, 1 });
 
-    auto counts = new history("count", "counts", "photon p_{T}", rpt, 2);
+    auto counts = new history<TH1F>("count", "counts", "photon p_{T}", rpt, 2);
 
     /* iterate */
     auto nentries = static_cast<int64_t>(t->GetEntries());

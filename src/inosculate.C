@@ -110,7 +110,7 @@ int64_t inosculate(char const* config, char const* output) {
     auto bins = new interval("mass (GeV/c^{2})"s, 30, 60., 120.);
     std::vector<int64_t> shape = { 1, ihf->size() };
 
-    auto minv = new history("mass"s, "counts"s, bins, shape);
+    auto minv = new history<TH1F>("mass"s, "counts"s, bins, shape);
 
     TRandom3* gen = new TRandom3(144);
 
