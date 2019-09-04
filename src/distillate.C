@@ -78,11 +78,11 @@ int distillate(char const* config, char const* output) {
     auto obj = new history(f, tag + "_" + object);
 
     /* prepare histograms */
-    auto ival = std::make_shared<interval>(1, 0., 1.);
+    auto ival = new interval(1, 0., 1.);
 
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ieta = std::make_shared<interval>(deta);
-    auto ihf = std::make_shared<interval>(dhf);
+    auto ipt = new interval(dpt);
+    auto ieta = new interval(deta);
+    auto ihf = new interval(dhf);
 
     auto hf_shape = x{ ihf->size() };
     auto pthf_shape = x{ ipt->size(), ihf->size() };
@@ -174,10 +174,10 @@ int distillate(char const* config, char const* output) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
 
     auto pthf_info = [&](int64_t index) {
-        stack_text(index, 0.75, 0.04, obj_dpthf.get(), pt_info, hf_info); };
+        stack_text(index, 0.75, 0.04, obj_dpthf, pt_info, hf_info); };
 
     auto etahf_info = [&](int64_t index) {
-        stack_text(index, 0.75, 0.04, obj_detahf.get(), eta_info, hf_info); };
+        stack_text(index, 0.75, 0.04, obj_detahf, eta_info, hf_info); };
 
     auto tag_object = tag + "_" + object;
     auto system_info = system + " #sqrt{s_{NN}} = 5.02 TeV";

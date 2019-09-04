@@ -20,7 +20,6 @@
 #include "TLatex.h"
 #include "TLine.h"
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -46,8 +45,8 @@ int congratulate(char const* config, char const* output) {
 
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ihf = std::make_shared<interval>(dhf);
+    auto ipt = new interval(dpt);
+    auto ihf = new interval(dhf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

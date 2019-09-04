@@ -18,7 +18,6 @@
 #include "TLatex.h"
 #include "TLine.h"
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -26,13 +25,13 @@ using namespace std::literals::string_literals;
 using namespace std::placeholders;
 
 template <typename... T>
-void normalise_to_unity(std::unique_ptr<T>&... args) {
+void normalise_to_unity(T*&... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
         obj->Scale(1. / obj->Integral("width")); }), 0)... };
 }
 
 template <typename... T>
-void normalise_ia_to_unity(std::unique_ptr<T>&... args) {
+void normalise_ia_to_unity(T*&... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
         auto width = revert_radian(obj->GetBinLowEdge(1)
             - obj->GetBinLowEdge(obj->GetNbinsX() + 1));
@@ -41,7 +40,7 @@ void normalise_ia_to_unity(std::unique_ptr<T>&... args) {
 }
 
 template <typename... T>
-void title(std::function<void(TH1*)> f, std::unique_ptr<T>&... args) {
+void title(std::function<void(TH1*)> f, T*&... args) {
     (void)(int [sizeof...(T)]) { (args->apply(f), 0)... };
 }
 
@@ -66,8 +65,7 @@ int accumulate(char const* config, char const* output) {
     /* convert to integral angle units (cast to double) */
     convert_in_place_pi(rdphi);
 
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ihf = std::make_shared<interval>(dhf);
+    auto ihf = new interval(dhf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -77,19 +75,13 @@ int accumulate(char const* config, char const* output) {
     TFile* f = new TFile(input.data(), "read");
 
     /* load histograms */
-    auto nevt = std::make_unique<history>(
-        f, label + "_raw_nevt"s);
+    auto nevt = new history(f, label + "_raw_nevt"s);
 
-    auto pjet_es_f_dphi = std::make_unique<history>(
-        f, label + "_raw_sub_pjet_es_f_dphi"s);
-    auto pjet_wta_f_dphi = std::make_unique<history>(
-        f, label + "_raw_sub_pjet_wta_f_dphi"s);
-    auto pjet_f_x = std::make_unique<history>(
-        f, label + "_raw_sub_pjet_f_x"s);
-    auto pjet_f_ddr = std::make_unique<history>(
-        f, label + "_raw_sub_pjet_f_ddr"s);
-    auto pjet_f_jpt = std::make_unique<history>(
-        f, label + "_raw_sub_pjet_f_jpt"s);
+    auto pjet_es_f_dphi = new history(f, label + "_raw_sub_pjet_es_f_dphi"s);
+    auto pjet_wta_f_dphi = new history(f, label + "_raw_sub_pjet_wta_f_dphi"s);
+    auto pjet_f_x = new history(f, label + "_raw_sub_pjet_f_x"s);
+    auto pjet_f_ddr = new history(f, label + "_raw_sub_pjet_f_ddr"s);
+    auto pjet_f_jpt = new history(f, label + "_raw_sub_pjet_f_jpt"s);
 
     /* rescale by number of signal photons (events) */
     pjet_es_f_dphi->multiply(*nevt);
@@ -99,7 +91,7 @@ int accumulate(char const* config, char const* output) {
     pjet_f_jpt->multiply(*nevt);
 
     /* discard overflow photon pt bin */
-    auto discard = [](std::unique_ptr<history>& h, int64_t axis) {
+    auto discard = [](history*& h, int64_t axis) {
         auto shape = h->shape();
         shape[axis] = shape[axis] - 1;
         h = h->shrink("s", shape, std::vector<int64_t>(h->dims(), 0));
@@ -208,7 +200,7 @@ int accumulate(char const* config, char const* output) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
 
     auto pthf_info = [&](int64_t index) {
-        stack_text(index, 0.75, 0.04, nevt.get(), pt_info, hf_info); };
+        stack_text(index, 0.75, 0.04, nevt, pt_info, hf_info); };
 
     auto hb = new pencil();
     hb->category("system", "PbPb", "pp");

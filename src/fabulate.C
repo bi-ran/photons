@@ -13,7 +13,6 @@
 #include "TH1.h"
 #include "TTree.h"
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -59,20 +58,12 @@ int fabulate(char const* config, char const* output) {
     auto hf_min = dhf.front();
 
     /* prepare histograms */
-    auto ies = std::make_shared<interval>("energy scale"s,
-        static_cast<int64_t>(res[0]), res[1], res[2]);
-    auto idr = std::make_shared<interval>("#deltar^{2}"s,
-        static_cast<int64_t>(rdr[0]), rdr[1], rdr[2]);
-    auto ide = std::make_shared<interval>("#delta#eta"s,
-        static_cast<int64_t>(rde[0]), rde[1], rde[2]);
-    auto idp = std::make_shared<interval>("#delta#phi"s,
-        static_cast<int64_t>(rdp[0]), rdp[1], rdp[2]);
+    auto ies = new interval("energy scale"s, (int64_t)res[0], res[1], res[2]);
+    auto idr = new interval("#deltar^{2}"s, (int64_t)rdr[0], rdr[1], rdr[2]);
+    auto ide = new interval("#delta#eta"s, (int64_t)rde[0], rde[1], rde[2]);
+    auto idp = new interval("#delta#phi"s, (int64_t)rdp[0], rdp[1], rdp[2]);
 
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ieta = std::make_shared<interval>(deta);
-    auto ihf = std::make_shared<interval>(dhf);
-
-    auto mptetahf = std::make_shared<multival>(dpt, deta, dhf);
+    auto mptetahf = new multival(dpt, deta, dhf);
 
     auto scale = std::make_unique<memory>("scale"s, "counts", ies, mptetahf);
     auto angle = std::make_unique<memory>("angle"s, "counts", idr, mptetahf);

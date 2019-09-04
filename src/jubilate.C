@@ -49,35 +49,30 @@ int jubilate(char const* config, char const* output) {
     /* convert to integral angle units (cast to double) */
     convert_in_place_pi(rdphi);
 
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ihf = std::make_shared<interval>(dhf);
+    auto ihf = new interval(dhf);
 
     /* load history objects */
     TFile* f = new TFile(input.data(), "read");
 
     TH1::SetDefaultSumw2();
 
-    auto nevt = std::make_unique<history>(f, "raw_nevt");
+    auto nevt = new history(f, "raw_nevt");
 
-    auto pjet_es_f_dphi = std::make_unique<history>(f, "raw_pjet_es_f_dphi");
-    auto pjet_wta_f_dphi = std::make_unique<history>(f, "raw_pjet_wta_f_dphi");
-    auto pjet_f_x = std::make_unique<history>(f, "raw_pjet_f_x");
-    auto pjet_f_ddr = std::make_unique<history>(f, "raw_pjet_f_ddr");
+    auto pjet_es_f_dphi = new history(f, "raw_pjet_es_f_dphi");
+    auto pjet_wta_f_dphi = new history(f, "raw_pjet_wta_f_dphi");
+    auto pjet_f_x = new history(f, "raw_pjet_f_x");
+    auto pjet_f_ddr = new history(f, "raw_pjet_f_ddr");
 
-    auto mix_pjet_es_f_dphi = std::make_unique<history>(
-        f, "raw_mix_pjet_es_f_dphi");
-    auto mix_pjet_wta_f_dphi = std::make_unique<history>(
-        f, "raw_mix_pjet_wta_f_dphi");
-    auto mix_pjet_f_x = std::make_unique<history>(
-        f, "raw_mix_pjet_f_x");
-    auto mix_pjet_f_ddr = std::make_unique<history>(
-        f, "raw_mix_pjet_f_ddr");
+    auto mix_pjet_es_f_dphi = new history(f, "raw_mix_pjet_es_f_dphi");
+    auto mix_pjet_wta_f_dphi = new history(f, "raw_mix_pjet_wta_f_dphi");
+    auto mix_pjet_f_x = new history(f, "raw_mix_pjet_f_x");
+    auto mix_pjet_f_ddr = new history(f, "raw_mix_pjet_f_ddr");
 
     /* shrink to remove overflow photon pt bin */
     auto shape = nevt->shape();
     shape[0] = shape[0] - 1;
 
-    auto wrap = [&](std::unique_ptr<history>& h) {
+    auto wrap = [&](history*& h) {
         h = h->shrink("s", shape, { 0, 0 }); };
 
     wrap(nevt);
@@ -109,7 +104,7 @@ int jubilate(char const* config, char const* output) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
 
     auto pthf_info = [&](int64_t index) {
-        stack_text(index, 0.75, 0.04, nevt.get(), pt_info, hf_info); };
+        stack_text(index, 0.75, 0.04, nevt, pt_info, hf_info); };
 
     auto hb = new pencil();
     hb->category("system", "pp", "PbPb");

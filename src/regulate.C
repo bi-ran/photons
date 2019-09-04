@@ -75,7 +75,7 @@ int regulate(char const* config, char const* output) {
     auto pthatw = conf->get<std::vector<float>>("pthatw");
     auto vzw = conf->get<std::vector<float>>("vzw");
 
-    auto ihf = std::make_shared<interval>(dhf);
+    auto ihf = new interval(dhf);
 
     for (auto& v : csn) { v = v * v; }
 

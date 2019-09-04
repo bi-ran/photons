@@ -33,10 +33,7 @@ int emulate(char const* config, char const* output) {
     auto rpthat = conf->get<std::vector<float>>("pthat_range");
     auto rvz = conf->get<std::vector<float>>("vz_range");
 
-    auto ipthat = std::make_shared<interval>("pthat"s,
-        static_cast<int64_t>(rpthat[0]), rpthat[1], rpthat[2]);
-    auto ivz = std::make_shared<interval>("v_{z}"s,
-        static_cast<int64_t>(rvz[0]), rvz[1], rvz[2]);
+    auto ivz = new interval("v_{z}"s, (int64_t)rvz[0], rvz[1], rvz[2]);
 
     /* manange memory manually */
     TH1::AddDirectory(false);
@@ -52,7 +49,7 @@ int emulate(char const* config, char const* output) {
     tbase->Add(files[0].data());
 
     auto count = static_cast<int64_t>(pthats.size());
-    auto incl = std::make_shared<interval>(1L, 0., 1.);
+    auto incl = new interval(1L, 0., 1.);
     auto pthat = std::make_unique<history>("pthat"s, "", incl, count);
 
     pthats.push_back(999999);

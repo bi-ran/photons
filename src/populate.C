@@ -172,14 +172,13 @@ int populate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    auto incl = std::make_shared<interval>(1, 0.f, 9999.f);
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ihf = std::make_shared<interval>(dhf);
+    auto incl = new interval(1, 0.f, 9999.f);
+    auto ipt = new interval(dpt);
+    auto ihf = new interval(dhf);
 
-    auto mincl = std::make_shared<multival>(*incl);
-    auto mpthf = std::make_shared<multival>(dpt, dhf);
+    auto mpthf = new multival(dpt, dhf);
 
-    auto irdphi = std::make_shared<interval>("#Delta#phi^{#gammaj}", rdphi);
+    auto irdphi = new interval("#Delta#phi^{#gammaj}", rdphi);
 
     auto nevt = std::make_unique<memory>("nevt"s, "", incl, mpthf);
     auto nmix = std::make_unique<memory>("nmix"s, "", incl, mpthf);

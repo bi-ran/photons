@@ -106,8 +106,8 @@ int64_t inosculate(char const* config, char const* output) {
     auto p = new pjtree(false, false, t, { 1, 0, 1, 0, 0, 0 });
 
     /* prepare histograms */
-    auto ihf = std::make_shared<interval>(dhf);
-    auto bins = std::make_shared<interval>("mass (GeV/c^{2})"s, 30, 60., 120.);
+    auto ihf = new interval(dhf);
+    auto bins = new interval("mass (GeV/c^{2})"s, 30, 60., 120.);
     std::vector<int64_t> shape = { 1, ihf->size() };
 
     auto minv = std::make_unique<history>("mass"s, "counts"s, bins, shape);

@@ -27,8 +27,7 @@ using namespace std::literals::string_literals;
 
 void fill_data(std::unique_ptr<memory>& see_iso,
                std::unique_ptr<memory>& see_noniso,
-               std::shared_ptr<multival>& mpthf,
-               TTree* t, pjtree* p, bool heavyion,
+               multival* mpthf, TTree* t, pjtree* p, bool heavyion,
                float pt_min, float eta_max, float hovere_max,
                float iso_max, float noniso_min, float noniso_max,
                float hf_min) {
@@ -74,8 +73,7 @@ void fill_data(std::unique_ptr<memory>& see_iso,
 }
 
 void fill_signal(std::unique_ptr<memory>& see,
-                 std::shared_ptr<multival>& mpthf,
-                 TTree* t, pjtree* p, bool heavyion,
+                 multival* mpthf, TTree* t, pjtree* p, bool heavyion,
                  float pt_min, float eta_max, float hovere_max,
                  float hf_min) {
     printf("fill signal\n");
@@ -190,14 +188,12 @@ int tessellate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    auto rsee = std::make_shared<interval>("#sigma_{#eta#eta}",
-        see_nbins, see_low, see_high);
+    auto rsee = new interval("#sigma_{#eta#eta}", see_nbins, see_low, see_high);
 
-    auto incl = std::make_shared<interval>(1, 0., 1.);
-    auto ipt = std::make_shared<interval>(dpt);
-    auto ihf = std::make_shared<interval>(dhf);
+    auto incl = new interval(1, 0., 1.);
+    auto ipt = new interval(dpt);
 
-    auto mpthf = std::make_shared<multival>(dpt, dhf);
+    auto mpthf = new multival(dpt, dhf);
 
     auto see_data = std::make_unique<memory>("sigma_ieta_ieta_data"s,
         "counts", rsee, mpthf);
@@ -255,7 +251,7 @@ int tessellate(char const* config, char const* output) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
 
     auto pthf_info = [&](int64_t index) {
-        stack_text(index, 0.75, 0.04, mpthf.get(), pt_info, hf_info); };
+        stack_text(index, 0.75, 0.04, mpthf, pt_info, hf_info); };
 
     auto purity_info = [&](int64_t index) {
         char buffer[128] = { '\0' };
