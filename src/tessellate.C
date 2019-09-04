@@ -175,9 +175,7 @@ int tessellate(char const* config, char const* output) {
     auto noniso_max = conf->get<float>("noniso_max");
     auto see_max = conf->get<float>("see_max");
 
-    auto see_nbins = conf->get<int64_t>("see_nbins");
-    auto see_low = conf->get<float>("see_low");
-    auto see_high = conf->get<float>("see_high");
+    auto see_range = conf->get<std::vector<double>>("see_range");
     auto rfit = conf->get<std::vector<float>>("rfit");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
@@ -187,7 +185,8 @@ int tessellate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    auto rsee = new interval("#sigma_{#eta#eta}", see_nbins, see_low, see_high);
+    auto rsee = new interval("#sigma_{#eta#eta}",
+        (int64_t)see_range[0], see_range[1], see_range[2]);
 
     auto incl = new interval(1, 0., 1.);
     auto ipt = new interval(dpt);
