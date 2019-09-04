@@ -25,9 +25,8 @@
 
 using namespace std::literals::string_literals;
 
-void fill_data(std::unique_ptr<memory>& see_iso,
-               std::unique_ptr<memory>& see_noniso,
-               multival* mpthf, TTree* t, pjtree* p, bool heavyion,
+void fill_data(memory* see_iso, memory* see_noniso, multival* mpthf,
+               TTree* t, pjtree* p, bool heavyion,
                float pt_min, float eta_max, float hovere_max,
                float iso_max, float noniso_min, float noniso_max,
                float hf_min) {
@@ -72,8 +71,8 @@ void fill_data(std::unique_ptr<memory>& see_iso,
     printf("\n");
 }
 
-void fill_signal(std::unique_ptr<memory>& see,
-                 multival* mpthf, TTree* t, pjtree* p, bool heavyion,
+void fill_signal(memory* see, multival* mpthf,
+                 TTree* t, pjtree* p, bool heavyion,
                  float pt_min, float eta_max, float hovere_max,
                  float hf_min) {
     printf("fill signal\n");
@@ -195,15 +194,11 @@ int tessellate(char const* config, char const* output) {
 
     auto mpthf = new multival(dpt, dhf);
 
-    auto see_data = std::make_unique<memory>("sigma_ieta_ieta_data"s,
-        "counts", rsee, mpthf);
-    auto see_sig = std::make_unique<memory>("sigma_ieta_ieta_sig"s,
-        "counts", rsee, mpthf);
-    auto see_bkg = std::make_unique<memory>("sigma_ieta_ieta_bkg"s,
-        "counts", rsee, mpthf);
+    auto see_data = new memory("sigma_ieta_ieta_data"s, "counts", rsee, mpthf);
+    auto see_sig = new memory("sigma_ieta_ieta_sig"s, "counts", rsee, mpthf);
+    auto see_bkg = new memory("sigma_ieta_ieta_bkg"s, "counts", rsee, mpthf);
 
-    auto purity = std::make_unique<memory>("pthf"s,
-        "purity"s, incl, mpthf);
+    auto purity = new memory("pthf"s, "purity"s, incl, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

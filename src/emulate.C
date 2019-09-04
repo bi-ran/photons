@@ -50,7 +50,7 @@ int emulate(char const* config, char const* output) {
 
     auto count = static_cast<int64_t>(pthats.size());
     auto incl = new interval(1L, 0., 1.);
-    auto pthat = std::make_unique<history>("pthat"s, "", incl, count);
+    auto pthat = new history("pthat"s, "", incl, count);
 
     pthats.push_back(999999);
     for (int64_t i = 0; i < count; ++i) {
@@ -67,7 +67,7 @@ int emulate(char const* config, char const* output) {
     printf("\n");
 
     /* calculate vz weights */
-    auto vz = std::make_unique<history>("vz"s, "", ivz, 3L);
+    auto vz = new history("vz"s, "", ivz, 3L);
 
     TChain* tdata = new TChain("pj");
     tdata->Add(data.data());

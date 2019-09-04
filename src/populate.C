@@ -22,18 +22,18 @@ using namespace std::literals::string_literals;
 using namespace std::placeholders;
 
 template <typename... T>
-void scale(double factor, std::unique_ptr<T>&... args) {
+void scale(double factor, T*... args) {
     (void)(int [sizeof...(T)]) { (args->scale(factor), 0)... };
 }
 
 template <typename... T>
-void scale_bin_width(std::unique_ptr<T>&... args) {
+void scale_bin_width(T*... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
         obj->Scale(1., "width"); }), 0)... };
 }
 
 template <typename... T>
-void scale_ia_bin_width(std::unique_ptr<T>&... args) {
+void scale_ia_bin_width(T*... args) {
     (void)(int [sizeof...(T)]) { (args->apply([](TH1* obj) {
         for (int64_t i = 1; i <= obj->GetNbinsX(); ++i) {
             auto width = revert_radian(obj->GetBinWidth(i));
@@ -43,19 +43,19 @@ void scale_ia_bin_width(std::unique_ptr<T>&... args) {
 }
 
 template <typename... T>
-void title(std::function<void(TH1*)> f, std::unique_ptr<T>&... args) {
+void title(std::function<void(TH1*)> f, T*... args) {
     (void)(int [sizeof...(T)]) { (args->apply(f), 0)... };
 }
 
 void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                double photon_pt, float photon_eta, int64_t photon_phi,
                int64_t pthf_x,
-               std::unique_ptr<memory>& nevt,
-               std::unique_ptr<memory>& pjet_es_f_dphi,
-               std::unique_ptr<memory>& pjet_wta_f_dphi,
-               std::unique_ptr<memory>& pjet_f_x,
-               std::unique_ptr<memory>& pjet_f_ddr,
-               std::unique_ptr<memory>& pjet_f_jpt) {
+               memory* nevt,
+               memory* pjet_es_f_dphi,
+               memory* pjet_wta_f_dphi,
+               memory* pjet_f_x,
+               memory* pjet_f_ddr,
+               memory* pjet_f_jpt) {
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
@@ -180,29 +180,29 @@ int populate(char const* config, char const* output) {
 
     auto irdphi = new interval("#Delta#phi^{#gammaj}", rdphi);
 
-    auto nevt = std::make_unique<memory>("nevt"s, "", incl, mpthf);
-    auto nmix = std::make_unique<memory>("nmix"s, "", incl, mpthf);
+    auto nevt = new memory("nevt"s, "", incl, mpthf);
+    auto nmix = new memory("nmix"s, "", incl, mpthf);
 
-    auto pjet_es_f_dphi = std::make_unique<memory>("pjet_es_f_dphi"s,
+    auto pjet_es_f_dphi = new memory("pjet_es_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto pjet_wta_f_dphi = std::make_unique<memory>("pjet_wta_f_dphi"s,
+    auto pjet_wta_f_dphi = new memory("pjet_wta_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto pjet_f_x = std::make_unique<memory>("pjet_f_x"s,
+    auto pjet_f_x = new memory("pjet_f_x"s,
         "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
-    auto pjet_f_ddr = std::make_unique<memory>("pjet_f_ddr"s,
+    auto pjet_f_ddr = new memory("pjet_f_ddr"s,
         "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
-    auto pjet_f_jpt = std::make_unique<memory>("pjet_f_jpt"s,
+    auto pjet_f_jpt = new memory("pjet_f_jpt"s,
         "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
-    auto mix_pjet_es_f_dphi = std::make_unique<memory>("mix_pjet_es_f_dphi"s,
+    auto mix_pjet_es_f_dphi = new memory("mix_pjet_es_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto mix_pjet_wta_f_dphi = std::make_unique<memory>("mix_pjet_wta_f_dphi"s,
+    auto mix_pjet_wta_f_dphi = new memory("mix_pjet_wta_f_dphi"s,
         "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
-    auto mix_pjet_f_x = std::make_unique<memory>("mix_pjet_f_x"s,
+    auto mix_pjet_f_x = new memory("mix_pjet_f_x"s,
         "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
-    auto mix_pjet_f_ddr = std::make_unique<memory>("mix_pjet_f_ddr",
+    auto mix_pjet_f_ddr = new memory("mix_pjet_f_ddr",
         "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
-    auto mix_pjet_f_jpt = std::make_unique<memory>("mix_pjet_f_jpt"s,
+    auto mix_pjet_f_jpt = new memory("mix_pjet_f_jpt"s,
         "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
     /* manage memory manually */

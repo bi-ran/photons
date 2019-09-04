@@ -94,9 +94,9 @@ int distillate(char const* config, char const* output) {
     auto s = new history("s"s, "", ival, obj->shape());
     auto r = new history("r"s, "", ival, obj->shape());
 
-    auto s_f_pt = std::make_unique<history>("s_f_pt"s,
+    auto s_f_pt = new history("s_f_pt"s,
         label.data(), "jet p_{T}", rpt, etahf_shape);
-    auto r_f_pt = std::make_unique<history>("r_f_pt"s,
+    auto r_f_pt = new history("r_f_pt"s,
         title.data(), "jet p_{T}", rpt, etahf_shape);
 
     /* differential in pt, hf */
@@ -105,9 +105,9 @@ int distillate(char const* config, char const* output) {
     auto s_dpthf = new history("s_dpthf", "", ival, pthf_shape);
     auto r_dpthf = new history("r_dpthf", "", ival, pthf_shape);
 
-    auto s_dhf_f_pt = std::make_unique<history>("s_dhf_f_pt"s,
+    auto s_dhf_f_pt = new history("s_dhf_f_pt"s,
         label.data(), "jet p_{T}", rpt, hf_shape);
-    auto r_dhf_f_pt = std::make_unique<history>("r_dhf_f_pt"s,
+    auto r_dhf_f_pt = new history("r_dhf_f_pt"s,
         title.data(), "jet p_{T}", rpt, hf_shape);
 
     /* differential in eta, hf */
@@ -117,9 +117,9 @@ int distillate(char const* config, char const* output) {
     auto s_detahf = new history("s_detahf", "", ival, etahf_shape);
     auto r_detahf = new history("r_detahf", "", ival, etahf_shape);
 
-    auto s_dhf_f_eta = std::make_unique<history>("s_dhf_f_eta"s,
+    auto s_dhf_f_eta = new history("s_dhf_f_eta"s,
         label.data(), "jet #eta", reta, hf_shape);
-    auto r_dhf_f_eta = std::make_unique<history>("r_dhf_f_eta"s,
+    auto r_dhf_f_eta = new history("r_dhf_f_eta"s,
         title.data(), "jet #eta", reta, hf_shape);
 
     /* load fitting parameters */
