@@ -172,21 +172,21 @@ int populate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    auto incl = new interval(1, 0.f, 9999.f);
     auto ipt = new interval(dpt);
     auto ihf = new interval(dhf);
 
     auto mpthf = new multival(dpt, dhf);
 
-    auto irdphi = new interval("#Delta#phi^{#gammaj}", rdphi);
+    auto mincl = new multival(""s, 1, 0.f, 9999.f);
+    auto mdphi = new multival("#Delta#phi^{#gammaj}"s, rdphi);
 
-    auto nevt = new memory<TH1F>("nevt"s, "", incl, mpthf);
-    auto nmix = new memory<TH1F>("nmix"s, "", incl, mpthf);
+    auto nevt = new memory<TH1F>("nevt"s, "", mincl, mpthf);
+    auto nmix = new memory<TH1F>("nmix"s, "", mincl, mpthf);
 
     auto pjet_es_f_dphi = new memory<TH1F>("pjet_es_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
     auto pjet_wta_f_dphi = new memory<TH1F>("pjet_wta_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
     auto pjet_f_x = new memory<TH1F>("pjet_f_x"s,
         "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
     auto pjet_f_ddr = new memory<TH1F>("pjet_f_ddr"s,
@@ -195,9 +195,9 @@ int populate(char const* config, char const* output) {
         "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
 
     auto mix_pjet_es_f_dphi = new memory<TH1F>("mix_pjet_es_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
     auto mix_pjet_wta_f_dphi = new memory<TH1F>("mix_pjet_wta_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", irdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
     auto mix_pjet_f_x = new memory<TH1F>("mix_pjet_f_x"s,
         "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
     auto mix_pjet_f_ddr = new memory<TH1F>("mix_pjet_f_ddr",

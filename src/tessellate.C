@@ -175,7 +175,7 @@ int tessellate(char const* config, char const* output) {
     auto noniso_max = conf->get<float>("noniso_max");
     auto see_max = conf->get<float>("see_max");
 
-    auto see_range = conf->get<std::vector<double>>("see_range");
+    auto rsee = conf->get<std::vector<float>>("rsee");
     auto rfit = conf->get<std::vector<float>>("rfit");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
@@ -185,22 +185,19 @@ int tessellate(char const* config, char const* output) {
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
-    auto rsee = new interval("#sigma_{#eta#eta}",
-        see_range[0], see_range[1], see_range[2]);
-
-    auto incl = new interval(1, 0., 1.);
-    auto ipt = new interval(dpt);
-
+    /* prepare histograms */
     auto mpthf = new multival(dpt, dhf);
 
-    auto see_data = new memory<TH1F>("sigma_ieta_ieta_data"s,
-        "counts", rsee, mpthf);
-    auto see_sig = new memory<TH1F>("sigma_ieta_ieta_sig"s,
-        "counts", rsee, mpthf);
-    auto see_bkg = new memory<TH1F>("sigma_ieta_ieta_bkg"s,
-        "counts", rsee, mpthf);
+    auto mincl = new multival(""s, 1, 0., 1.);
+    auto msee = new multival("#sigma_{#eta#eta}"s, rsee[0], rsee[1], rsee[2]);
 
-    auto purity = new memory<TH1F>("pthf"s, "purity"s, incl, mpthf);
+    auto ipt = new interval(dpt);
+
+    auto see_data = new memory<TH1F>("see_data"s, "counts", msee, mpthf);
+    auto see_sig = new memory<TH1F>("see_sig"s, "counts", msee, mpthf);
+    auto see_bkg = new memory<TH1F>("see_bkg"s, "counts", msee, mpthf);
+
+    auto purity = new memory<TH1F>("pthf"s, "purity"s, mincl, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

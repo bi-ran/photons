@@ -78,7 +78,7 @@ int distillate(char const* config, char const* output) {
     auto obj = new history<TH1F>(f, tag + "_" + object);
 
     /* prepare histograms */
-    auto ival = new interval(1, 0., 1.);
+    auto mincl = new multival(""s, 1, 0., 1.);
 
     auto ipt = new interval(dpt);
     auto ieta = new interval(deta);
@@ -91,8 +91,8 @@ int distillate(char const* config, char const* output) {
     auto title = "#sigma("s + label + ")";
 
     /* fully differential (pt, eta, hf) */
-    auto s = new history<TH1F>("s"s, "", ival, obj->shape());
-    auto r = new history<TH1F>("r"s, "", ival, obj->shape());
+    auto s = new history<TH1F>("s"s, "", mincl, obj->shape());
+    auto r = new history<TH1F>("r"s, "", mincl, obj->shape());
 
     auto s_f_pt = new history<TH1F>("s_f_pt"s,
         label.data(), "jet p_{T}", rpt, etahf_shape);
@@ -102,8 +102,8 @@ int distillate(char const* config, char const* output) {
     /* differential in pt, hf */
     auto obj_dpthf = obj->sum(1);
 
-    auto s_dpthf = new history<TH1F>("s_dpthf", "", ival, pthf_shape);
-    auto r_dpthf = new history<TH1F>("r_dpthf", "", ival, pthf_shape);
+    auto s_dpthf = new history<TH1F>("s_dpthf", "", mincl, pthf_shape);
+    auto r_dpthf = new history<TH1F>("r_dpthf", "", mincl, pthf_shape);
 
     auto s_dhf_f_pt = new history<TH1F>("s_dhf_f_pt"s,
         label.data(), "jet p_{T}", rpt, hf_shape);
@@ -114,8 +114,8 @@ int distillate(char const* config, char const* output) {
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
     auto obj_detahf = obj->shrink("valid", resize, remove)->sum(0);
 
-    auto s_detahf = new history<TH1F>("s_detahf", "", ival, etahf_shape);
-    auto r_detahf = new history<TH1F>("r_detahf", "", ival, etahf_shape);
+    auto s_detahf = new history<TH1F>("s_detahf", "", mincl, etahf_shape);
+    auto r_detahf = new history<TH1F>("r_detahf", "", mincl, etahf_shape);
 
     auto s_dhf_f_eta = new history<TH1F>("s_dhf_f_eta"s,
         label.data(), "jet #eta", reta, hf_shape);

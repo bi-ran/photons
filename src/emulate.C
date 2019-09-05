@@ -33,7 +33,7 @@ int emulate(char const* config, char const* output) {
     auto rpthat = conf->get<std::vector<float>>("pthat_range");
     auto rvz = conf->get<std::vector<float>>("vz_range");
 
-    auto ivz = new interval("v_{z}"s, rvz[0], rvz[1], rvz[2]);
+    auto ivz = new multival("v_{z}"s, rvz[0], rvz[1], rvz[2]);
 
     /* manange memory manually */
     TH1::AddDirectory(false);
@@ -48,9 +48,9 @@ int emulate(char const* config, char const* output) {
     TChain* tbase = new TChain("pj");
     tbase->Add(files[0].data());
 
+    auto mincl = new multival(""s, 1L, 0., 1.);
     auto count = static_cast<int64_t>(pthats.size());
-    auto incl = new interval(1L, 0., 1.);
-    auto pthat = new history<TH1F>("pthat"s, "", incl, count);
+    auto pthat = new history<TH1F>("pthat"s, "", mincl, count);
 
     pthats.push_back(999999);
     for (int64_t i = 0; i < count; ++i) {

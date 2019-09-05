@@ -48,7 +48,9 @@ int fabulate(char const* config, char const* output) {
     auto rdr = conf->get<std::vector<float>>("dr_range");
     auto rde = conf->get<std::vector<float>>("de_range");
     auto rdp = conf->get<std::vector<float>>("dp_range");
-    auto rda = conf->get<std::vector<float>>("da_range");
+
+    auto rar = conf->get<std::vector<float>>("ar_range");
+    auto rag = conf->get<std::vector<float>>("ag_range");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto deta = conf->get<std::vector<float>>("eta_diff");
@@ -58,20 +60,24 @@ int fabulate(char const* config, char const* output) {
     auto hf_min = dhf.front();
 
     /* prepare histograms */
-    auto ies = new interval("energy scale"s, res[0], res[1], res[2]);
-    auto idr = new interval("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
-    auto ide = new interval("#delta#eta"s, rde[0], rde[1], rde[2]);
-    auto idp = new interval("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
-    auto ida = new interval("#deltaj"s, rda[0], rda[1], rda[2]);
-
     auto mptetahf = new multival(dpt, deta, dhf);
 
-    auto scale = new memory<TH1F>("scale"s, "counts", ies, mptetahf);
-    auto angle = new memory<TH1F>("angle"s, "counts", idr, mptetahf);
-    auto eta = new memory<TH1F>("eta"s, "counts", ide, mptetahf);
-    auto phi = new memory<TH1F>("phi"s, "counts", idp, mptetahf);
+    auto mes = new multival("energy scale"s, res[0], res[1], res[2]);
+    auto mdr = new multival("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
+    auto mde = new multival("#delta#eta"s, rde[0], rde[1], rde[2]);
+    auto mdp = new multival("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
 
-    auto axis = new memory<TH2F>("axis"s, "#deltaj"s, ida, mptetahf);
+    auto iar = new interval("#deltaj"s, rar[0], rar[1], rar[2]);
+    auto iag = new interval("#deltaj"s, rag[0], rag[1], rag[2]);
+
+    auto marag = new multival(*iar, *iag);
+
+    auto scale = new memory<TH1F>("scale"s, "counts", mes, mptetahf);
+    auto angle = new memory<TH1F>("angle"s, "counts", mdr, mptetahf);
+    auto eta = new memory<TH1F>("eta"s, "counts", mde, mptetahf);
+    auto phi = new memory<TH1F>("phi"s, "counts", mdp, mptetahf);
+
+    auto axis = new memory<TH2F>("axis"s, "counts", marag, mptetahf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
