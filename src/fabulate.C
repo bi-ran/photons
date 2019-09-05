@@ -11,6 +11,7 @@
 
 #include "TFile.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "TTree.h"
 
 #include <string>
@@ -49,6 +50,7 @@ int fabulate(char const* config, char const* output) {
     auto rdr = conf->get<std::vector<float>>("dr_range");
     auto rde = conf->get<std::vector<float>>("de_range");
     auto rdp = conf->get<std::vector<float>>("dp_range");
+    auto rda = conf->get<std::vector<float>>("da_range");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto deta = conf->get<std::vector<float>>("eta_diff");
@@ -62,6 +64,7 @@ int fabulate(char const* config, char const* output) {
     auto idr = new interval("#deltar^{2}"s, (int64_t)rdr[0], rdr[1], rdr[2]);
     auto ide = new interval("#delta#eta"s, (int64_t)rde[0], rde[1], rde[2]);
     auto idp = new interval("#delta#phi"s, (int64_t)rdp[0], rdp[1], rdp[2]);
+    auto ida = new interval("#deltaj"s, (int64_t)rda[0], rda[1], rda[2]);
 
     auto mptetahf = new multival(dpt, deta, dhf);
 
@@ -69,6 +72,8 @@ int fabulate(char const* config, char const* output) {
     auto angle = new memory<TH1F>("angle"s, "counts", idr, mptetahf);
     auto eta = new memory<TH1F>("eta"s, "counts", ide, mptetahf);
     auto phi = new memory<TH1F>("phi"s, "counts", idp, mptetahf);
+
+    auto axis = new memory<TH2F>("axis"s, "#deltaj"s, ida, mptetahf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -101,6 +106,10 @@ int fabulate(char const* config, char const* output) {
             exclusion.push_back(j);
         }
 
+        std::unordered_map<float, int64_t> genid;
+        for (int64_t j = 0; j < p->ngen; ++j)
+            genid[(*p->genpt)[j]] = j;
+
         for (int64_t j = 0; j < p->nref; ++j) {
             if ((*p->subid)[j] > 0) { continue; }
 
@@ -112,8 +121,8 @@ int fabulate(char const* config, char const* output) {
 
             bool match = false;
             for (auto const& index : exclusion) {
-                if (dr2((*p->mcEta)[index], (*p->geneta)[j],
-                        (*p->mcPhi)[index], (*p->genphi)[j]) < 0.01) {
+                if (dr2((*p->mcEta)[index], (*p->refeta)[j],
+                        (*p->mcPhi)[index], (*p->refphi)[j]) < 0.01) {
                     match = true; break; }
             }
 
@@ -124,16 +133,25 @@ int fabulate(char const* config, char const* output) {
 
             auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
 
+            (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
+
             auto deta = (*p->jteta)[j] - (*p->refeta)[j];
             auto dphi = revert_radian(convert_radian((*p->jtphi)[j])
                 - convert_radian((*p->refphi)[j]));
 
-            (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
+            (*eta)[index]->Fill(deta, p->weight);
+            (*phi)[index]->Fill(dphi, p->weight);
+
             (*angle)[index]->Fill(sgn((*p->refphi)[j])
                 * (deta * deta + dphi * dphi), p->weight);
 
-            (*eta)[index]->Fill(deta, p->weight);
-            (*phi)[index]->Fill(dphi, p->weight);
+            auto id = genid[gen_pt];
+            auto rdr2 = dr2((*p->jteta)[j], (*p->WTAeta)[j],
+                            (*p->jtphi)[j], (*p->WTAphi)[j]);
+            auto gdr2 = dr2((*p->refeta)[j], (*p->WTAgeneta)[id],
+                            (*p->refphi)[j], (*p->WTAgenphi)[id]);
+
+            (*axis)[index]->Fill(std::sqrt(rdr2), std::sqrt(gdr2), p->weight);
         }
     }
 
@@ -141,9 +159,10 @@ int fabulate(char const* config, char const* output) {
     in(output, [&]() {
         scale->save(tag);
         angle->save(tag);
-
         eta->save(tag);
         phi->save(tag);
+
+        axis->save(tag);
     });
 
     return 0;
