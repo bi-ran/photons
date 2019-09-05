@@ -33,7 +33,7 @@ int emulate(char const* config, char const* output) {
     auto rpthat = conf->get<std::vector<float>>("pthat_range");
     auto rvz = conf->get<std::vector<float>>("vz_range");
 
-    auto ivz = new interval("v_{z}"s, (int64_t)rvz[0], rvz[1], rvz[2]);
+    auto ivz = new interval("v_{z}"s, rvz[0], rvz[1], rvz[2]);
 
     /* manange memory manually */
     TH1::AddDirectory(false);

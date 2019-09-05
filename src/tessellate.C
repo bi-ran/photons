@@ -186,7 +186,7 @@ int tessellate(char const* config, char const* output) {
     auto hf_min = dhf.front();
 
     auto rsee = new interval("#sigma_{#eta#eta}",
-        (int64_t)see_range[0], see_range[1], see_range[2]);
+        see_range[0], see_range[1], see_range[2]);
 
     auto incl = new interval(1, 0., 1.);
     auto ipt = new interval(dpt);

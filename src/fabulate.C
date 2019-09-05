@@ -31,9 +31,7 @@ static float dr2(float eta1, float eta2, float phi1, float phi2) {
 }
 
 template <typename T>
-static int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
+static int sgn(T val) { return (T(0) < val) - (val < T(0)); }
 
 int fabulate(char const* config, char const* output) {
     auto conf = new configurer(config);
@@ -60,11 +58,11 @@ int fabulate(char const* config, char const* output) {
     auto hf_min = dhf.front();
 
     /* prepare histograms */
-    auto ies = new interval("energy scale"s, (int64_t)res[0], res[1], res[2]);
-    auto idr = new interval("#deltar^{2}"s, (int64_t)rdr[0], rdr[1], rdr[2]);
-    auto ide = new interval("#delta#eta"s, (int64_t)rde[0], rde[1], rde[2]);
-    auto idp = new interval("#delta#phi"s, (int64_t)rdp[0], rdp[1], rdp[2]);
-    auto ida = new interval("#deltaj"s, (int64_t)rda[0], rda[1], rda[2]);
+    auto ies = new interval("energy scale"s, res[0], res[1], res[2]);
+    auto idr = new interval("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
+    auto ide = new interval("#delta#eta"s, rde[0], rde[1], rde[2]);
+    auto idp = new interval("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
+    auto ida = new interval("#deltaj"s, rda[0], rda[1], rda[2]);
 
     auto mptetahf = new multival(dpt, deta, dhf);
 
