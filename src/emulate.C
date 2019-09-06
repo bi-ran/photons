@@ -3,6 +3,7 @@
 
 #include "../git/config/include/configurer.h"
 
+#include "../git/history/include/multival.h"
 #include "../git/history/include/history.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
@@ -20,6 +21,7 @@
 #include <vector>
 
 using namespace std::literals::string_literals;
+using namespace std::placeholders;
 
 int emulate(char const* config, char const* output) {
     auto conf = new configurer(config);
@@ -32,8 +34,6 @@ int emulate(char const* config, char const* output) {
 
     auto rpthat = conf->get<std::vector<float>>("pthat_range");
     auto rvz = conf->get<std::vector<float>>("vz_range");
-
-    auto ivz = new multival("v_{z}"s, rvz[0], rvz[1], rvz[2]);
 
     /* manange memory manually */
     TH1::AddDirectory(false);
@@ -48,9 +48,12 @@ int emulate(char const* config, char const* output) {
     TChain* tbase = new TChain("pj");
     tbase->Add(files[0].data());
 
-    auto mincl = new multival(""s, 1L, 0., 1.);
     auto count = static_cast<int64_t>(pthats.size());
-    auto pthat = new history<TH1F>("pthat"s, "", mincl, count);
+
+    auto mincl = new multival(""s, 1L, 0., 1.);
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
+
+    auto pthat = new history<TH1F>("pthat"s, "", fincl, count);
 
     pthats.push_back(999999);
     for (int64_t i = 0; i < count; ++i) {
@@ -67,7 +70,10 @@ int emulate(char const* config, char const* output) {
     printf("\n");
 
     /* calculate vz weights */
-    auto vz = new history<TH1F>("vz"s, "", ivz, 3L);
+    auto mvz = new multival("v_{z}"s, rvz[0], rvz[1], rvz[2]);
+    auto fvz = std::bind(&multival::book<TH1F>, mvz, _1, _2);
+
+    auto vz = new history<TH1F>("vz"s, "", fvz, 3L);
 
     TChain* tdata = new TChain("pj");
     tdata->Add(data.data());

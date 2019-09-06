@@ -78,8 +78,6 @@ int distillate(char const* config, char const* output) {
     auto obj = new history<TH1F>(f, tag + "_" + object);
 
     /* prepare histograms */
-    auto mincl = new multival(""s, 1, 0., 1.);
-
     auto ipt = new interval(dpt);
     auto ieta = new interval(deta);
     auto ihf = new interval(dhf);
@@ -88,39 +86,45 @@ int distillate(char const* config, char const* output) {
     auto pthf_shape = x{ ipt->size(), ihf->size() };
     auto etahf_shape = x{ ieta->size(), ihf->size() };
 
+    auto mincl = new multival(""s, 1, 0., 1.);
+    auto mpt = new multival("jet p_{T}"s, rpt);
+    auto meta = new multival("jet #eta"s, reta);
+
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
+    auto fpt = std::bind(&multival::book<TH1F>, mpt, _1, _2);
+    auto feta = std::bind(&multival::book<TH1F>, meta, _1, _2);
+
     auto title = "#sigma("s + label + ")";
 
     /* fully differential (pt, eta, hf) */
-    auto s = new history<TH1F>("s"s, "", mincl, obj->shape());
-    auto r = new history<TH1F>("r"s, "", mincl, obj->shape());
+    auto s = new history<TH1F>("s"s, "", fincl, obj->shape());
+    auto r = new history<TH1F>("r"s, "", fincl, obj->shape());
 
-    auto s_f_pt = new history<TH1F>("s_f_pt"s,
-        label.data(), "jet p_{T}", rpt, etahf_shape);
-    auto r_f_pt = new history<TH1F>("r_f_pt"s,
-        title.data(), "jet p_{T}", rpt, etahf_shape);
+    auto s_f_pt = new history<TH1F>("s_f_pt"s, label.data(), fpt, etahf_shape);
+    auto r_f_pt = new history<TH1F>("r_f_pt"s, title.data(), fpt, etahf_shape);
 
     /* differential in pt, hf */
     auto obj_dpthf = obj->sum(1);
 
-    auto s_dpthf = new history<TH1F>("s_dpthf", "", mincl, pthf_shape);
-    auto r_dpthf = new history<TH1F>("r_dpthf", "", mincl, pthf_shape);
+    auto s_dpthf = new history<TH1F>("s_dpthf", "", fincl, pthf_shape);
+    auto r_dpthf = new history<TH1F>("r_dpthf", "", fincl, pthf_shape);
 
     auto s_dhf_f_pt = new history<TH1F>("s_dhf_f_pt"s,
-        label.data(), "jet p_{T}", rpt, hf_shape);
+        label.data(), fpt, hf_shape);
     auto r_dhf_f_pt = new history<TH1F>("r_dhf_f_pt"s,
-        title.data(), "jet p_{T}", rpt, hf_shape);
+        title.data(), fpt, hf_shape);
 
     /* differential in eta, hf */
     std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
     auto obj_detahf = obj->shrink("valid", resize, remove)->sum(0);
 
-    auto s_detahf = new history<TH1F>("s_detahf", "", mincl, etahf_shape);
-    auto r_detahf = new history<TH1F>("r_detahf", "", mincl, etahf_shape);
+    auto s_detahf = new history<TH1F>("s_detahf", "", fincl, etahf_shape);
+    auto r_detahf = new history<TH1F>("r_detahf", "", fincl, etahf_shape);
 
     auto s_dhf_f_eta = new history<TH1F>("s_dhf_f_eta"s,
-        label.data(), "jet #eta", reta, hf_shape);
+        label.data(), feta, hf_shape);
     auto r_dhf_f_eta = new history<TH1F>("r_dhf_f_eta"s,
-        title.data(), "jet #eta", reta, hf_shape);
+        title.data(), feta, hf_shape);
 
     /* load fitting parameters */
     auto fl = new std::vector<float>*[ihf->size()];

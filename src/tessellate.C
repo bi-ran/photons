@@ -24,6 +24,7 @@
 #include <vector>
 
 using namespace std::literals::string_literals;
+using namespace std::placeholders;
 
 void fill_data(memory<TH1F>* see_iso, memory<TH1F>* see_noniso,
                multival* mpthf, TTree* t, pjtree* p, bool heavyion,
@@ -191,13 +192,16 @@ int tessellate(char const* config, char const* output) {
     auto mincl = new multival(""s, 1, 0., 1.);
     auto msee = new multival("#sigma_{#eta#eta}"s, rsee[0], rsee[1], rsee[2]);
 
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
+    auto fsee = std::bind(&multival::book<TH1F>, msee, _1, _2);
+
     auto ipt = new interval(dpt);
 
-    auto see_data = new memory<TH1F>("see_data"s, "counts", msee, mpthf);
-    auto see_sig = new memory<TH1F>("see_sig"s, "counts", msee, mpthf);
-    auto see_bkg = new memory<TH1F>("see_bkg"s, "counts", msee, mpthf);
+    auto see_data = new memory<TH1F>("see_data"s, "counts", fsee, mpthf);
+    auto see_sig = new memory<TH1F>("see_sig"s, "counts", fsee, mpthf);
+    auto see_bkg = new memory<TH1F>("see_bkg"s, "counts", fsee, mpthf);
 
-    auto purity = new memory<TH1F>("pthf"s, "purity"s, mincl, mpthf);
+    auto purity = new memory<TH1F>("pthf"s, "purity"s, fincl, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

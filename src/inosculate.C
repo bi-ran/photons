@@ -4,6 +4,7 @@
 
 #include "../git/config/include/configurer.h"
 
+#include "../git/history/include/multival.h"
 #include "../git/history/include/history.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
@@ -110,7 +111,9 @@ int64_t inosculate(char const* config, char const* output) {
     std::vector<int64_t> shape = { 1, ihf->size() };
 
     auto mmass = new multival("mass (GeV/c^{2})"s, 30, 60., 120.);
-    auto minv = new history<TH1F>("mass"s, "counts"s, mmass, shape);
+    auto fmass = std::bind(&multival::book<TH1F>, mmass, _1, _2);
+
+    auto minv = new history<TH1F>("mass"s, "counts"s, fmass, shape);
 
     TRandom3* gen = new TRandom3(144);
 

@@ -18,6 +18,7 @@
 #include <vector>
 
 using namespace std::literals::string_literals;
+using namespace std::placeholders;
 
 static bool in_hem_failure_region(float eta, float phi) {
     return (eta < -1.242 && -1.72 < phi && phi < -0.72);
@@ -72,12 +73,19 @@ int fabulate(char const* config, char const* output) {
 
     auto marag = new multival(*iar, *iag);
 
-    auto scale = new memory<TH1F>("scale"s, "counts", mes, mptetahf);
-    auto angle = new memory<TH1F>("angle"s, "counts", mdr, mptetahf);
-    auto eta = new memory<TH1F>("eta"s, "counts", mde, mptetahf);
-    auto phi = new memory<TH1F>("phi"s, "counts", mdp, mptetahf);
+    auto fes = std::bind(&multival::book<TH1F>, mes, _1, _2);
+    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2);
+    auto fde = std::bind(&multival::book<TH1F>, mde, _1, _2);
+    auto fdp = std::bind(&multival::book<TH1F>, mdp, _1, _2);
 
-    auto axis = new memory<TH2F>("axis"s, "counts", marag, mptetahf);
+    auto farag = std::bind(&multival::book<TH2F>, marag, _1, _2);
+
+    auto scale = new memory<TH1F>("scale"s, "counts", fes, mptetahf);
+    auto angle = new memory<TH1F>("angle"s, "counts", fdr, mptetahf);
+    auto eta = new memory<TH1F>("eta"s, "counts", fde, mptetahf);
+    auto phi = new memory<TH1F>("phi"s, "counts", fdp, mptetahf);
+
+    auto axis = new memory<TH2F>("axis"s, "counts", farag, mptetahf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);

@@ -179,31 +179,40 @@ int populate(char const* config, char const* output) {
 
     auto mincl = new multival(""s, 1, 0.f, 9999.f);
     auto mdphi = new multival("#Delta#phi^{#gammaj}"s, rdphi);
+    auto mx = new multival("x^{#gammaj}"s, rx);
+    auto mdr = new multival("#deltaj"s, rdr);
+    auto mjpt = new multival("p_{T}^{j}"s, rjpt);
 
-    auto nevt = new memory<TH1F>("nevt"s, "", mincl, mpthf);
-    auto nmix = new memory<TH1F>("nmix"s, "", mincl, mpthf);
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
+    auto fdphi = std::bind(&multival::book<TH1F>, mdphi, _1, _2);
+    auto fx = std::bind(&multival::book<TH1F>, mx, _1, _2);
+    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2);
+    auto fjpt = std::bind(&multival::book<TH1F>, mjpt, _1, _2);
+
+    auto nevt = new memory<TH1F>("nevt"s, "", fincl, mpthf);
+    auto nmix = new memory<TH1F>("nmix"s, "", fincl, mpthf);
 
     auto pjet_es_f_dphi = new memory<TH1F>("pjet_es_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", fdphi, mpthf);
     auto pjet_wta_f_dphi = new memory<TH1F>("pjet_wta_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", fdphi, mpthf);
     auto pjet_f_x = new memory<TH1F>("pjet_f_x"s,
-        "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
+        "1/N^{#gamma} dN/dx^{#gammaj}", fx, mpthf);
     auto pjet_f_ddr = new memory<TH1F>("pjet_f_ddr"s,
-        "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
+        "1/N^{#gamma} dN/d#deltaj", fdr, mpthf);
     auto pjet_f_jpt = new memory<TH1F>("pjet_f_jpt"s,
-        "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
+        "1/N^{#gamma} dN/dp_{T}^{j}", fjpt, mpthf);
 
     auto mix_pjet_es_f_dphi = new memory<TH1F>("mix_pjet_es_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", fdphi, mpthf);
     auto mix_pjet_wta_f_dphi = new memory<TH1F>("mix_pjet_wta_f_dphi"s,
-        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", mdphi, mpthf);
+        "1/N^{#gamma} dN/d#Delta#phi^{#gammaj}", fdphi, mpthf);
     auto mix_pjet_f_x = new memory<TH1F>("mix_pjet_f_x"s,
-        "1/N^{#gamma} dN/dx^{#gammaj}", "x^{#gammaj}", rx, mpthf);
+        "1/N^{#gamma} dN/dx^{#gammaj}", fx, mpthf);
     auto mix_pjet_f_ddr = new memory<TH1F>("mix_pjet_f_ddr",
-        "1/N^{#gamma} dN/d#deltaj", "#deltaj", rdr, mpthf);
+        "1/N^{#gamma} dN/d#deltaj", fdr, mpthf);
     auto mix_pjet_f_jpt = new memory<TH1F>("mix_pjet_f_jpt"s,
-        "1/N^{#gamma} dN/dp_{T}^{j}", "p_{T}^{j}", rjpt, mpthf);
+        "1/N^{#gamma} dN/dp_{T}^{j}", fjpt, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
