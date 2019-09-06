@@ -92,9 +92,8 @@ int speculate(char const* config, char const* output) {
     }
 
     /* calculate efficiency */
-    auto frame = (TH1F*)(*counts)[0]->Clone("frame");
-    frame->GetYaxis()->SetTitle("efficiency");
-    frame->Reset("MICES");
+    auto hframe = frame((*counts)[0]->GetXaxis(), (*counts)[0]->GetYaxis());
+    hframe->GetYaxis()->SetTitle("efficiency");
 
     auto eff = new TGraphAsymmErrors((*counts)[1], (*counts)[0],
         "c1=0.683 b(1,1) mode");
@@ -107,7 +106,7 @@ int speculate(char const* config, char const* output) {
     apply_style(c1, system + " #sqrt{s} = 5.02 TeV"s, 0., 1.2);
     c1->accessory(std::bind(line_at, _1, 1., rpt.front(), rpt.back()));
 
-    c1->add(frame);
+    c1->add(hframe);
     c1->stack(eff, system);
 
     hb->sketch();
