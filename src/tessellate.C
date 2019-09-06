@@ -192,8 +192,8 @@ int tessellate(char const* config, char const* output) {
     auto mincl = new multival(""s, 1, 0., 1.);
     auto msee = new multival("#sigma_{#eta#eta}"s, rsee[0], rsee[1], rsee[2]);
 
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
-    auto fsee = std::bind(&multival::book<TH1F>, msee, _1, _2);
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
+    auto fsee = std::bind(&multival::book<TH1F>, msee, _1, _2, _3);
 
     auto ipt = new interval(dpt);
 

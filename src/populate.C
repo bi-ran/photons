@@ -183,11 +183,11 @@ int populate(char const* config, char const* output) {
     auto mdr = new multival("#deltaj"s, rdr);
     auto mjpt = new multival("p_{T}^{j}"s, rjpt);
 
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
-    auto fdphi = std::bind(&multival::book<TH1F>, mdphi, _1, _2);
-    auto fx = std::bind(&multival::book<TH1F>, mx, _1, _2);
-    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2);
-    auto fjpt = std::bind(&multival::book<TH1F>, mjpt, _1, _2);
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
+    auto fdphi = std::bind(&multival::book<TH1F>, mdphi, _1, _2, _3);
+    auto fx = std::bind(&multival::book<TH1F>, mx, _1, _2, _3);
+    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2, _3);
+    auto fjpt = std::bind(&multival::book<TH1F>, mjpt, _1, _2, _3);
 
     auto nevt = new memory<TH1F>("nevt"s, "", fincl, mpthf);
     auto nmix = new memory<TH1F>("nmix"s, "", fincl, mpthf);

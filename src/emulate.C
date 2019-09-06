@@ -51,7 +51,7 @@ int emulate(char const* config, char const* output) {
     auto count = static_cast<int64_t>(pthats.size());
 
     auto mincl = new multival(""s, 1L, 0., 1.);
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
 
     auto pthat = new history<TH1F>("pthat"s, "", fincl, count);
 
@@ -71,7 +71,7 @@ int emulate(char const* config, char const* output) {
 
     /* calculate vz weights */
     auto mvz = new multival("v_{z}"s, rvz[0], rvz[1], rvz[2]);
-    auto fvz = std::bind(&multival::book<TH1F>, mvz, _1, _2);
+    auto fvz = std::bind(&multival::book<TH1F>, mvz, _1, _2, _3);
 
     auto vz = new history<TH1F>("vz"s, "", fvz, 3L);
 

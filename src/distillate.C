@@ -90,9 +90,9 @@ int distillate(char const* config, char const* output) {
     auto mpt = new multival("jet p_{T}"s, rpt);
     auto meta = new multival("jet #eta"s, reta);
 
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2);
-    auto fpt = std::bind(&multival::book<TH1F>, mpt, _1, _2);
-    auto feta = std::bind(&multival::book<TH1F>, meta, _1, _2);
+    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
+    auto fpt = std::bind(&multival::book<TH1F>, mpt, _1, _2, _3);
+    auto feta = std::bind(&multival::book<TH1F>, meta, _1, _2, _3);
 
     auto title = "#sigma("s + label + ")";
 

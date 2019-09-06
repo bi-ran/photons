@@ -111,7 +111,7 @@ int64_t inosculate(char const* config, char const* output) {
     std::vector<int64_t> shape = { 1, ihf->size() };
 
     auto mmass = new multival("mass (GeV/c^{2})"s, 30, 60., 120.);
-    auto fmass = std::bind(&multival::book<TH1F>, mmass, _1, _2);
+    auto fmass = std::bind(&multival::book<TH1F>, mmass, _1, _2, _3);
 
     auto minv = new history<TH1F>("mass"s, "counts"s, fmass, shape);
 

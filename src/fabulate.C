@@ -73,12 +73,12 @@ int fabulate(char const* config, char const* output) {
 
     auto marag = new multival(*iar, *iag);
 
-    auto fes = std::bind(&multival::book<TH1F>, mes, _1, _2);
-    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2);
-    auto fde = std::bind(&multival::book<TH1F>, mde, _1, _2);
-    auto fdp = std::bind(&multival::book<TH1F>, mdp, _1, _2);
+    auto fes = std::bind(&multival::book<TH1F>, mes, _1, _2, _3);
+    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2, _3);
+    auto fde = std::bind(&multival::book<TH1F>, mde, _1, _2, _3);
+    auto fdp = std::bind(&multival::book<TH1F>, mdp, _1, _2, _3);
 
-    auto farag = std::bind(&multival::book<TH2F>, marag, _1, _2);
+    auto farag = std::bind(&multival::book<TH2F>, marag, _1, _2, _3);
 
     auto scale = new memory<TH1F>("scale"s, "counts", fes, mptetahf);
     auto angle = new memory<TH1F>("angle"s, "counts", fdr, mptetahf);
