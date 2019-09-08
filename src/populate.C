@@ -55,7 +55,9 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
                memory<TH1F>* pjet_wta_f_dphi,
                memory<TH1F>* pjet_f_x,
                memory<TH1F>* pjet_f_ddr,
-               memory<TH1F>* pjet_f_jpt) {
+               memory<TH1F>* pjet_f_jpt,
+               multival* mr,
+               memory<TH1F>* pjet_f_r) {
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
@@ -90,9 +92,11 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
 
         double jt_deta = jet_eta - jet_wta_eta;
         double jt_dphi = revert_radian(jet_phi - jet_wta_phi);
-        double jt_dr = jt_deta * jt_deta + jt_dphi * jt_dphi;
+        double jt_dr = std::sqrt(jt_deta * jt_deta + jt_dphi * jt_dphi);
 
-        (*pjet_f_ddr)[pthf_x]->Fill(std::sqrt(jt_dr));
+        (*pjet_f_ddr)[pthf_x]->Fill(jt_dr);
+
+        (*pjet_f_r)[pthf_x]->Fill(mr->index_for(v{jt_dr, jet_pt}));
     }
 }
 
@@ -163,6 +167,9 @@ int populate(char const* config, char const* output) {
     auto rx = conf->get<std::vector<float>>("x_range");
     auto rdr = conf->get<std::vector<float>>("dr_range");
 
+    auto rdrr = conf->get<std::vector<float>>("drr_range");
+    auto rptr = conf->get<std::vector<float>>("ptr_range");
+
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
 
@@ -183,11 +190,16 @@ int populate(char const* config, char const* output) {
     auto idr = new interval("#deltaj"s, rdr);
     auto ijpt = new interval("p_{T}^{j}"s, rjpt);
 
+    auto mr = new multival(rdrr, rptr);
+
     auto fincl = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
     auto fdphi = std::bind(&interval::book<TH1F>, idphi, _1, _2, _3);
     auto fx = std::bind(&interval::book<TH1F>, ix, _1, _2, _3);
     auto fdr = std::bind(&interval::book<TH1F>, idr, _1, _2, _3);
     auto fjpt = std::bind(&interval::book<TH1F>, ijpt, _1, _2, _3);
+
+    auto fr = [&](int64_t, std::string const& name, std::string const&) {
+        return new TH1F(name.data(), ";index;", mr->size(), 0, mr->size()); };
 
     auto nevt = new memory<TH1F>("nevt"s, "", fincl, mpthf);
     auto nmix = new memory<TH1F>("nmix"s, "", fincl, mpthf);
@@ -213,6 +225,9 @@ int populate(char const* config, char const* output) {
         "1/N^{#gamma} dN/d#deltaj", fdr, mpthf);
     auto mix_pjet_f_jpt = new memory<TH1F>("mix_pjet_f_jpt"s,
         "1/N^{#gamma} dN/dp_{T}^{j}", fjpt, mpthf);
+
+    auto pjet_f_r = new memory<TH1F>("pjet_f_r"s, "", fr, mpthf);
+    auto mix_pjet_f_r = new memory<TH1F>("mix_pjet_f_r"s, "", fr, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -309,7 +324,8 @@ int populate(char const* config, char const* output) {
         fill_axes(pjt, jet_pt_min, jet_eta_abs,
                   photon_pt, photon_eta, photon_phi, pthf_x,
                   nevt, pjet_es_f_dphi, pjet_wta_f_dphi,
-                  pjet_f_x, pjet_f_ddr, pjet_f_jpt);
+                  pjet_f_x, pjet_f_ddr, pjet_f_jpt,
+                  mr, pjet_f_r);
 
         /* mixing events in minimum bias */
         for (int64_t k = 0; k < mix; m = (m + 1) % mentries) {
@@ -321,7 +337,8 @@ int populate(char const* config, char const* output) {
             fill_axes(pjtm, jet_pt_min, jet_eta_abs,
                       photon_pt, photon_eta, photon_phi, pthf_x,
                       nmix, mix_pjet_es_f_dphi, mix_pjet_wta_f_dphi,
-                      mix_pjet_f_x, mix_pjet_f_ddr, mix_pjet_f_jpt);
+                      mix_pjet_f_x, mix_pjet_f_ddr, mix_pjet_f_jpt,
+                      mr, mix_pjet_f_r);
 
             ++k;
         }
@@ -334,7 +351,8 @@ int populate(char const* config, char const* output) {
             mix_pjet_wta_f_dphi,
             mix_pjet_f_ddr,
             mix_pjet_f_x,
-            mix_pjet_f_jpt);
+            mix_pjet_f_jpt,
+            mix_pjet_f_r);
 
     /* scale by bin width */
     scale_bin_width(
@@ -357,12 +375,14 @@ int populate(char const* config, char const* output) {
     pjet_f_x->divide(*nevt);
     pjet_f_ddr->divide(*nevt);
     pjet_f_jpt->divide(*nevt);
+    pjet_f_r->divide(*nevt);
 
     mix_pjet_es_f_dphi->divide(*nevt);
     mix_pjet_wta_f_dphi->divide(*nevt);
     mix_pjet_f_x->divide(*nevt);
     mix_pjet_f_ddr->divide(*nevt);
     mix_pjet_f_jpt->divide(*nevt);
+    mix_pjet_f_r->divide(*nevt);
 
     /* subtract histograms */
     auto sub_pjet_es_f_dphi = new memory<TH1F>(*pjet_es_f_dphi, "sub");
@@ -370,12 +390,14 @@ int populate(char const* config, char const* output) {
     auto sub_pjet_f_x = new memory<TH1F>(*pjet_f_x, "sub");
     auto sub_pjet_f_ddr = new memory<TH1F>(*pjet_f_ddr, "sub");
     auto sub_pjet_f_jpt = new memory<TH1F>(*pjet_f_jpt, "sub");
+    auto sub_pjet_f_r = new memory<TH1F>(*pjet_f_r, "sub");
 
     *sub_pjet_es_f_dphi -= *mix_pjet_es_f_dphi;
     *sub_pjet_wta_f_dphi -= *mix_pjet_wta_f_dphi;
     *sub_pjet_f_x -= *mix_pjet_f_x;
     *sub_pjet_f_ddr -= *mix_pjet_f_ddr;
     *sub_pjet_f_jpt -= *mix_pjet_f_jpt;
+    *sub_pjet_f_r -= *mix_pjet_f_r;
 
     /* save histograms */
     in(output, [&]() {
@@ -387,18 +409,21 @@ int populate(char const* config, char const* output) {
         pjet_f_x->save(tag);
         pjet_f_ddr->save(tag);
         pjet_f_jpt->save(tag);
+        pjet_f_r->save(tag);
 
         mix_pjet_es_f_dphi->save(tag);
         mix_pjet_wta_f_dphi->save(tag);
         mix_pjet_f_x->save(tag);
         mix_pjet_f_ddr->save(tag);
         mix_pjet_f_jpt->save(tag);
+        mix_pjet_f_r->save(tag);
 
         sub_pjet_es_f_dphi->save(tag);
         sub_pjet_wta_f_dphi->save(tag);
         sub_pjet_f_x->save(tag);
         sub_pjet_f_ddr->save(tag);
         sub_pjet_f_jpt->save(tag);
+        sub_pjet_f_r->save(tag);
     });
 
     printf("destroying objects..\n");
