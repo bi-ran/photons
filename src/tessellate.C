@@ -189,11 +189,11 @@ int tessellate(char const* config, char const* output) {
     /* prepare histograms */
     auto mpthf = new multival(dpt, dhf);
 
-    auto mincl = new multival(""s, 1, 0., 1.);
-    auto msee = new multival("#sigma_{#eta#eta}"s, rsee[0], rsee[1], rsee[2]);
+    auto incl = new interval(""s, 1, 0., 1.);
+    auto isee = new interval("#sigma_{#eta#eta}"s, rsee[0], rsee[1], rsee[2]);
 
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
-    auto fsee = std::bind(&multival::book<TH1F>, msee, _1, _2, _3);
+    auto fincl = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
+    auto fsee = std::bind(&interval::book<TH1F>, isee, _1, _2, _3);
 
     auto ipt = new interval(dpt);
 

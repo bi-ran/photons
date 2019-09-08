@@ -3,7 +3,7 @@
 
 #include "../git/config/include/configurer.h"
 
-#include "../git/history/include/multival.h"
+#include "../git/history/include/interval.h"
 #include "../git/history/include/history.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
@@ -50,8 +50,8 @@ int emulate(char const* config, char const* output) {
 
     auto count = static_cast<int64_t>(pthats.size());
 
-    auto mincl = new multival(""s, 1L, 0., 1.);
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
+    auto incl = new interval(""s, 1L, 0., 1.);
+    auto fincl = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
 
     auto pthat = new history<TH1F>("pthat"s, "", fincl, count);
 
@@ -70,8 +70,8 @@ int emulate(char const* config, char const* output) {
     printf("\n");
 
     /* calculate vz weights */
-    auto mvz = new multival("v_{z}"s, rvz[0], rvz[1], rvz[2]);
-    auto fvz = std::bind(&multival::book<TH1F>, mvz, _1, _2, _3);
+    auto ivz = new interval("v_{z}"s, rvz[0], rvz[1], rvz[2]);
+    auto fvz = std::bind(&interval::book<TH1F>, ivz, _1, _2, _3);
 
     auto vz = new history<TH1F>("vz"s, "", fvz, 3L);
 

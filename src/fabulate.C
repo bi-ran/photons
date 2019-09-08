@@ -63,20 +63,20 @@ int fabulate(char const* config, char const* output) {
     /* prepare histograms */
     auto mptetahf = new multival(dpt, deta, dhf);
 
-    auto mes = new multival("energy scale"s, res[0], res[1], res[2]);
-    auto mdr = new multival("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
-    auto mde = new multival("#delta#eta"s, rde[0], rde[1], rde[2]);
-    auto mdp = new multival("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
+    auto ies = new interval("energy scale"s, res[0], res[1], res[2]);
+    auto idr = new interval("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
+    auto ide = new interval("#delta#eta"s, rde[0], rde[1], rde[2]);
+    auto idp = new interval("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
 
     auto iar = new interval("#deltaj"s, rar[0], rar[1], rar[2]);
     auto iag = new interval("#deltaj"s, rag[0], rag[1], rag[2]);
 
     auto marag = new multival(*iar, *iag);
 
-    auto fes = std::bind(&multival::book<TH1F>, mes, _1, _2, _3);
-    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2, _3);
-    auto fde = std::bind(&multival::book<TH1F>, mde, _1, _2, _3);
-    auto fdp = std::bind(&multival::book<TH1F>, mdp, _1, _2, _3);
+    auto fes = std::bind(&interval::book<TH1F>, ies, _1, _2, _3);
+    auto fdr = std::bind(&interval::book<TH1F>, idr, _1, _2, _3);
+    auto fde = std::bind(&interval::book<TH1F>, ide, _1, _2, _3);
+    auto fdp = std::bind(&interval::book<TH1F>, idp, _1, _2, _3);
 
     auto farag = std::bind(&multival::book<TH2F>, marag, _1, _2, _3);
 

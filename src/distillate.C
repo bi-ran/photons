@@ -78,21 +78,21 @@ int distillate(char const* config, char const* output) {
     auto obj = new history<TH1F>(f, tag + "_" + object);
 
     /* prepare histograms */
-    auto ipt = new interval(dpt);
-    auto ieta = new interval(deta);
-    auto ihf = new interval(dhf);
+    auto idpt = new interval(dpt);
+    auto ideta = new interval(deta);
+    auto idhf = new interval(dhf);
 
-    auto hf_shape = x{ ihf->size() };
-    auto pthf_shape = x{ ipt->size(), ihf->size() };
-    auto etahf_shape = x{ ieta->size(), ihf->size() };
+    auto hf_shape = x{ idhf->size() };
+    auto pthf_shape = x{ idpt->size(), idhf->size() };
+    auto etahf_shape = x{ ideta->size(), idhf->size() };
 
-    auto mincl = new multival(""s, 1, 0., 1.);
-    auto mpt = new multival("jet p_{T}"s, rpt);
-    auto meta = new multival("jet #eta"s, reta);
+    auto incl = new interval(""s, 1, 0., 1.);
+    auto ipt = new interval("jet p_{T}"s, rpt);
+    auto ieta = new interval("jet #eta"s, reta);
 
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
-    auto fpt = std::bind(&multival::book<TH1F>, mpt, _1, _2, _3);
-    auto feta = std::bind(&multival::book<TH1F>, meta, _1, _2, _3);
+    auto fincl = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
+    auto fpt = std::bind(&interval::book<TH1F>, ipt, _1, _2, _3);
+    auto feta = std::bind(&interval::book<TH1F>, ieta, _1, _2, _3);
 
     auto title = "#sigma("s + label + ")";
 
@@ -115,7 +115,7 @@ int distillate(char const* config, char const* output) {
         title.data(), fpt, hf_shape);
 
     /* differential in eta, hf */
-    std::vector<int64_t> resize = {ipt->size() - 1, ieta->size(), ihf->size()};
+    auto resize = x{ idpt->size() - 1, ideta->size(), idhf->size() };
     auto obj_detahf = obj->shrink("valid", resize, remove)->sum(0);
 
     auto s_detahf = new history<TH1F>("s_detahf", "", fincl, etahf_shape);
@@ -127,21 +127,21 @@ int distillate(char const* config, char const* output) {
         title.data(), feta, hf_shape);
 
     /* load fitting parameters */
-    auto fl = new std::vector<float>*[ihf->size()];
-    auto fh = new std::vector<float>*[ihf->size()];
+    auto fl = new std::vector<float>*[idhf->size()];
+    auto fh = new std::vector<float>*[idhf->size()];
 
-    auto flp = new std::vector<float>[ihf->size()];
-    auto fhp = new std::vector<float>[ihf->size()];
-    auto fle = new std::vector<float>[ihf->size()];
-    auto fhe = new std::vector<float>[ihf->size()];
+    auto flp = new std::vector<float>[idhf->size()];
+    auto fhp = new std::vector<float>[idhf->size()];
+    auto fle = new std::vector<float>[idhf->size()];
+    auto fhe = new std::vector<float>[idhf->size()];
 
-    for (int64_t i = 0; i < ihf->size(); ++i) {
+    for (int64_t i = 0; i < idhf->size(); ++i) {
         auto hf_str = std::to_string(i);
 
-        fl[i] = new std::vector<float>[ieta->size()];
-        fh[i] = new std::vector<float>[ieta->size()];
+        fl[i] = new std::vector<float>[ideta->size()];
+        fh[i] = new std::vector<float>[ideta->size()];
 
-        for (int64_t j = 0; j < ieta->size(); ++j) {
+        for (int64_t j = 0; j < ideta->size(); ++j) {
             auto eta_str = std::to_string(j);
             fl[i][j] = conf->get<std::vector<float>>(
                 "fl_"s + hf_str + "_"s + eta_str);
@@ -195,7 +195,7 @@ int distillate(char const* config, char const* output) {
     auto c1 = new paper(tag_object + "_dpthf_sr_fits", hb);
     apply_style(c1, system_info);
     c1->accessory(pthf_info);
-    c1->divide(ipt->size(), -1);
+    c1->divide(idpt->size(), -1);
 
     /* fit obj and resolution */
     obj_dpthf->apply([&](TH1* h, int64_t index) {
@@ -226,7 +226,7 @@ int distillate(char const* config, char const* output) {
     auto c2 = new paper(tag_object + "_dhf_f_pt_s", hb);
     apply_style(c2, system_info);
     c2->accessory(std::bind(hf_info, _1, 0.75));
-    c2->divide(ihf->size(), -1);
+    c2->divide(idhf->size(), -1);
     c2->set(paper::flags::logx);
 
     s_dhf_f_pt->apply([&](TH1* h, int64_t index) {
@@ -245,7 +245,7 @@ int distillate(char const* config, char const* output) {
     auto c3 = new paper(tag_object + "_dhf_f_pt_r", hb);
     apply_style(c3, system_info);
     c3->accessory(std::bind(hf_info, _1, 0.75));
-    c3->divide(ihf->size(), -1);
+    c3->divide(idhf->size(), -1);
     c3->set(paper::flags::logx);
 
     r_dhf_f_pt->apply([&](TH1* h, int64_t index) {
@@ -272,7 +272,7 @@ int distillate(char const* config, char const* output) {
     auto c4 = new paper(tag_object + "_detahf_sr_fits", hb);
     apply_style(c4, system_info);
     c4->accessory(etahf_info);
-    c4->divide(ieta->size(), -1);
+    c4->divide(ideta->size(), -1);
 
     /* fit mean and resolution */
     obj_detahf->apply([&](TH1* h, int64_t index) {
@@ -303,7 +303,7 @@ int distillate(char const* config, char const* output) {
     auto c5 = new paper(tag_object + "_dhf_f_eta_s", hb);
     apply_style(c5, system_info);
     c5->accessory(std::bind(hf_info, _1, 0.75));
-    c5->divide(ihf->size(), -1);
+    c5->divide(idhf->size(), -1);
 
     s_dhf_f_eta->apply([&](TH1* h) {
         h->SetAxisRange(s_range[0], s_range[1], "Y");
@@ -312,35 +312,35 @@ int distillate(char const* config, char const* output) {
     auto c6 = new paper(tag_object + "_dhf_f_eta_r", hb);
     apply_style(c6, system_info);
     c6->accessory(std::bind(hf_info, _1, 0.75));
-    c6->divide(ihf->size(), -1);
+    c6->divide(idhf->size(), -1);
 
     r_dhf_f_eta->apply([&](TH1* h) {
         h->SetAxisRange(r_range[0], r_range[1], "Y");
         c6->add(h, "mc"); });
 
-    auto c7 = std::vector<paper*>(ieta->size());
-    auto c8 = std::vector<paper*>(ieta->size());
-    auto c9 = std::vector<paper*>(ieta->size());
+    auto c7 = std::vector<paper*>(ideta->size());
+    auto c8 = std::vector<paper*>(ideta->size());
+    auto c9 = std::vector<paper*>(ideta->size());
 
-    for (int64_t i = 0; i < ieta->size(); ++i) {
+    for (int64_t i = 0; i < ideta->size(); ++i) {
         c7[i] = new paper(tag_object + "_sr_fits_s" + std::to_string(i), hb);
         apply_style(c7[i], system_info);
         c7[i]->accessory(pthf_info);
         c7[i]->ornaments(std::bind(eta_info, i + 1, 0.67));
-        c7[i]->divide(ipt->size(), -1);
+        c7[i]->divide(idpt->size(), -1);
 
         c8[i] = new paper(tag_object + "_f_pt_s_s" + std::to_string(i), hb);
         apply_style(c8[i], system_info);
         c8[i]->accessory(std::bind(hf_info, _1, 0.75));
         c8[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
-        c8[i]->divide(ihf->size(), -1);
+        c8[i]->divide(idhf->size(), -1);
         c8[i]->set(paper::flags::logx);
 
         c9[i] = new paper(tag_object + "_f_pt_r_s" + std::to_string(i), hb);
         apply_style(c9[i], system_info);
         c9[i]->accessory(std::bind(hf_info, _1, 0.75));
         c9[i]->ornaments(std::bind(eta_info, i + 1, 0.71));
-        c9[i]->divide(ihf->size(), -1);
+        c9[i]->divide(idhf->size(), -1);
         c9[i]->set(paper::flags::logx);
     }
 

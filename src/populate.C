@@ -177,17 +177,17 @@ int populate(char const* config, char const* output) {
 
     auto mpthf = new multival(dpt, dhf);
 
-    auto mincl = new multival(""s, 1, 0.f, 9999.f);
-    auto mdphi = new multival("#Delta#phi^{#gammaj}"s, rdphi);
-    auto mx = new multival("x^{#gammaj}"s, rx);
-    auto mdr = new multival("#deltaj"s, rdr);
-    auto mjpt = new multival("p_{T}^{j}"s, rjpt);
+    auto incl = new interval(""s, 1, 0.f, 9999.f);
+    auto idphi = new interval("#Delta#phi^{#gammaj}"s, rdphi);
+    auto ix = new interval("x^{#gammaj}"s, rx);
+    auto idr = new interval("#deltaj"s, rdr);
+    auto ijpt = new interval("p_{T}^{j}"s, rjpt);
 
-    auto fincl = std::bind(&multival::book<TH1F>, mincl, _1, _2, _3);
-    auto fdphi = std::bind(&multival::book<TH1F>, mdphi, _1, _2, _3);
-    auto fx = std::bind(&multival::book<TH1F>, mx, _1, _2, _3);
-    auto fdr = std::bind(&multival::book<TH1F>, mdr, _1, _2, _3);
-    auto fjpt = std::bind(&multival::book<TH1F>, mjpt, _1, _2, _3);
+    auto fincl = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
+    auto fdphi = std::bind(&interval::book<TH1F>, idphi, _1, _2, _3);
+    auto fx = std::bind(&interval::book<TH1F>, ix, _1, _2, _3);
+    auto fdr = std::bind(&interval::book<TH1F>, idr, _1, _2, _3);
+    auto fjpt = std::bind(&interval::book<TH1F>, ijpt, _1, _2, _3);
 
     auto nevt = new memory<TH1F>("nevt"s, "", fincl, mpthf);
     auto nmix = new memory<TH1F>("nmix"s, "", fincl, mpthf);
