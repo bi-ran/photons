@@ -50,8 +50,10 @@ int fabulate(char const* config, char const* output) {
     auto rde = conf->get<std::vector<float>>("de_range");
     auto rdp = conf->get<std::vector<float>>("dp_range");
 
-    auto rar = conf->get<std::vector<float>>("ar_range");
-    auto rag = conf->get<std::vector<float>>("ag_range");
+    auto rdrr = conf->get<std::vector<float>>("drr_range");
+    auto rdrg = conf->get<std::vector<float>>("drg_range");
+    auto rptr = conf->get<std::vector<float>>("ptr_range");
+    auto rptg = conf->get<std::vector<float>>("ptg_range");
 
     auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto deta = conf->get<std::vector<float>>("eta_diff");
@@ -61,31 +63,43 @@ int fabulate(char const* config, char const* output) {
     auto hf_min = dhf.front();
 
     /* prepare histograms */
+    auto mhf = new multival(dhf);
     auto mptetahf = new multival(dpt, deta, dhf);
+
+    auto ihf = new interval(dhf);
 
     auto ies = new interval("energy scale"s, res[0], res[1], res[2]);
     auto idr = new interval("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
     auto ide = new interval("#delta#eta"s, rde[0], rde[1], rde[2]);
     auto idp = new interval("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
 
-    auto iar = new interval("#deltaj"s, rar[0], rar[1], rar[2]);
-    auto iag = new interval("#deltaj"s, rag[0], rag[1], rag[2]);
+    auto mcdr = new multival(rdrr, rdrg);
+    auto mcpt = new multival(rptr, rptg);
 
-    auto marag = new multival(*iar, *iag);
+    auto mr = new multival(rdrr, rptr);
+    auto mg = new multival(rdrg, rptg);
 
     auto fes = std::bind(&interval::book<TH1F>, ies, _1, _2, _3);
     auto fdr = std::bind(&interval::book<TH1F>, idr, _1, _2, _3);
     auto fde = std::bind(&interval::book<TH1F>, ide, _1, _2, _3);
     auto fdp = std::bind(&interval::book<TH1F>, idp, _1, _2, _3);
 
-    auto farag = std::bind(&multival::book<TH2F>, marag, _1, _2, _3);
+    auto fcdr = std::bind(&multival::book<TH2F>, mcdr, _1, _2, _3);
+    auto fcpt = std::bind(&multival::book<TH2F>, mcpt, _1, _2, _3);
+
+    auto fc = [&](int64_t, std::string const& name, std::string const& label) {
+        return new TH2F(name.data(), (";reco;gen;" + label).data(),
+            mr->size(), 0, mr->size(), mg->size(), 0, mg->size()); };
 
     auto scale = new memory<TH1F>("scale"s, "counts", fes, mptetahf);
     auto angle = new memory<TH1F>("angle"s, "counts", fdr, mptetahf);
     auto eta = new memory<TH1F>("eta"s, "counts", fde, mptetahf);
     auto phi = new memory<TH1F>("phi"s, "counts", fdp, mptetahf);
 
-    auto axis = new memory<TH2F>("axis"s, "counts", farag, mptetahf);
+    auto cdr = new memory<TH2F>("cdr"s, "counts", fcdr, mhf);
+    auto cpt = new memory<TH2F>("cpt"s, "counts", fcpt, mhf);
+
+    auto c = new memory<TH2F>("c"s, "counts", fc, mhf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -122,6 +136,8 @@ int fabulate(char const* config, char const* output) {
         for (int64_t j = 0; j < p->ngen; ++j)
             genid[(*p->genpt)[j]] = j;
 
+        auto hf_x = ihf->index_for(p->hiHF);
+
         for (int64_t j = 0; j < p->nref; ++j) {
             if ((*p->subid)[j] > 0) { continue; }
 
@@ -131,39 +147,49 @@ int fabulate(char const* config, char const* output) {
             auto gen_eta = (*p->refeta)[j];
             if (std::abs(gen_eta) >= eta_max) { continue; }
 
+            auto gen_phi = (*p->refphi)[j];
+
             bool match = false;
             for (auto const& index : exclusion) {
-                if (dr2((*p->mcEta)[index], (*p->refeta)[j],
-                        (*p->mcPhi)[index], (*p->refphi)[j]) < 0.01) {
+                if (dr2((*p->mcEta)[index], gen_eta,
+                        (*p->mcPhi)[index], gen_phi) < 0.01) {
                     match = true; break; }
             }
 
             if (match == true) { continue; }
 
-            if (heavyion && in_hem_failure_region(gen_eta, (*p->refphi)[j]))
+            if (heavyion && in_hem_failure_region(gen_eta, gen_phi))
                 continue;
+
+            auto reco_pt = (*p->jtpt)[j];
+            auto reco_eta = (*p->jteta)[j];
+            auto reco_phi = (*p->jtphi)[j];
 
             auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
 
-            (*scale)[index]->Fill((*p->jtpt)[j] / gen_pt, p->weight);
+            (*scale)[index]->Fill(reco_pt / gen_pt, p->weight);
 
-            auto deta = (*p->jteta)[j] - (*p->refeta)[j];
-            auto dphi = revert_radian(convert_radian((*p->jtphi)[j])
-                - convert_radian((*p->refphi)[j]));
+            auto deta = reco_eta - gen_eta;
+            auto dphi = revert_radian(convert_radian(reco_phi)
+                - convert_radian(gen_phi));
 
             (*eta)[index]->Fill(deta, p->weight);
             (*phi)[index]->Fill(dphi, p->weight);
 
-            (*angle)[index]->Fill(sgn((*p->refphi)[j])
-                * (deta * deta + dphi * dphi), p->weight);
+            (*angle)[index]->Fill(sgn(gen_phi) * (deta * deta + dphi * dphi),
+                                  p->weight);
 
             auto id = genid[gen_pt];
-            auto rdr2 = dr2((*p->jteta)[j], (*p->WTAeta)[j],
-                            (*p->jtphi)[j], (*p->WTAphi)[j]);
-            auto gdr2 = dr2((*p->refeta)[j], (*p->WTAgeneta)[id],
-                            (*p->refphi)[j], (*p->WTAgenphi)[id]);
+            auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
+                                     reco_phi, (*p->WTAphi)[j]));
+            auto gdr = std::sqrt(dr2(gen_eta, (*p->WTAgeneta)[id],
+                                     gen_phi, (*p->WTAgenphi)[id]));
 
-            (*axis)[index]->Fill(std::sqrt(rdr2), std::sqrt(gdr2), p->weight);
+            (*cdr)[hf_x]->Fill(rdr, gdr, p->weight);
+            (*cpt)[hf_x]->Fill(reco_pt, gen_pt, p->weight);
+            (*c)[hf_x]->Fill(mr->index_for(v{rdr, reco_pt}),
+                             mg->index_for(v{gdr, gen_pt}),
+                             p->weight);
         }
     }
 
@@ -174,7 +200,9 @@ int fabulate(char const* config, char const* output) {
         eta->save(tag);
         phi->save(tag);
 
-        axis->save(tag);
+        cdr->save(tag);
+        cpt->save(tag);
+        c->save(tag);
     });
 
     return 0;
