@@ -12,6 +12,7 @@
 
 #include "../git/tricks-and-treats/include/overflow_angles.h"
 #include "../git/tricks-and-treats/include/trunk.h"
+#include "../git/tricks-and-treats/include/zip.h"
 
 #include "TFile.h"
 #include "TH1.h"
@@ -219,119 +220,88 @@ int accumulate(char const* config, char const* output) {
 
     auto collisions = system + " #sqrt{s_{NN}} = 5.02 TeV"s;
 
-    auto c1 = new paper(tag + "_dphi_d_pt", hb);
-    apply_style(c1, collisions, -0.04, 0.24);
-    c1->accessory(std::bind(pt_info, _1, 0.75));
-    c1->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
-    c1->jewellery(redraw_dphi_axis);
-    c1->divide(-1, 1);
+    auto suffixes = { "d_pthf"s, "d_pt"s, "d_hf"s };
+    auto texts = std::vector<std::function<void(int64_t)>> {
+        pthf_info, std::bind(pt_info, _1, 0.75), std::bind(hf_info, _1, 0.75) };
 
-    nevt_d_pt->apply([&](TH1*, int64_t index) {
-        c1->add((*pjet_es_f_dphi_d_pt)[index], system, "es");
-        c1->stack((*pjet_wta_f_dphi_d_pt)[index], system, "wta");
-    });
+    std::vector<paper*> c1(3, nullptr);
+    std::vector<paper*> c2(3, nullptr);
+    std::vector<paper*> c3(3, nullptr);
+    std::vector<paper*> c4(3, nullptr);
 
-    auto c2 = new paper(tag + "_dphi_d_hf", hb);
-    apply_style(c2, collisions, -0.04, 0.24);
-    c2->accessory(std::bind(hf_info, _1, 0.75));
-    c2->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
-    c2->jewellery(redraw_dphi_axis);
-    c2->divide(-1, 1);
+    zip([&](paper*& c, int64_t rows, std::string const& suffix,
+            std::function<void(int64_t)> text) {
+        c = new paper(tag + "_dphi_" + suffix, hb);
+        c->divide(-1, rows);
+        c->accessory(text);
 
-    nevt_d_hf->apply([&](TH1*, int64_t index) {
-        c2->add((*pjet_es_f_dphi_d_hf)[index], system, "es");
-        c2->stack((*pjet_wta_f_dphi_d_hf)[index], system, "wta");
-    });
-
-    auto c3 = new paper(tag + "_x_d_pt", hb);
-    apply_style(c3, collisions, -0.1, 1.5);
-    c3->accessory(std::bind(pt_info, _1, 0.75));
-    c3->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
-    c3->divide(-1, 1);
-
-    pjet_f_x_d_pt->apply([&](TH1* h) { c3->add(h, system); });
-
-    auto c4 = new paper(tag + "_x_d_hf", hb);
-    apply_style(c4, collisions, -0.1, 1.5);
-    c4->accessory(std::bind(hf_info, _1, 0.75));
-    c4->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
-    c4->divide(-1, 1);
-
-    pjet_f_x_d_hf->apply([&](TH1* h) { c4->add(h, system); });
-
-    auto c5 = new paper(tag + "_ddr_d_pt", hb);
-    apply_style(c5, collisions, -2., 27.);
-    c5->accessory(std::bind(pt_info, _1, 0.75));
-    c5->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
-    c5->divide(-1, 1);
-
-    pjet_f_ddr_d_pt->apply([&](TH1* h) { c5->add(h, system); });
-
-    auto c6 = new paper(tag + "_ddr_d_hf", hb);
-    apply_style(c6, collisions, -2., 27.);
-    c6->accessory(std::bind(hf_info, _1, 0.75));
-    c6->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
-    c6->divide(-1, 1);
-
-    pjet_f_ddr_d_hf->apply([&](TH1* h) { c6->add(h, system); });
-
-    auto c7 = new paper(tag + "_jpt_d_pt", hb);
-    apply_style(c7, collisions, -0.001, 0.02);
-    c7->accessory(std::bind(pt_info, _1, 0.75));
-    c7->accessory(std::bind(line_at, _1, 0.f, rjpt[0], rjpt[1]));
-    c7->divide(-1, 1);
-
-    pjet_f_jpt_d_pt->apply([&](TH1* h) { c7->add(h, system); });
-
-    auto c8 = new paper(tag + "_jpt_d_hf", hb);
-    apply_style(c8, collisions, -0.001, 0.02);
-    c8->accessory(std::bind(hf_info, _1, 0.75));
-    c8->accessory(std::bind(line_at, _1, 0.f, rjpt[0], rjpt[1]));
-    c8->divide(-1, 1);
-
-    pjet_f_jpt_d_hf->apply([&](TH1* h) { c8->add(h, system); });
-
-    auto c9 = new paper(tag + "_dphi_d_pthf", hb);
-    apply_style(c9, collisions, -0.04, 0.24);
-    c9->accessory(pthf_info);
-    c9->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
-    c9->jewellery(redraw_dphi_axis);
-    c9->divide(-1, ihf->size());
+        apply_style(c, collisions, -0.04, 0.24);
+        c->accessory(std::bind(line_at, _1, 0.f, rdphi[0], rdphi[1]));
+        c->jewellery(redraw_dphi_axis);
+    }, c1, x{ ihf->size(), 1L, 1L }, suffixes, texts);
 
     nevt->apply([&](TH1*, int64_t index) {
-        c9->add((*pjet_es_f_dphi)[index], system, "es");
-        c9->stack((*pjet_wta_f_dphi)[index], system, "wta");
+        c1[0]->add((*pjet_es_f_dphi)[index], system, "es");
+        c1[0]->stack((*pjet_wta_f_dphi)[index], system, "wta");
     });
 
-    auto ca = new paper(tag + "_x_d_pthf", hb);
-    apply_style(ca, collisions, -0.1, 1.5);
-    ca->accessory(pthf_info);
-    ca->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
-    ca->divide(-1, ihf->size());
+    nevt_d_pt->apply([&](TH1*, int64_t index) {
+        c1[1]->add((*pjet_es_f_dphi_d_pt)[index], system, "es");
+        c1[1]->stack((*pjet_wta_f_dphi_d_pt)[index], system, "wta");
+    });
 
-    pjet_f_x->apply([&](TH1* h) { ca->add(h, system); });
+    nevt_d_hf->apply([&](TH1*, int64_t index) {
+        c1[2]->add((*pjet_es_f_dphi_d_hf)[index], system, "es");
+        c1[2]->stack((*pjet_wta_f_dphi_d_hf)[index], system, "wta");
+    });
 
-    auto cb = new paper(tag + "_ddr_d_pthf", hb);
-    apply_style(cb, collisions, -2., 27.);
-    cb->accessory(pthf_info);
-    cb->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
-    cb->divide(-1, ihf->size());
+    zip([&](paper*& c, int64_t rows, std::string const& suffix,
+            std::function<void(int64_t)> text) {
+        c = new paper(tag + "_x_" + suffix, hb);
+        c->divide(-1, rows);
+        c->accessory(text);
 
-    pjet_f_ddr->apply([&](TH1* h) { cb->add(h, system); });
+        apply_style(c, collisions, -0.1, 1.5);
+        c->accessory(std::bind(line_at, _1, 0.f, rx[0], rx[1]));
+    }, c2, x{ ihf->size(), 1L, 1L }, suffixes, texts);
 
-    auto cc = new paper(tag + "_jpt_d_pthf", hb);
-    apply_style(cc, collisions, -0.001, 0.02);
-    cc->accessory(pthf_info);
-    cc->accessory(std::bind(line_at, _1, 0.f, rjpt[0], rjpt[1]));
-    cc->divide(-1, ihf->size());
+    pjet_f_x->apply([&](TH1* h) { c2[0]->add(h, system); });
+    pjet_f_x_d_pt->apply([&](TH1* h) { c2[1]->add(h, system); });
+    pjet_f_x_d_hf->apply([&](TH1* h) { c2[2]->add(h, system); });
 
-    pjet_f_jpt->apply([&](TH1* h) { cc->add(h, system); });
+    zip([&](paper*& c, int64_t rows, std::string const& suffix,
+            std::function<void(int64_t)> text) {
+        c = new paper(tag + "_ddr_" + suffix, hb);
+        c->divide(-1, rows);
+        c->accessory(text);
+
+        apply_style(c, collisions, -2., 27.);
+        c->accessory(std::bind(line_at, _1, 0.f, rdr[0], rdr[1]));
+    }, c3, x{ ihf->size(), 1L, 1L }, suffixes, texts);
+
+    pjet_f_ddr->apply([&](TH1* h) { c3[0]->add(h, system); });
+    pjet_f_ddr_d_pt->apply([&](TH1* h) { c3[1]->add(h, system); });
+    pjet_f_ddr_d_hf->apply([&](TH1* h) { c3[2]->add(h, system); });
+
+    zip([&](paper*& c, int64_t rows, std::string const& suffix,
+            std::function<void(int64_t)> text) {
+        c = new paper(tag + "_jpt_" + suffix, hb);
+        c->divide(-1, rows);
+        c->accessory(text);
+
+        apply_style(c, collisions, -0.001, 0.02);
+        c->accessory(std::bind(line_at, _1, 0.f, rjpt[0], rjpt[1]));
+    }, c4, x{ ihf->size(), 1L, 1L }, suffixes, texts);
+
+    pjet_f_jpt->apply([&](TH1* h) { c4[0]->add(h, system); });
+    pjet_f_jpt_d_pt->apply([&](TH1* h) { c4[1]->add(h, system); });
+    pjet_f_jpt_d_hf->apply([&](TH1* h) { c4[2]->add(h, system); });
 
     hb->set_binary("system");
     hb->sketch();
 
-    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9, ca, cb, cc })
-        c->draw("pdf");
+    for (auto const& c : { c1, c2, c3, c4 })
+        for (auto p : c) { p->draw("pdf"); }
 
     return 0;
 }
