@@ -11,6 +11,7 @@
 
 #include "TFile.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "TTree.h"
 
 #include <string>
@@ -30,49 +31,46 @@ static float dr2(float eta1, float eta2, float phi1, float phi2) {
     return deta * deta + dphi * dphi;
 }
 
-template <typename T>
-static int sgn(T val) { return (T(0) < val) - (val < T(0)); }
-
-int fabulate(char const* config, char const* output) {
+int vacillate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
     auto input = conf->get<std::string>("input");
     auto tag = conf->get<std::string>("tag");
 
     auto heavyion = conf->get<bool>("heavyion");
-
-    auto pt_min = conf->get<float>("pt_min");
     auto eta_max = conf->get<float>("eta_max");
 
-    auto res = conf->get<std::vector<float>>("es_range");
-    auto rdr = conf->get<std::vector<float>>("dr_range");
-    auto rde = conf->get<std::vector<float>>("de_range");
-    auto rdp = conf->get<std::vector<float>>("dp_range");
+    auto rdrr = conf->get<std::vector<float>>("drr_range");
+    auto rdrg = conf->get<std::vector<float>>("drg_range");
+    auto rptr = conf->get<std::vector<float>>("ptr_range");
+    auto rptg = conf->get<std::vector<float>>("ptg_range");
 
-    auto dpt = conf->get<std::vector<float>>("pt_diff");
-    auto deta = conf->get<std::vector<float>>("eta_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
 
     /* exclude most peripheral events */
     auto hf_min = dhf.front();
 
     /* prepare histograms */
-    auto mptetahf = new multival(dpt, deta, dhf);
+    auto ihf = new interval(dhf);
+    auto mhf = new multival(dhf);
 
-    auto ies = new interval("energy scale"s, res[0], res[1], res[2]);
-    auto idr = new interval("#deltar^{2}"s, rdr[0], rdr[1], rdr[2]);
-    auto ide = new interval("#delta#eta"s, rde[0], rde[1], rde[2]);
-    auto idp = new interval("#delta#phi"s, rdp[0], rdp[1], rdp[2]);
+    auto mcdr = new multival(rdrr, rdrg);
+    auto mcpt = new multival(rptr, rptg);
 
-    auto fes = std::bind(&interval::book<TH1F>, ies, _1, _2, _3);
-    auto fdr = std::bind(&interval::book<TH1F>, idr, _1, _2, _3);
-    auto fde = std::bind(&interval::book<TH1F>, ide, _1, _2, _3);
-    auto fdp = std::bind(&interval::book<TH1F>, idp, _1, _2, _3);
+    auto mr = new multival(rdrr, rptr);
+    auto mg = new multival(rdrg, rptg);
 
-    auto scale = new memory<TH1F>("scale"s, "counts", fes, mptetahf);
-    auto angle = new memory<TH1F>("angle"s, "counts", fdr, mptetahf);
-    auto eta = new memory<TH1F>("eta"s, "counts", fde, mptetahf);
-    auto phi = new memory<TH1F>("phi"s, "counts", fdp, mptetahf);
+    auto fcdr = std::bind(&multival::book<TH2F>, mcdr, _1, _2, _3);
+    auto fcpt = std::bind(&multival::book<TH2F>, mcpt, _1, _2, _3);
+
+    auto fc = [&](int64_t, std::string const& name, std::string const& label) {
+        return new TH2F(name.data(), (";reco;gen;" + label).data(),
+            mr->size(), 0, mr->size(), mg->size(), 0, mg->size()); };
+
+    auto cdr = new memory<TH2F>("cdr"s, "counts", fcdr, mhf);
+    auto cpt = new memory<TH2F>("cpt"s, "counts", fcpt, mhf);
+
+    auto c = new memory<TH2F>("c"s, "counts", fc, mhf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -105,16 +103,20 @@ int fabulate(char const* config, char const* output) {
             exclusion.push_back(j);
         }
 
+        std::unordered_map<float, int64_t> genid;
+        for (int64_t j = 0; j < p->ngen; ++j)
+            genid[(*p->genpt)[j]] = j;
+
+        auto hf_x = ihf->index_for(p->hiHF);
+
         for (int64_t j = 0; j < p->nref; ++j) {
             if ((*p->subid)[j] > 0) { continue; }
 
             auto gen_pt = (*p->refpt)[j];
-            if (gen_pt < pt_min) { continue; }
-
             auto gen_eta = (*p->refeta)[j];
-            if (std::abs(gen_eta) >= eta_max) { continue; }
-
             auto gen_phi = (*p->refphi)[j];
+
+            if (std::abs(gen_eta) >= eta_max) { continue; }
 
             bool match = false;
             for (auto const& index : exclusion) {
@@ -132,28 +134,29 @@ int fabulate(char const* config, char const* output) {
             auto reco_eta = (*p->jteta)[j];
             auto reco_phi = (*p->jtphi)[j];
 
-            auto index = mptetahf->index_for(v{gen_pt, gen_eta, p->hiHF});
+            if (reco_pt <= rptr.front() || reco_pt >= rptr.back())
+                continue;
 
-            (*scale)[index]->Fill(reco_pt / gen_pt, p->weight);
+            auto id = genid[gen_pt];
+            auto gdr = std::sqrt(dr2(gen_eta, (*p->WTAgeneta)[id],
+                                     gen_phi, (*p->WTAgenphi)[id]));
 
-            auto deta = reco_eta - gen_eta;
-            auto dphi = revert_radian(convert_radian(reco_phi)
-                - convert_radian(gen_phi));
+            auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
+                                     reco_phi, (*p->WTAphi)[j]));
 
-            (*eta)[index]->Fill(deta, p->weight);
-            (*phi)[index]->Fill(dphi, p->weight);
-
-            (*angle)[index]->Fill(sgn(gen_phi) * (deta * deta + dphi * dphi),
-                                  p->weight);
+            (*cdr)[hf_x]->Fill(rdr, gdr, p->weight);
+            (*cpt)[hf_x]->Fill(reco_pt, gen_pt, p->weight);
+            (*c)[hf_x]->Fill(mr->index_for(v{rdr, reco_pt}),
+                             mg->index_for(v{gdr, gen_pt}),
+                             p->weight);
         }
     }
 
     /* save output */
     in(output, [&]() {
-        scale->save(tag);
-        angle->save(tag);
-        eta->save(tag);
-        phi->save(tag);
+        cdr->save(tag);
+        cpt->save(tag);
+        c->save(tag);
     });
 
     return 0;
@@ -161,7 +164,7 @@ int fabulate(char const* config, char const* output) {
 
 int main(int argc, char* argv[]) {
     if (argc == 3)
-        return fabulate(argv[1], argv[2]);
+        return vacillate(argv[1], argv[2]);
 
     return 0;
 }
