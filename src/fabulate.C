@@ -179,6 +179,8 @@ int fabulate(char const* config, char const* output) {
             (*angle)[index]->Fill(sgn(gen_phi) * (deta * deta + dphi * dphi),
                                   p->weight);
 
+            if (gen_pt <= 30) { continue; }
+
             auto id = genid[gen_pt];
             auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
                                      reco_phi, (*p->WTAphi)[j]));
