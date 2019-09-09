@@ -47,25 +47,23 @@ void title(std::function<void(TH1*)> f, T*... args) {
     (void)(int [sizeof...(T)]) { (args->apply(f), 0)... };
 }
 
-void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
+void fill_axes(pjtree* pjt, int64_t pthf_x, multival* mr,
                double photon_pt, float photon_eta, int64_t photon_phi,
-               int64_t pthf_x,
                memory<TH1F>* nevt,
                memory<TH1F>* pjet_es_f_dphi,
                memory<TH1F>* pjet_wta_f_dphi,
                memory<TH1F>* pjet_f_x,
                memory<TH1F>* pjet_f_ddr,
                memory<TH1F>* pjet_f_jpt,
-               multival* mr,
                memory<TH1F>* pjet_f_r) {
     (*nevt)[pthf_x]->Fill(1.);
 
     for (int64_t j = 0; j < pjt->nref; ++j) {
         auto jet_pt = (*pjt->jtpt)[j];
-        if (jet_pt <= jet_pt_min) { continue; }
+        if (jet_pt <= 30) { continue; }
 
         auto jet_eta = (*pjt->jteta)[j];
-        if (std::abs(jet_eta) >= jet_eta_abs) { continue; }
+        if (std::abs(jet_eta) >= 1.6) { continue; }
 
         auto jet_phi = convert_radian((*pjt->jtphi)[j]);
 
@@ -79,7 +77,7 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         auto jet_wta_phi = convert_radian((*pjt->WTAphi)[j]);
 
         auto photon_jet_dphi = std::abs(photon_phi - jet_phi);
-        auto photon_wta_dphi = std::abs(photon_phi - jet_wta_phi); 
+        auto photon_wta_dphi = std::abs(photon_phi - jet_wta_phi);
 
         (*pjet_es_f_dphi)[pthf_x]->Fill(photon_jet_dphi);
         (*pjet_wta_f_dphi)[pthf_x]->Fill(photon_wta_dphi);
@@ -95,6 +93,8 @@ void fill_axes(pjtree* pjt, float jet_pt_min, float jet_eta_abs,
         double jt_dr = std::sqrt(jt_deta * jt_deta + jt_dphi * jt_dphi);
 
         (*pjet_f_ddr)[pthf_x]->Fill(jt_dr);
+
+        if (jet_pt >= 200) { continue; }
 
         (*pjet_f_r)[pthf_x]->Fill(mr->index_for(v{jt_dr, jet_pt}));
     }
@@ -155,8 +155,6 @@ int populate(char const* config, char const* output) {
     /* selections */
     auto const photon_pt_min = conf->get<float>("photon_pt_min");
     auto const photon_eta_abs = conf->get<float>("photon_eta_abs");
-    auto const jet_pt_min = conf->get<float>("jet_pt_min");
-    auto const jet_eta_abs = conf->get<float>("jet_eta_abs");
     auto const hovere_max = conf->get<float>("hovere_max");
     auto const see_min = conf->get<float>("see_min");
     auto const see_max = conf->get<float>("see_max");
@@ -321,11 +319,11 @@ int populate(char const* config, char const* output) {
 
         auto pthf_x = mpthf->index_for(x{pt_x, hf_x});
 
-        fill_axes(pjt, jet_pt_min, jet_eta_abs,
-                  photon_pt, photon_eta, photon_phi, pthf_x,
+        fill_axes(pjt, pthf_x, mr,
+                  photon_pt, photon_eta, photon_phi,
                   nevt, pjet_es_f_dphi, pjet_wta_f_dphi,
                   pjet_f_x, pjet_f_ddr, pjet_f_jpt,
-                  mr, pjet_f_r);
+                  pjet_f_r);
 
         /* mixing events in minimum bias */
         for (int64_t k = 0; k < mix; m = (m + 1) % mentries) {
@@ -334,11 +332,11 @@ int populate(char const* config, char const* output) {
             /* hf within +/- 10% */
             if (std::abs(pjtm->hiHF / pjt->hiHF - 1.) > 0.1) { continue; }
 
-            fill_axes(pjtm, jet_pt_min, jet_eta_abs,
-                      photon_pt, photon_eta, photon_phi, pthf_x,
+            fill_axes(pjtm, pthf_x, mr,
+                      photon_pt, photon_eta, photon_phi,
                       nmix, mix_pjet_es_f_dphi, mix_pjet_wta_f_dphi,
                       mix_pjet_f_x, mix_pjet_f_ddr, mix_pjet_f_jpt,
-                      mr, mix_pjet_f_r);
+                      mix_pjet_f_r);
 
             ++k;
         }
