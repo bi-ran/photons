@@ -31,12 +31,16 @@ T* null(int64_t, std::string const&, std::string const&) {
 }
 
 template <typename T>
-TH1F* fold(T* flat, multival const* m, int64_t axis) {
+TH1F* fold(T* flat, multival const* m, int64_t axis,
+           std::array<int64_t, 2> const& offset) {
     auto name = std::string(flat->GetName()) + "_fold" + std::to_string(axis);
-    auto hfold = m->axis(axis).book<TH1F>(0, name, "");
+    auto hfold = m->axis(axis).book<TH1F, 2>(0, name, "", offset);
 
     for (int64_t i = 0; i < m->size(); ++i) {
-        auto index = m->indices_for(i)[axis];
+        auto index = m->indices_for(i)[axis] - offset[0];
+
+        if (index < 0 || index >= hfold->GetNbinsX()) { continue; }
+
         hfold->SetBinContent(index + 1, hfold->GetBinContent(index + 1)
             + flat->GetBinContent(i + 1));
         hfold->SetBinError(index + 1, std::sqrt(hfold->GetBinError(index + 1)
@@ -160,8 +164,8 @@ int undulate(char const* config, char const* output) {
         (*result)[i] = u->GetOutput("Unfolded");
         (*refold)[i] = u->GetFoldedOutput("FoldedBack");
 
-        (*fold0)[i] = fold((*result)[i], mg, 0);
-        (*fold1)[i] = fold((*result)[i], mg, 1);
+        (*fold0)[i] = fold((*result)[i], mg, 0, { 0, 0 });
+        (*fold1)[i] = fold((*result)[i], mg, 1, { 1, 1 });
 
         double t;
         double x;
