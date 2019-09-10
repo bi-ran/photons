@@ -5,7 +5,6 @@
 #include "../git/history/include/interval.h"
 #include "../git/history/include/multival.h"
 #include "../git/history/include/history.h"
-#include "../git/history/include/memory.h"
 
 #include "../git/paper-and-pencil/include/paper.h"
 #include "../git/paper-and-pencil/include/pencil.h"
@@ -48,6 +47,8 @@ TH1F* fold(T* flat, multival const* m, int64_t axis,
             * flat->GetBinError(i + 1)));
     }
 
+    hfold->Scale(1., "width");
+
     return hfold;
 }
 
@@ -71,6 +72,8 @@ TH2F* shade(T* flat, multival const* m, std::array<int64_t, 4> const& offset) {
             flat->GetBinError(i + 1));
     }
 
+    hshade->Scale(1., "width");
+
     return hshade;
 }
 
@@ -83,6 +86,8 @@ int undulate(char const* config, char const* output) {
 
     auto victim = conf->get<std::string>("victim");
     auto label = conf->get<std::string>("label");
+
+    auto refs = conf->get<std::vector<std::string>>("refs");
 
     auto rdrr = conf->get<std::vector<float>>("drr_range");
     auto rdrg = conf->get<std::vector<float>>("drg_range");
@@ -102,33 +107,42 @@ int undulate(char const* config, char const* output) {
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
-    /* load input (and victims) */
+    /* load input, victims, and references */
     TFile* fi = new TFile(input.data(), "read");
     auto matrices = new history<TH2F>(fi, tag + "_c");
 
     TFile* fv = new TFile(victim.data(), "read");
     auto victims = new history<TH1F>(fv, label);
 
+    std::vector<history<TH1F>*> notes(refs.size(), nullptr);
+    zip([&](history<TH1F>*& n, std::string const& ref) {
+        n = new history<TH1F>(fv, ref); }, notes, refs);
+
+    auto shape = victims->shape();
+
     /* prepare objects for unfolding */
     auto factory = [&](int64_t i, std::string const&, std::string const&) {
         return new TUnfoldDensity((*matrices)[i], TUnfold::kHistMapOutputVert);
     };
 
-    auto uf = new memory<TUnfoldDensity>("uf"s, "", factory, mhf);
+    auto uf = new history<TUnfoldDensity>("uf"s, "", factory, shape);
 
-    auto logtaux = new memory<TSpline>("logtaux"s, "", null<TSpline>, mhf);
-    auto logtauy = new memory<TSpline>("logtauy"s, "", null<TSpline>, mhf);
-    auto lcurve = new memory<TGraph>("lcurve"s, "", null<TGraph>, mhf);
+    auto shaded = new history<TH2F>(label + "_shade", "", null<TH2F>, shape);
+    auto side0 = new history<TH1F>(label + "_side0", "", null<TH1F>, shape);
+    auto side1 = new history<TH1F>(label + "_side1", "", null<TH1F>, shape);
 
-    auto result = new memory<TH1>("result"s, "", null<TH1>, mhf);
-    auto refold = new memory<TH1>("refold"s, "", null<TH1>, mhf);
+    auto logtaux = new history<TSpline>("logtaux"s, "", null<TSpline>, shape);
+    auto logtauy = new history<TSpline>("logtauy"s, "", null<TSpline>, shape);
+    auto lcurve = new history<TGraph>("lcurve"s, "", null<TGraph>, shape);
 
-    auto fold0 = new memory<TH1F>("fold0"s, "", null<TH1F>, mhf);
-    auto fold1 = new memory<TH1F>("fold1"s, "", null<TH1F>, mhf);
+    auto result = new history<TH1>("result"s, "", null<TH1>, shape);
+    auto refold = new history<TH1>("refold"s, "", null<TH1>, shape);
 
-    auto sresult = new memory<TH2F>("sresult"s, "", null<TH2F>, mhf);
-    auto srefold = new memory<TH2F>("srefold"s, "", null<TH2F>, mhf);
-    auto svictim = new memory<TH2F>("svictim"s, "", null<TH2F>, mhf);
+    auto sresult = new history<TH2F>("sresult"s, "", null<TH2F>, shape);
+    auto srefold = new history<TH2F>("srefold"s, "", null<TH2F>, shape);
+
+    auto fold0 = new history<TH1F>("fold0"s, "", null<TH1F>, shape);
+    auto fold1 = new history<TH1F>("fold1"s, "", null<TH1F>, shape);
 
     constexpr int points = 30;
 
@@ -143,21 +157,23 @@ int undulate(char const* config, char const* output) {
     /* figures */
     auto hb = new pencil();
     hb->category("type", "data", "unfolded", "refolded", "optimal");
+    hb->category("bins", "gen", "reco");
+
+    hb->alias("gen", "");
+    hb->alias("reco", "");
 
     std::vector<paper*> cs(10, nullptr);
     zip([&](paper*& c, std::string const& title) {
         c = new paper(tag + "_dhf_" + title, hb);
         apply_style(c, system_info);
         c->accessory(std::bind(hf_info, _1, 0.75));
-        c->divide(ihf->size(), -1);
+        c->divide(-1, ihf->size());
     }, cs, (std::initializer_list<std::string> const) {
-        "matrices"s, "unfold"s, "refold"s, "logtaux"s, "lcurve"s,
-        "fold0"s, "fold1"s, "sresult"s, "srefold"s, "svictim"s });
+        "matrices"s, "shaded"s, "logtaux"s, "lcurve"s, "unfold"s, "refold"s,
+        "sresult"s, "srefold"s, "fold0"s, "fold1"s });
 
-    matrices->apply([&](TH2F* h) {
-        cs[0]->add(h);
-        cs[0]->adjust(h, "colz", "");
-    });
+    cs[8]->format(std::bind(default_formatter, _1, -2., 27.));
+    cs[9]->format(std::bind(default_formatter, _1, -0.001, 0.02));
 
     /* unfold */
     uf->apply([&](TUnfoldDensity* u, int64_t i) {
@@ -171,12 +187,11 @@ int undulate(char const* config, char const* output) {
         (*result)[i] = u->GetOutput("Unfolded");
         (*refold)[i] = u->GetFoldedOutput("FoldedBack");
 
-        (*fold0)[i] = fold((*result)[i], mg, 0, { 0, 0 });
-        (*fold1)[i] = fold((*result)[i], mg, 1, { 1, 1 });
-
         (*sresult)[i] = shade((*result)[i], mg, { 0, 0, 1, 1 });
         (*srefold)[i] = shade((*refold)[i], mr, { 0, 0, 0, 0 });
-        (*svictim)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
+
+        (*fold0)[i] = fold((*result)[i], mg, 0, { 0, 0 });
+        (*fold1)[i] = fold((*result)[i], mg, 1, { 1, 1 });
 
         double t;
         double x;
@@ -192,39 +207,74 @@ int undulate(char const* config, char const* output) {
 
         auto hframe = frame((*logtaux)[i], (*lcurve)[i]->GetXaxis());
 
-        cs[1]->add((*result)[i], "unfolded");
+        /* input folds */
+        (*shaded)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
+        (*side0)[i] = fold((*victims)[i], mr, 0, { 0, 0 });
+        (*side1)[i] = fold((*victims)[i], mr, 1, { 0, 0 });
 
-        cs[2]->add((*victims)[i], "data");
-        cs[2]->stack((*refold)[i], "refolded");
+        /* normalise to unity */
+        (*fold0)[i]->Scale(1. / (*fold0)[i]->Integral("width"));
+        (*side0)[i]->Scale(1. / (*side0)[i]->Integral("width"));
 
-        cs[3]->add(hframe);
-        cs[3]->stack((*logtaux)[i]);
-        cs[3]->adjust((*logtaux)[i], "l", "");
-        cs[3]->stack(logtau_opt, "optimal");
-        cs[3]->adjust(logtau_opt, "p", "");
+        /* figures */
+        cs[0]->add((*matrices)[i]);
+        cs[0]->adjust((*matrices)[i], "colz", "");
 
-        cs[4]->add((*lcurve)[i]);
-        cs[4]->adjust((*lcurve)[i], "al", "");
-        cs[4]->stack(lcurve_opt, "optimal");
-        cs[4]->adjust(lcurve_opt, "p", "");
+        cs[1]->add((*shaded)[i]);
+        cs[1]->adjust((*shaded)[i], "colz", "");
 
-        cs[5]->add((*fold0)[i]);
-        cs[6]->add((*fold1)[i]);
+        cs[2]->add(hframe);
+        cs[2]->stack((*logtaux)[i]);
+        cs[2]->adjust((*logtaux)[i], "l", "");
+        cs[2]->stack(logtau_opt, "optimal");
+        cs[2]->adjust(logtau_opt, "p", "");
 
-        cs[7]->add((*sresult)[i]);
-        cs[7]->adjust((*sresult)[i], "colz", "");
-        cs[8]->add((*srefold)[i]);
-        cs[8]->adjust((*srefold)[i], "colz", "");
-        cs[9]->add((*svictim)[i]);
-        cs[9]->adjust((*svictim)[i], "colz", "");
+        cs[3]->add((*lcurve)[i]);
+        cs[3]->adjust((*lcurve)[i], "al", "");
+        cs[3]->stack(lcurve_opt, "optimal");
+        cs[3]->adjust(lcurve_opt, "p", "");
+
+        cs[4]->add((*result)[i], "unfolded");
+        cs[5]->add((*victims)[i], "data");
+        cs[5]->stack((*refold)[i], "refolded");
+
+        cs[6]->add((*sresult)[i]);
+        cs[6]->adjust((*sresult)[i], "colz", "");
+        cs[7]->add((*srefold)[i]);
+        cs[7]->adjust((*srefold)[i], "colz", "");
+
+        cs[8]->add((*notes[0])[i], "data", "gen");
+        cs[8]->stack((*side0)[i], "data", "reco");
+        cs[8]->stack((*fold0)[i], "unfolded", "gen");
+        cs[9]->add((*notes[1])[i], "data", "gen");
+        cs[9]->stack((*side1)[i], "data", "reco");
+        cs[9]->stack((*fold1)[i], "unfolded", "gen");
     });
 
+    hb->set_binary("bins");
     hb->sketch();
-    for (auto c : cs) { c->draw("pdf"); }
+
+    for (auto c : cs)
+        c->draw("pdf");
+
+    logtaux->rename();
+    logtauy->rename();
+    lcurve->rename();
+
+    result->rename();
+    refold->rename();
+    sresult->rename();
+    srefold->rename();
+    fold0->rename();
+    fold1->rename();
 
     /* save output */
     in(output, [&]() {
         matrices->save("");
+        victims->save("");
+        shaded->save("");
+        side0->save("");
+        side1->save("");
 
         logtaux->save(tag);
         logtauy->save(tag);
@@ -232,12 +282,10 @@ int undulate(char const* config, char const* output) {
 
         result->save(tag);
         refold->save(tag);
-        fold0->save(tag);
-        fold1->save(tag);
-
         sresult->save(tag);
         srefold->save(tag);
-        svictim->save(tag);
+        fold0->save(tag);
+        fold1->save(tag);
     });
 
     return 0;
