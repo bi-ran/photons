@@ -51,6 +51,29 @@ TH1F* fold(T* flat, multival const* m, int64_t axis,
     return hfold;
 }
 
+template <typename T>
+TH2F* shade(T* flat, multival const* m, std::array<int64_t, 4> const& offset) {
+    auto name = std::string(flat->GetName()) + "_shade";
+    auto hshade = m->book<TH2F, 4>(0, name, "", offset);
+
+    for (int64_t i = 0; i < m->size(); ++i) {
+        auto indices = m->indices_for(i);
+        indices[0] = indices[0] - offset[0];
+        indices[1] = indices[1] - offset[2];
+
+        if (indices[0] < 0 || indices[0] >= hshade->GetNbinsX()
+                || indices[1] < 0 || indices[1] >= hshade->GetNbinsY()) {
+            continue; }
+
+        hshade->SetBinContent(indices[0] + 1, indices[1] + 1,
+            flat->GetBinContent(i + 1));
+        hshade->SetBinError(indices[0] + 1, indices[1] + 1,
+            flat->GetBinError(i + 1));
+    }
+
+    return hshade;
+}
+
 int undulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
@@ -71,6 +94,7 @@ int undulate(char const* config, char const* output) {
 
     auto mhf = new multival(dhf);
 
+    auto mr = new multival(rdrr, rptr);
     auto mg = new multival(rdrg, rptg);
 
     /* manage memory manually */
@@ -100,6 +124,10 @@ int undulate(char const* config, char const* output) {
 
     auto fold0 = new memory<TH1F>("fold0"s, "", null<TH1F>, mhf);
     auto fold1 = new memory<TH1F>("fold1"s, "", null<TH1F>, mhf);
+
+    auto sresult = new memory<TH2F>("sresult"s, "", null<TH2F>, mhf);
+    auto srefold = new memory<TH2F>("srefold"s, "", null<TH2F>, mhf);
+    auto svictim = new memory<TH2F>("svictim"s, "", null<TH2F>, mhf);
 
     constexpr int points = 30;
 
@@ -152,6 +180,21 @@ int undulate(char const* config, char const* output) {
     c7->accessory(std::bind(hf_info, _1, 0.75));
     c7->divide(1, -1);
 
+    auto c8 = new paper(tag + "_dpthf_sresult", hb);
+    apply_style(c8, system_info);
+    c8->accessory(std::bind(hf_info, _1, 0.75));
+    c8->divide(1, -1);
+
+    auto c9 = new paper(tag + "_dpthf_srefold", hb);
+    apply_style(c9, system_info);
+    c9->accessory(std::bind(hf_info, _1, 0.75));
+    c9->divide(1, -1);
+
+    auto ca = new paper(tag + "_dpthf_svictim", hb);
+    apply_style(ca, system_info);
+    ca->accessory(std::bind(hf_info, _1, 0.75));
+    ca->divide(1, -1);
+
     /* unfold */
     uf->apply([&](TUnfoldDensity* u, int64_t i) {
         if (u->SetInput((*victims)[i]) > 9999) {
@@ -166,6 +209,10 @@ int undulate(char const* config, char const* output) {
 
         (*fold0)[i] = fold((*result)[i], mg, 0, { 0, 0 });
         (*fold1)[i] = fold((*result)[i], mg, 1, { 1, 1 });
+
+        (*sresult)[i] = shade((*result)[i], mg, { 0, 0, 1, 1 });
+        (*srefold)[i] = shade((*refold)[i], mr, { 0, 0, 0, 0 });
+        (*svictim)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
 
         double t;
         double x;
@@ -198,12 +245,18 @@ int undulate(char const* config, char const* output) {
         c5->adjust(lcurve_opt, "p", "");
 
         c6->add((*fold0)[i]);
-
         c7->add((*fold1)[i]);
+
+        c8->add((*sresult)[i]);
+        c8->adjust((*sresult)[i], "colz", "");
+        c9->add((*srefold)[i]);
+        c9->adjust((*srefold)[i], "colz", "");
+        ca->add((*svictim)[i]);
+        ca->adjust((*svictim)[i], "colz", "");
     });
 
     hb->sketch();
-    for (auto c : { c1, c2, c3, c4, c5, c6, c7 })
+    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9, ca })
         c->draw("pdf");
 
     /* save output */
@@ -218,6 +271,10 @@ int undulate(char const* config, char const* output) {
         refold->save(tag);
         fold0->save(tag);
         fold1->save(tag);
+
+        sresult->save(tag);
+        srefold->save(tag);
+        svictim->save(tag);
     });
 
     return 0;
