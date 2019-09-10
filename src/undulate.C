@@ -11,11 +11,11 @@
 #include "../git/paper-and-pencil/include/pencil.h"
 
 #include "../git/tricks-and-treats/include/trunk.h"
+#include "../git/tricks-and-treats/include/zip.h"
 
 #include "TFile.h"
 #include "TH1.h"
 #include "TH2.h"
-#include "TLatex.h"
 
 #include "TUnfoldDensity.h"
 
@@ -92,6 +92,7 @@ int undulate(char const* config, char const* output) {
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
+    auto ihf = new interval(dhf);
     auto mhf = new multival(dhf);
 
     auto mr = new multival(rdrr, rptr);
@@ -143,57 +144,20 @@ int undulate(char const* config, char const* output) {
     auto hb = new pencil();
     hb->category("type", "data", "unfolded", "refolded", "optimal");
 
-    auto c1 = new paper(tag + "_dpthf_matrices", hb);
-    apply_style(c1, system_info);
-    c1->accessory(std::bind(hf_info, _1, 0.75));
-    c1->divide(1, -1);
+    std::vector<paper*> cs(10, nullptr);
+    zip([&](paper*& c, std::string const& title) {
+        c = new paper(tag + "_dhf_" + title, hb);
+        apply_style(c, system_info);
+        c->accessory(std::bind(hf_info, _1, 0.75));
+        c->divide(ihf->size(), -1);
+    }, cs, (std::initializer_list<std::string> const) {
+        "matrices"s, "unfold"s, "refold"s, "logtaux"s, "lcurve"s,
+        "fold0"s, "fold1"s, "sresult"s, "srefold"s, "svictim"s });
 
-    matrices->apply([&](TH2F* h) { c1->add(h); c1->adjust(h, "colz", ""); });
-
-    auto c2 = new paper(tag + "_dpthf_unfold", hb);
-    apply_style(c2, system_info, -0.005, 0.05);
-    c2->accessory(std::bind(hf_info, _1, 0.75));
-    c2->divide(1, -1);
-
-    auto c3 = new paper(tag + "_dpthf_refold", hb);
-    apply_style(c3, system_info, -0.005, 0.05);
-    c3->accessory(std::bind(hf_info, _1, 0.75));
-    c3->divide(1, -1);
-
-    auto c4 = new paper(tag + "_dpthf_logtaux", hb);
-    apply_style(c4, system_info);
-    c4->accessory(std::bind(hf_info, _1, 0.75));
-    c4->divide(1, -1);
-
-    auto c5 = new paper(tag + "_dpthf_lcurve", hb);
-    apply_style(c5, system_info);
-    c5->accessory(std::bind(hf_info, _1, 0.75));
-    c5->divide(1, -1);
-
-    auto c6 = new paper(tag + "_dpthf_fold0", hb);
-    apply_style(c6, system_info);
-    c6->accessory(std::bind(hf_info, _1, 0.75));
-    c6->divide(1, -1);
-
-    auto c7 = new paper(tag + "_dpthf_fold1", hb);
-    apply_style(c7, system_info);
-    c7->accessory(std::bind(hf_info, _1, 0.75));
-    c7->divide(1, -1);
-
-    auto c8 = new paper(tag + "_dpthf_sresult", hb);
-    apply_style(c8, system_info);
-    c8->accessory(std::bind(hf_info, _1, 0.75));
-    c8->divide(1, -1);
-
-    auto c9 = new paper(tag + "_dpthf_srefold", hb);
-    apply_style(c9, system_info);
-    c9->accessory(std::bind(hf_info, _1, 0.75));
-    c9->divide(1, -1);
-
-    auto ca = new paper(tag + "_dpthf_svictim", hb);
-    apply_style(ca, system_info);
-    ca->accessory(std::bind(hf_info, _1, 0.75));
-    ca->divide(1, -1);
+    matrices->apply([&](TH2F* h) {
+        cs[0]->add(h);
+        cs[0]->adjust(h, "colz", "");
+    });
 
     /* unfold */
     uf->apply([&](TUnfoldDensity* u, int64_t i) {
@@ -228,36 +192,35 @@ int undulate(char const* config, char const* output) {
 
         auto hframe = frame((*logtaux)[i], (*lcurve)[i]->GetXaxis());
 
-        c2->add((*result)[i], "unfolded");
+        cs[1]->add((*result)[i], "unfolded");
 
-        c3->add((*victims)[i], "data");
-        c3->stack((*refold)[i], "refolded");
+        cs[2]->add((*victims)[i], "data");
+        cs[2]->stack((*refold)[i], "refolded");
 
-        c4->add(hframe);
-        c4->stack((*logtaux)[i]);
-        c4->adjust((*logtaux)[i], "l", "");
-        c4->stack(logtau_opt, "optimal");
-        c4->adjust(logtau_opt, "p", "");
+        cs[3]->add(hframe);
+        cs[3]->stack((*logtaux)[i]);
+        cs[3]->adjust((*logtaux)[i], "l", "");
+        cs[3]->stack(logtau_opt, "optimal");
+        cs[3]->adjust(logtau_opt, "p", "");
 
-        c5->add((*lcurve)[i]);
-        c5->adjust((*lcurve)[i], "al", "");
-        c5->stack(lcurve_opt, "optimal");
-        c5->adjust(lcurve_opt, "p", "");
+        cs[4]->add((*lcurve)[i]);
+        cs[4]->adjust((*lcurve)[i], "al", "");
+        cs[4]->stack(lcurve_opt, "optimal");
+        cs[4]->adjust(lcurve_opt, "p", "");
 
-        c6->add((*fold0)[i]);
-        c7->add((*fold1)[i]);
+        cs[5]->add((*fold0)[i]);
+        cs[6]->add((*fold1)[i]);
 
-        c8->add((*sresult)[i]);
-        c8->adjust((*sresult)[i], "colz", "");
-        c9->add((*srefold)[i]);
-        c9->adjust((*srefold)[i], "colz", "");
-        ca->add((*svictim)[i]);
-        ca->adjust((*svictim)[i], "colz", "");
+        cs[7]->add((*sresult)[i]);
+        cs[7]->adjust((*sresult)[i], "colz", "");
+        cs[8]->add((*srefold)[i]);
+        cs[8]->adjust((*srefold)[i], "colz", "");
+        cs[9]->add((*svictim)[i]);
+        cs[9]->adjust((*svictim)[i], "colz", "");
     });
 
     hb->sketch();
-    for (auto c : { c1, c2, c3, c4, c5, c6, c7, c8, c9, ca })
-        c->draw("pdf");
+    for (auto c : cs) { c->draw("pdf"); }
 
     /* save output */
     in(output, [&]() {
