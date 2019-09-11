@@ -35,8 +35,6 @@ int emulate(char const* config, char const* output) {
     auto rpthat = conf->get<std::vector<float>>("pthat_range");
     auto rvz = conf->get<std::vector<float>>("vz_range");
 
-    /* manange memory manually */
-    TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
 
     /* merged gen inputs */

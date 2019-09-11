@@ -56,6 +56,7 @@ int regulate(char const* config, char const* output) {
     auto heavyion = conf->get<bool>("heavyion");
     auto mc_branches = conf->get<bool>("mc_branches");
     auto hlt_branches = conf->get<bool>("hlt_branches");
+    auto apply_weights = conf->get<bool>("apply_weights");
     auto apply_residual = conf->get<bool>("apply_residual");
     auto active = conf->get<std::vector<bool>>("active");
 
@@ -113,23 +114,25 @@ int regulate(char const* config, char const* output) {
     auto JEU = new JetUncertainty(jeu);
 
     TF1* fweight = new TF1("fweight", "(gaus(0))/(gaus(3))");
-    if (mc_branches) { fweight->SetParameters(
+    if (mc_branches && apply_weights) { fweight->SetParameters(
         vzw[0], vzw[1], vzw[2], vzw[3], vzw[4], vzw[5]); }
 
     TF1** fres = nullptr;
     if (apply_residual) {
         TFile* fh = new TFile(residual.data(), "read");
-        auto hres = new history<TH1F>(fh, tag + "_es_dhf_f_pt");
+        auto hres = new history<TH1F>(fh, tag + "_scale_s_dhf_f_pt");
 
         fres = new TF1*[hres->size()];
         hres->apply([&](TH1* h, int64_t index) {
             fres[index] = h->GetFunction(
-                ("f_es_dhf_f_pt_"s + std::to_string(index)).data()); });
+                ("f_s_dhf_f_pt_"s + std::to_string(index)).data()); });
     }
 
     auto regr = new phoERegression();
-    regr->initialiseReaderEB(xmls[0]);
-    regr->initialiseReaderEE(xmls[1]);
+    if (!xmls.empty()) {
+        regr->initialiseReaderEB(xmls[0]);
+        regr->initialiseReaderEE(xmls[1]);
+    }
 
     std::vector<float> regr_variables(17, 0);
     auto fill_regr_variables = [&](int64_t index) {
@@ -193,7 +196,7 @@ int regulate(char const* config, char const* output) {
             tree_pj->Ncoll = 1000;
         }
 
-        tree_pj->weight = mc_branches
+        tree_pj->weight = (mc_branches && apply_weights)
             ? tree_pj->Ncoll / 1000.f
                 * fweight->Eval(tree_pj->vz)
                 * weight_for(pthat, pthatw, tree_pj->pthat)
