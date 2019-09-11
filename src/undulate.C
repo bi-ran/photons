@@ -88,6 +88,8 @@ int undulate(char const* config, char const* output) {
     auto label = conf->get<std::string>("label");
 
     auto refs = conf->get<std::vector<std::string>>("refs");
+    auto extensions = conf->get<std::vector<int64_t>>("extensions");
+    auto dimensions = conf->get<std::vector<int64_t>>("dimensions");
 
     auto rdrr = conf->get<std::vector<float>>("drr_range");
     auto rdrg = conf->get<std::vector<float>>("drg_range");
@@ -117,6 +119,10 @@ int undulate(char const* config, char const* output) {
     std::vector<history<TH1F>*> notes(refs.size(), nullptr);
     zip([&](history<TH1F>*& n, std::string const& ref) {
         n = new history<TH1F>(fv, ref); }, notes, refs);
+
+    zip([&](int64_t extension, int64_t dimension) {
+        matrices = matrices->extend("ext"s + std::to_string(extension),
+            extension, dimension); }, extensions, dimensions);
 
     auto shape = victims->shape();
 
