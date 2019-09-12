@@ -133,6 +133,9 @@ void stack_text(int64_t index, float position, float spacing, T* shape,
     auto indices = shape->indices_for(index - 1);
     auto it = std::begin(indices);
 
+    /* readjust position */
+    position = position + spacing;
+
     (void)(int [sizeof...(U)]) {
         (args(*(it++) + 1, position -= spacing), 0)... };
 }
