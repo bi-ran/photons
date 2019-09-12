@@ -64,7 +64,7 @@ int vacillate(char const* config, char const* output) {
     auto fcpt = std::bind(&multival::book<TH2F>, mcpt, _1, _2, _3);
 
     auto fc = [&](int64_t, std::string const& name, std::string const& label) {
-        return new TH2F(name.data(), (";reco;gen;" + label).data(),
+        return new TH2F(name.data(), (";reco;gen;"s + label).data(),
             mr->size(), 0, mr->size(), mg->size(), 0, mg->size()); };
 
     auto cdr = new memory<TH2F>("cdr"s, "counts", fcdr, mhf);
@@ -134,12 +134,14 @@ int vacillate(char const* config, char const* output) {
             auto reco_eta = (*p->jteta)[j];
             auto reco_phi = (*p->jtphi)[j];
 
-            if (reco_pt <= rptr.front() || reco_pt >= rptr.back())
-                continue;
-
             auto id = genid[gen_pt];
             auto gdr = std::sqrt(dr2(gen_eta, (*p->WTAgeneta)[id],
                                      gen_phi, (*p->WTAgenphi)[id]));
+
+            if (reco_pt <= rptr.front() || reco_pt >= rptr.back()) {
+                (*c)[hf_x]->Fill(-1, mg->index_for(v{gdr, gen_pt}), p->weight);
+                continue;
+            }
 
             auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
                                      reco_phi, (*p->WTAphi)[j]));
