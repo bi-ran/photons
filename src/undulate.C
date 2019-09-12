@@ -29,16 +29,26 @@ T* null(int64_t, std::string const&, std::string const&) {
     return nullptr;
 }
 
-template <typename T>
+template <typename T, int64_t N>
 TH1F* fold(T* flat, multival const* m, int64_t axis,
-           std::array<int64_t, 2> const& offset) {
+           std::array<int64_t, N> const& offsets) {
     auto name = std::string(flat->GetName()) + "_fold" + std::to_string(axis);
-    auto hfold = m->axis(axis).book<TH1F, 2>(0, name, "", offset);
+    auto hfold = m->axis(axis).book<TH1F, 2>(0, name, "",
+        { offsets[axis << 1], offsets[(axis << 1) + 1] });
+
+    auto shape = m->shape();
 
     for (int64_t i = 0; i < m->size(); ++i) {
-        auto index = m->indices_for(i)[axis] - offset[0];
+        auto indices = m->indices_for(i);
 
-        if (index < 0 || index >= hfold->GetNbinsX()) { continue; }
+        bool flag = false;
+        for (int64_t j = 0; j < m->dims(); ++j)
+            if (indices[j] >= shape[j] - offsets[(j << 1) + 1]
+                    || indices[j] < offsets[j << 1])
+                flag = true;
+        if (flag) { continue; }
+
+        auto index = indices[axis] - offsets[axis << 1];
 
         hfold->SetBinContent(index + 1, hfold->GetBinContent(index + 1)
             + flat->GetBinContent(i + 1));
@@ -193,11 +203,11 @@ int undulate(char const* config, char const* output) {
         (*result)[i] = u->GetOutput("Unfolded");
         (*refold)[i] = u->GetFoldedOutput("FoldedBack");
 
-        (*sresult)[i] = shade((*result)[i], mg, { 0, 0, 1, 1 });
+        (*sresult)[i] = shade((*result)[i], mg, { 0, 0, 2, 1 });
         (*srefold)[i] = shade((*refold)[i], mr, { 0, 0, 0, 0 });
 
-        (*fold0)[i] = fold((*result)[i], mg, 0, { 0, 0 });
-        (*fold1)[i] = fold((*result)[i], mg, 1, { 1, 1 });
+        (*fold0)[i] = fold<TH1, 4>((*result)[i], mg, 0, { 0, 0, 2, 1 });
+        (*fold1)[i] = fold<TH1, 4>((*result)[i], mg, 1, { 0, 0, 2, 1 });
 
         double t;
         double x;
@@ -215,8 +225,8 @@ int undulate(char const* config, char const* output) {
 
         /* input folds */
         (*shaded)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
-        (*side0)[i] = fold((*victims)[i], mr, 0, { 0, 0 });
-        (*side1)[i] = fold((*victims)[i], mr, 1, { 0, 0 });
+        (*side0)[i] = fold<TH1, 4>((*victims)[i], mr, 0, { 0, 0, 0, 0 });
+        (*side1)[i] = fold<TH1, 4>((*victims)[i], mr, 1, { 0, 0, 0, 0 });
 
         /* normalise to unity */
         (*fold0)[i]->Scale(1. / (*fold0)[i]->Integral("width"));
