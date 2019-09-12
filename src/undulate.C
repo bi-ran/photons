@@ -101,6 +101,8 @@ int undulate(char const* config, char const* output) {
     auto extensions = conf->get<std::vector<int64_t>>("extensions");
     auto dimensions = conf->get<std::vector<int64_t>>("dimensions");
 
+    auto points = conf->get<int64_t>("points");
+
     auto rdrr = conf->get<std::vector<float>>("drr_range");
     auto rdrg = conf->get<std::vector<float>>("drg_range");
     auto rptr = conf->get<std::vector<float>>("ptr_range");
@@ -159,8 +161,6 @@ int undulate(char const* config, char const* output) {
 
     auto fold0 = new history<TH1F>("fold0"s, "", null<TH1F>, shape);
     auto fold1 = new history<TH1F>("fold1"s, "", null<TH1F>, shape);
-
-    constexpr int points = 30;
 
     std::vector<int32_t> tau(mhf->size(), -1);
 
