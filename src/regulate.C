@@ -211,9 +211,7 @@ int regulate(char const* config, char const* output) {
             JEC->SetJetPhi((*tree_pj->jtphi)[j]);
 
             float corr = JEC->GetCorrectedPT();
-            float cres = (apply_residual) ? fres[hf_x]->Eval(corr) : 1.f;
-
-            corr /= cres > 0.8 ? cres : 0.8;
+            corr = corr / (apply_residual ? fres[hf_x]->Eval(corr) : 1.f);
 
             if (!jeu.empty()) {
                 auto unc = JEU->GetUncertainty();
