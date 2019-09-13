@@ -140,7 +140,12 @@ int undulate(char const* config, char const* output) {
 
     /* prepare objects for unfolding */
     auto factory = [&](int64_t i, std::string const&, std::string const&) {
-        return new TUnfoldDensity((*matrices)[i], TUnfold::kHistMapOutputVert);
+        return new TUnfoldDensity((*matrices)[i],
+            TUnfold::EHistMap::kHistMapOutputVert,
+            TUnfold::ERegMode::kRegModeCurvature,
+            TUnfold::EConstraint::kEConstraintNone,
+            TUnfoldDensity::EDensityMode::kDensityModeNone
+        );
     };
 
     auto uf = new history<TUnfoldDensity>("uf"s, "", factory, shape);
