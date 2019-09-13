@@ -150,13 +150,16 @@ int undulate(char const* config, char const* output) {
 
     auto uf = new history<TUnfoldDensity>("uf"s, "", factory, shape);
 
-    auto shaded = new history<TH2F>(label + "_shade", "", null<TH2F>, shape);
-    auto side0 = new history<TH1F>(label + "_side0", "", null<TH1F>, shape);
-    auto side1 = new history<TH1F>(label + "_side1", "", null<TH1F>, shape);
-
+    auto bias = new history<TH1>("bias"s, "", null<TH1>, shape);
+    auto ematrix = new history<TH2>("ematrix"s, "", null<TH2>, shape);
+    auto lmatrix = new history<TH2>("lmatrix"s, "", null<TH2>, shape);
     auto logtaux = new history<TSpline>("logtaux"s, "", null<TSpline>, shape);
     auto logtauy = new history<TSpline>("logtauy"s, "", null<TSpline>, shape);
     auto lcurve = new history<TGraph>("lcurve"s, "", null<TGraph>, shape);
+
+    auto shaded = new history<TH2F>(label + "_shade", "", null<TH2F>, shape);
+    auto side0 = new history<TH1F>(label + "_side0", "", null<TH1F>, shape);
+    auto side1 = new history<TH1F>(label + "_side1", "", null<TH1F>, shape);
 
     auto result = new history<TH1>("result"s, "", null<TH1>, shape);
     auto refold = new history<TH1>("refold"s, "", null<TH1>, shape);
@@ -177,24 +180,25 @@ int undulate(char const* config, char const* output) {
 
     /* figures */
     auto hb = new pencil();
-    hb->category("type", "data", "unfolded", "refolded", "optimal");
+    hb->category("type", "data", "unfolded", "refolded", "optimal", "bias");
     hb->category("bins", "gen", "reco");
 
     hb->alias("gen", "");
     hb->alias("reco", "");
 
-    std::vector<paper*> cs(10, nullptr);
+    std::vector<paper*> cs(13, nullptr);
     zip([&](paper*& c, std::string const& title) {
         c = new paper(tag + "_dhf_" + title, hb);
         apply_style(c, system_info);
         c->accessory(std::bind(hf_info, _1, 0.75));
         c->divide(-1, ihf->size());
     }, cs, (std::initializer_list<std::string> const) {
-        "matrices"s, "shaded"s, "logtaux"s, "lcurve"s, "unfold"s, "refold"s,
-        "sresult"s, "srefold"s, "fold0"s, "fold1"s });
+        "matrices"s, "bias"s, "ematrix"s, "lmatrix"s, "logtaux"s, "lcurve"s,
+        "unfold"s, "refold"s, "sresult"s, "srefold"s, "fold0"s, "fold1"s,
+        "shaded"s });
 
-    cs[8]->format(std::bind(default_formatter, _1, -2., 27.));
-    cs[9]->format(std::bind(default_formatter, _1, -0.001, 0.02));
+    cs[10]->format(std::bind(default_formatter, _1, -2., 27.));
+    cs[11]->format(std::bind(default_formatter, _1, -0.001, 0.02));
 
     /* unfold */
     uf->apply([&](TUnfoldDensity* u, int64_t i) {
@@ -213,6 +217,10 @@ int undulate(char const* config, char const* output) {
 
         (*fold0)[i] = fold<TH1, 4>((*result)[i], mg, 0, { 0, 0, 2, 1 });
         (*fold1)[i] = fold<TH1, 4>((*result)[i], mg, 1, { 0, 0, 2, 1 });
+
+        (*bias)[i] = u->GetBias(nullptr);
+        (*ematrix)[i] = u->GetEmatrixInput(nullptr);
+        (*lmatrix)[i] = u->GetL(nullptr);
 
         double t;
         double x;
@@ -241,35 +249,44 @@ int undulate(char const* config, char const* output) {
         cs[0]->add((*matrices)[i]);
         cs[0]->adjust((*matrices)[i], "colz", "");
 
-        cs[1]->add((*shaded)[i]);
-        cs[1]->adjust((*shaded)[i], "colz", "");
+        cs[1]->add((*bias)[i], "bias");
 
-        cs[2]->add(hframe);
-        cs[2]->stack((*logtaux)[i]);
-        cs[2]->adjust((*logtaux)[i], "l", "");
-        cs[2]->stack(logtau_opt, "optimal");
-        cs[2]->adjust(logtau_opt, "p", "");
+        cs[2]->add((*ematrix)[i]);
+        cs[2]->adjust((*ematrix)[i], "colz", "");
 
-        cs[3]->add((*lcurve)[i]);
-        cs[3]->adjust((*lcurve)[i], "al", "");
-        cs[3]->stack(lcurve_opt, "optimal");
-        cs[3]->adjust(lcurve_opt, "p", "");
+        cs[3]->add((*lmatrix)[i]);
+        cs[3]->adjust((*lmatrix)[i], "colz", "");
 
-        cs[4]->add((*result)[i], "unfolded");
-        cs[5]->add((*victims)[i], "data");
-        cs[5]->stack((*refold)[i], "refolded");
+        cs[4]->add(hframe);
+        cs[4]->stack((*logtaux)[i]);
+        cs[4]->adjust((*logtaux)[i], "l", "");
+        cs[4]->stack(logtau_opt, "optimal");
+        cs[4]->adjust(logtau_opt, "p", "");
 
-        cs[6]->add((*sresult)[i]);
-        cs[6]->adjust((*sresult)[i], "colz", "");
-        cs[7]->add((*srefold)[i]);
-        cs[7]->adjust((*srefold)[i], "colz", "");
+        cs[5]->add((*lcurve)[i]);
+        cs[5]->adjust((*lcurve)[i], "al", "");
+        cs[5]->stack(lcurve_opt, "optimal");
+        cs[5]->adjust(lcurve_opt, "p", "");
 
-        cs[8]->add((*notes[0])[i], "data", "gen");
-        cs[8]->stack((*side0)[i], "data", "reco");
-        cs[8]->stack((*fold0)[i], "unfolded", "gen");
-        cs[9]->add((*notes[1])[i], "data", "gen");
-        cs[9]->stack((*side1)[i], "data", "reco");
-        cs[9]->stack((*fold1)[i], "unfolded", "gen");
+        cs[6]->add((*result)[i], "unfolded");
+
+        cs[7]->add((*victims)[i], "data");
+        cs[7]->stack((*refold)[i], "refolded");
+
+        cs[8]->add((*sresult)[i]);
+        cs[8]->adjust((*sresult)[i], "colz", "");
+        cs[9]->add((*srefold)[i]);
+        cs[9]->adjust((*srefold)[i], "colz", "");
+
+        cs[10]->add((*notes[0])[i], "data", "gen");
+        cs[10]->stack((*side0)[i], "data", "reco");
+        cs[10]->stack((*fold0)[i], "unfolded", "gen");
+        cs[11]->add((*notes[1])[i], "data", "gen");
+        cs[11]->stack((*side1)[i], "data", "reco");
+        cs[11]->stack((*fold1)[i], "unfolded", "gen");
+
+        cs[12]->add((*shaded)[i]);
+        cs[12]->adjust((*shaded)[i], "colz", "");
     });
 
     hb->set_binary("bins");
@@ -278,6 +295,9 @@ int undulate(char const* config, char const* output) {
     for (auto c : cs)
         c->draw("pdf");
 
+    bias->rename();
+    ematrix->rename();
+    lmatrix->rename();
     logtaux->rename();
     logtauy->rename();
     lcurve->rename();
@@ -297,6 +317,9 @@ int undulate(char const* config, char const* output) {
         side0->save("");
         side1->save("");
 
+        bias->save(tag);
+        ematrix->save(tag);
+        lmatrix->save(tag);
         logtaux->save(tag);
         logtauy->save(tag);
         lcurve->save(tag);
