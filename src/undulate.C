@@ -203,10 +203,11 @@ int undulate(char const* config, char const* output) {
     auto rptr = conf->get<std::vector<float>>("ptr_range");
     auto rptg = conf->get<std::vector<float>>("ptg_range");
 
+    auto dpt = conf->get<std::vector<float>>("pt_diff");
     auto dhf = conf->get<std::vector<float>>("hf_diff");
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
-    auto ihf = new interval(dhf);
+    auto mpthf = new multival(dpt, dhf);
 
     auto idrr = new interval("#deltaj"s, rdrr);
     auto iptr = new interval("p_{T}^{j}"s, rptr);
@@ -300,8 +301,14 @@ int undulate(char const* config, char const* output) {
     auto fold1 = new history<TH1F>("fold1"s, "", null<TH1F>, shape);
 
     /* info text */
+    std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
+        info_text(x, pos, "%.0f < p_{T}^{#gamma} < %.0f", dpt, false); };
+
     std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
+
+    auto pthf_info = [&](int64_t index) {
+        stack_text(index, 0.75, 0.04, mpthf, pt_info, hf_info); };
 
     auto system_info = system + " #sqrt{s_{NN}} = 5.02 TeV";
 
@@ -317,8 +324,8 @@ int undulate(char const* config, char const* output) {
     zip([&](paper*& c, std::string const& title) {
         c = new paper(tag + "_dhf_" + title, hb);
         apply_style(c, system_info);
-        c->accessory(std::bind(hf_info, _1, 0.75));
-        c->divide(-1, ihf->size());
+        c->accessory(pthf_info);
+        c->divide(mpthf->shape()[0], -1);
     }, cs, (std::initializer_list<std::string> const) {
         "matrices"s, "bias"s, "ematrix"s, "lmatrix"s,
         "logtaur"s, "logtaux"s, "logtauy"s, "lcurve"s,
