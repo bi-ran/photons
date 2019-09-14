@@ -16,7 +16,9 @@
 #include "TH1.h"
 #include "TH2.h"
 
+#include "TUnfoldBinning.h"
 #include "TUnfoldDensity.h"
+#include "TVectorT.h"
 
 #include <string>
 #include <vector>
@@ -87,6 +89,73 @@ TH2F* shade(T* flat, multival const* m, std::array<int64_t, 4> const& offset) {
     return hshade;
 }
 
+std::vector<float> widths(multival* m, int64_t d) {
+    auto size = m->shape()[d];
+    auto axis = m->axis(d);
+
+    auto width = std::vector<float>(size, 0);
+    for (int64_t i = 0; i < size; ++i)
+        width[i] = axis.width(i);
+
+    return width;
+}
+
+std::vector<float> deltas(multival* m, int64_t d) {
+    auto size = m->shape()[d];
+    auto axis = m->axis(d);
+
+    auto delta = std::vector<float>(size, 0);
+    for (int64_t i = 0; i < size; ++i) {
+        auto edges = axis.edges(i);
+        delta[i] = (edges[0] + edges[1]) / 2.;
+    }
+
+    for (int64_t i = 0; i < size - 1; ++i)
+        delta[i] = delta[i + 1] - delta[i];
+    delta.pop_back();
+
+    return delta;
+}
+
+float averages(std::vector<float> const& w) {
+    return std::accumulate(std::begin(w), std::end(w), 0.f) / w.size();
+}
+
+template <TUnfold::ERegMode M>
+void pattern(TUnfoldDensity* u, multival* m);
+
+template <>
+void pattern<TUnfold::ERegMode::kRegModeCurvature>(TUnfoldDensity* u,
+                                                   multival* m) {
+    std::array<std::vector<float>, 2> ws = { widths(m, 0), widths(m, 1) };
+    std::array<std::vector<float>, 2> ds = { deltas(m, 0), deltas(m, 1) };
+    std::array<float, 2> as = { averages(ws[0]), averages(ws[1]) };
+
+    auto shape = m->shape();
+
+    for (int64_t i = 0; i < shape[0]; ++i) {
+        auto step = m->index_for(x{0, 1});
+        for (int64_t j = 0; j < shape[1] - 2; ++j) {
+            auto index = m->index_for(x{i, j});
+
+            auto common = as[1] * as[1] / (ds[1][j] + ds[1][j + 1]);
+            u->RegularizeCurvature(index, index + step, index + step + step,
+                common / ds[1][j], common / ds[1][j + 1]);
+        }
+    }
+
+    for (int64_t j = 0; j < shape[1]; ++j) {
+        auto step = m->index_for(x{1, 0});
+        for (int64_t i = 0; i < shape[0] - 2; ++i) {
+            auto index = m->index_for(x{i, j});
+
+            auto common = as[0] * as[0] / (ds[0][i] + ds[0][i + 1]);
+            u->RegularizeCurvature(index, index + step, index + step + step,
+                common / ds[0][i], common / ds[0][i + 1]);
+        }
+    }
+}
+
 int undulate(char const* config, char const* output) {
     auto conf = new configurer(config);
 
@@ -102,6 +171,7 @@ int undulate(char const* config, char const* output) {
     auto dimensions = conf->get<std::vector<int64_t>>("dimensions");
 
     auto points = conf->get<int64_t>("points");
+    auto taus = conf->get<std::vector<float>>("taus");
 
     auto rdrr = conf->get<std::vector<float>>("drr_range");
     auto rdrg = conf->get<std::vector<float>>("drg_range");
@@ -112,7 +182,6 @@ int undulate(char const* config, char const* output) {
     auto dcent = conf->get<std::vector<int32_t>>("cent_diff");
 
     auto ihf = new interval(dhf);
-    auto mhf = new multival(dhf);
 
     auto mr = new multival(rdrr, rptr);
     auto mg = new multival(rdrg, rptg);
@@ -138,13 +207,41 @@ int undulate(char const* config, char const* output) {
 
     auto shape = victims->shape();
 
+    /* prepare density vectors */
+    auto density = [](multival* m) {
+        auto s = new TVectorD(m->size()); *s = 1.;
+        for (int64_t i = 0; i < m->size(); ++i) {
+            auto axes = m->axes();
+            auto indices = m->indices_for(i);
+
+            zip([&](interval const& axis, int64_t index) {
+                (*s)[i] = (*s)[i] / axis.width(index);
+            }, axes, indices);
+        }
+
+        return s;
+    };
+
+    auto sr = density(mr);
+    auto sg = density(mg);
+
     /* prepare objects for unfolding */
+    auto fbr = [&](int64_t i, std::string const&, std::string const&) {
+        return new TUnfoldBinning(*(*matrices)[i]->GetXaxis(), 0, 0); };
+    auto fbg = [&](int64_t i, std::string const&, std::string const&) {
+        return new TUnfoldBinning(*(*matrices)[i]->GetYaxis(), 0, 0); };
+
+    auto br = new history<TUnfoldBinning>("br"s, "", fbr, shape);
+    auto bg = new history<TUnfoldBinning>("bg"s, "", fbg, shape);
+
     auto factory = [&](int64_t i, std::string const&, std::string const&) {
         return new TUnfoldDensity((*matrices)[i],
             TUnfold::EHistMap::kHistMapOutputVert,
-            TUnfold::ERegMode::kRegModeCurvature,
+            TUnfold::ERegMode::kRegModeNone,
             TUnfold::EConstraint::kEConstraintNone,
-            TUnfoldDensity::EDensityMode::kDensityModeNone
+            TUnfoldDensity::EDensityMode::kDensityModeUser,
+            (*bg)[i],
+            (*br)[i]
         );
     };
 
@@ -153,6 +250,8 @@ int undulate(char const* config, char const* output) {
     auto bias = new history<TH1>("bias"s, "", null<TH1>, shape);
     auto ematrix = new history<TH2>("ematrix"s, "", null<TH2>, shape);
     auto lmatrix = new history<TH2>("lmatrix"s, "", null<TH2>, shape);
+
+    auto logtaur = new history<TSpline>("logtaur"s, "", null<TSpline>, shape);
     auto logtaux = new history<TSpline>("logtaux"s, "", null<TSpline>, shape);
     auto logtauy = new history<TSpline>("logtauy"s, "", null<TSpline>, shape);
     auto lcurve = new history<TGraph>("lcurve"s, "", null<TGraph>, shape);
@@ -170,8 +269,6 @@ int undulate(char const* config, char const* output) {
     auto fold0 = new history<TH1F>("fold0"s, "", null<TH1F>, shape);
     auto fold1 = new history<TH1F>("fold1"s, "", null<TH1F>, shape);
 
-    std::vector<int32_t> tau(mhf->size(), -1);
-
     /* info text */
     std::function<void(int64_t, float)> hf_info = [&](int64_t x, float pos) {
         info_text(x, pos, "%i - %i%%", dcent, true); };
@@ -186,19 +283,20 @@ int undulate(char const* config, char const* output) {
     hb->alias("gen", "");
     hb->alias("reco", "");
 
-    std::vector<paper*> cs(13, nullptr);
+    std::vector<paper*> cs(15, nullptr);
     zip([&](paper*& c, std::string const& title) {
         c = new paper(tag + "_dhf_" + title, hb);
         apply_style(c, system_info);
         c->accessory(std::bind(hf_info, _1, 0.75));
         c->divide(-1, ihf->size());
     }, cs, (std::initializer_list<std::string> const) {
-        "matrices"s, "bias"s, "ematrix"s, "lmatrix"s, "logtaux"s, "lcurve"s,
-        "unfold"s, "refold"s, "sresult"s, "srefold"s, "fold0"s, "fold1"s,
-        "shaded"s });
+        "matrices"s, "bias"s, "ematrix"s, "lmatrix"s,
+        "logtaur"s, "logtaux"s, "logtauy"s, "lcurve"s,
+        "unfold"s, "refold"s, "sresult"s, "srefold"s,
+        "fold0"s, "fold1"s, "shaded"s });
 
-    cs[10]->format(std::bind(default_formatter, _1, -2., 27.));
-    cs[11]->format(std::bind(default_formatter, _1, -0.001, 0.02));
+    cs[12]->format(std::bind(default_formatter, _1, -2., 27.));
+    cs[13]->format(std::bind(default_formatter, _1, -0.001, 0.02));
 
     /* unfold */
     uf->apply([&](TUnfoldDensity* u, int64_t i) {
@@ -206,9 +304,19 @@ int undulate(char const* config, char const* output) {
             printf("  [!] error: set input\n"); exit(1);
         }
 
-        tau[i] = u->ScanLcurve(points, 0., 0., &(*lcurve)[i],
-                               &(*logtaux)[i], &(*logtauy)[i]);
+        /* set density factors */
+        (*br)[i]->SetBinFactorFunction(1., (TF1*)sr);
+        (*bg)[i]->SetBinFactorFunction(1., (TF1*)sg);
 
+        /* set regularisation pattern */
+        pattern<TUnfold::ERegMode::kRegModeCurvature>(u, mg);
+
+        /* scan global correlation coefficient */
+        auto knot = u->ScanTau(points, taus[0], taus[1], &(*logtaur)[i],
+                               TUnfoldDensity::kEScanTauRhoAvg, 0, 0,
+                               &(*lcurve)[i], &(*logtaux)[i], &(*logtauy)[i]);
+
+        /* results */
         (*result)[i] = u->GetOutput("Unfolded");
         (*refold)[i] = u->GetFoldedOutput("FoldedBack");
 
@@ -218,23 +326,45 @@ int undulate(char const* config, char const* output) {
         (*fold0)[i] = fold<TH1, 4>((*result)[i], mg, 0, { 0, 0, 2, 1 });
         (*fold1)[i] = fold<TH1, 4>((*result)[i], mg, 1, { 0, 0, 2, 1 });
 
+        /* information and settings */
         (*bias)[i] = u->GetBias(nullptr);
         (*ematrix)[i] = u->GetEmatrixInput(nullptr);
         (*lmatrix)[i] = u->GetL(nullptr);
 
         double t;
+        double r;
         double x;
         double y;
 
-        (*logtaux)[i]->GetKnot(tau[i], t, x);
-        (*logtauy)[i]->GetKnot(tau[i], t, y);
+        (*logtaur)[i]->GetKnot(knot, t, r);
+        (*logtaux)[i]->GetKnot(knot, t, x);
+        (*logtauy)[i]->GetKnot(knot, t, y);
 
-        auto logtau_opt = new TGraph(1, &t, &x);
-        logtau_opt->SetMarkerStyle(21);
-        auto lcurve_opt = new TGraph(1, &x, &y);
-        lcurve_opt->SetMarkerStyle(21);
+        auto mark = [](double const& x, double const& y) {
+            auto marker = new TGraph(1, &x, &y);
+            marker->SetMarkerStyle(21);
 
-        auto hframe = frame((*logtaux)[i], (*lcurve)[i]->GetXaxis());
+            return marker;
+        };
+
+        auto opt_logtaur = mark(t, r);
+        auto opt_logtaux = mark(t, x);
+        auto opt_logtauy = mark(t, y);
+        auto opt_lcurve = mark(x, y);
+
+        auto trace = [](TSpline const* s, int64_t n) {
+            auto x = new double[n];
+            auto y = new double[n];
+
+            for (int64_t i = 0; i < n; ++i)
+                s->GetKnot(i, x[i], y[i]);
+
+            return new TGraph(n, x, y);
+        };
+
+        auto tlogtaur = trace((*logtaur)[i], points);
+        auto tlogtaux = trace((*logtaux)[i], points);
+        auto tlogtauy = trace((*logtauy)[i], points);
 
         /* input folds */
         (*shaded)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
@@ -257,36 +387,45 @@ int undulate(char const* config, char const* output) {
         cs[3]->add((*lmatrix)[i]);
         cs[3]->adjust((*lmatrix)[i], "colz", "");
 
-        cs[4]->add(hframe);
-        cs[4]->stack((*logtaux)[i]);
-        cs[4]->adjust((*logtaux)[i], "l", "");
-        cs[4]->stack(logtau_opt, "optimal");
-        cs[4]->adjust(logtau_opt, "p", "");
+        cs[4]->add(tlogtaur);
+        cs[4]->adjust(tlogtaur, "al", "");
+        cs[4]->stack(opt_logtaur, "optimal");
+        cs[4]->adjust(opt_logtaur, "p", "");
 
-        cs[5]->add((*lcurve)[i]);
-        cs[5]->adjust((*lcurve)[i], "al", "");
-        cs[5]->stack(lcurve_opt, "optimal");
-        cs[5]->adjust(lcurve_opt, "p", "");
+        cs[5]->add(tlogtaux);
+        cs[5]->adjust(tlogtaux, "al", "");
+        cs[5]->stack(opt_logtaux, "optimal");
+        cs[5]->adjust(opt_logtaux, "p", "");
 
-        cs[6]->add((*result)[i], "unfolded");
+        cs[6]->add(tlogtauy);
+        cs[6]->adjust(tlogtauy, "al", "");
+        cs[6]->stack(opt_logtauy, "optimal");
+        cs[6]->adjust(opt_logtauy, "p", "");
 
-        cs[7]->add((*victims)[i], "data");
-        cs[7]->stack((*refold)[i], "refolded");
+        cs[7]->add((*lcurve)[i]);
+        cs[7]->adjust((*lcurve)[i], "al", "");
+        cs[7]->stack(opt_lcurve, "optimal");
+        cs[7]->adjust(opt_lcurve, "p", "");
 
-        cs[8]->add((*sresult)[i]);
-        cs[8]->adjust((*sresult)[i], "colz", "");
-        cs[9]->add((*srefold)[i]);
-        cs[9]->adjust((*srefold)[i], "colz", "");
+        cs[8]->add((*result)[i], "unfolded");
 
-        cs[10]->add((*notes[0])[i], "data", "gen");
-        cs[10]->stack((*side0)[i], "data", "reco");
-        cs[10]->stack((*fold0)[i], "unfolded", "gen");
-        cs[11]->add((*notes[1])[i], "data", "gen");
-        cs[11]->stack((*side1)[i], "data", "reco");
-        cs[11]->stack((*fold1)[i], "unfolded", "gen");
+        cs[9]->add((*victims)[i], "data");
+        cs[9]->stack((*refold)[i], "refolded");
 
-        cs[12]->add((*shaded)[i]);
-        cs[12]->adjust((*shaded)[i], "colz", "");
+        cs[10]->add((*sresult)[i]);
+        cs[10]->adjust((*sresult)[i], "colz", "");
+        cs[11]->add((*srefold)[i]);
+        cs[11]->adjust((*srefold)[i], "colz", "");
+
+        cs[12]->add((*notes[0])[i], "data", "gen");
+        cs[12]->stack((*side0)[i], "data", "reco");
+        cs[12]->stack((*fold0)[i], "unfolded", "gen");
+        cs[13]->add((*notes[1])[i], "data", "gen");
+        cs[13]->stack((*side1)[i], "data", "reco");
+        cs[13]->stack((*fold1)[i], "unfolded", "gen");
+
+        cs[14]->add((*shaded)[i]);
+        cs[14]->adjust((*shaded)[i], "colz", "");
     });
 
     hb->set_binary("bins");
@@ -298,6 +437,8 @@ int undulate(char const* config, char const* output) {
     bias->rename();
     ematrix->rename();
     lmatrix->rename();
+
+    logtaur->rename();
     logtaux->rename();
     logtauy->rename();
     lcurve->rename();
@@ -320,6 +461,8 @@ int undulate(char const* config, char const* output) {
         bias->save(tag);
         ematrix->save(tag);
         lmatrix->save(tag);
+
+        logtaur->save(tag);
         logtaux->save(tag);
         logtauy->save(tag);
         lcurve->save(tag);
