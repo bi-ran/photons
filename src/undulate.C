@@ -15,10 +15,11 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TSpline.h"
+#include "TVectorT.h"
 
 #include "TUnfoldBinning.h"
 #include "TUnfoldDensity.h"
-#include "TVectorT.h"
 
 #include <string>
 #include <vector>
@@ -183,8 +184,13 @@ int undulate(char const* config, char const* output) {
 
     auto ihf = new interval(dhf);
 
-    auto mr = new multival(rdrr, rptr);
-    auto mg = new multival(rdrg, rptg);
+    auto idrr = new interval("#deltaj"s, rdrr);
+    auto iptr = new interval("p_{T}^{j}"s, rptr);
+    auto idrg = new interval("#deltaj"s, rdrg);
+    auto iptg = new interval("p_{T}^{j}"s, rptg);
+
+    auto mr = new multival(*idrr, *iptr);
+    auto mg = new multival(*idrg, *iptg);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -251,9 +257,9 @@ int undulate(char const* config, char const* output) {
     auto ematrix = new history<TH2>("ematrix"s, "", null<TH2>, shape);
     auto lmatrix = new history<TH2>("lmatrix"s, "", null<TH2>, shape);
 
-    auto logtaur = new history<TSpline>("logtaur"s, "", null<TSpline>, shape);
-    auto logtaux = new history<TSpline>("logtaux"s, "", null<TSpline>, shape);
-    auto logtauy = new history<TSpline>("logtauy"s, "", null<TSpline>, shape);
+    auto logtaur = new history<TGraph>("logtaur"s, "", null<TGraph>, shape);
+    auto logtaux = new history<TGraph>("logtaux"s, "", null<TGraph>, shape);
+    auto logtauy = new history<TGraph>("logtauy"s, "", null<TGraph>, shape);
     auto lcurve = new history<TGraph>("lcurve"s, "", null<TGraph>, shape);
 
     auto shaded = new history<TH2F>(label + "_shade", "", null<TH2F>, shape);
@@ -311,10 +317,14 @@ int undulate(char const* config, char const* output) {
         /* set regularisation pattern */
         pattern<TUnfold::ERegMode::kRegModeCurvature>(u, mg);
 
+        TSpline* slogtaur;
+        TSpline* slogtaux;
+        TSpline* slogtauy;
+
         /* scan global correlation coefficient */
-        auto knot = u->ScanTau(points, taus[0], taus[1], &(*logtaur)[i],
+        auto knot = u->ScanTau(points, taus[0], taus[1], &slogtaur,
                                TUnfoldDensity::kEScanTauRhoAvg, 0, 0,
-                               &(*lcurve)[i], &(*logtaux)[i], &(*logtauy)[i]);
+                               &(*lcurve)[i], &slogtaux, &slogtauy);
 
         /* results */
         (*result)[i] = u->GetOutput("Unfolded");
@@ -336,9 +346,9 @@ int undulate(char const* config, char const* output) {
         double x;
         double y;
 
-        (*logtaur)[i]->GetKnot(knot, t, r);
-        (*logtaux)[i]->GetKnot(knot, t, x);
-        (*logtauy)[i]->GetKnot(knot, t, y);
+        slogtaur->GetKnot(knot, t, r);
+        slogtaux->GetKnot(knot, t, x);
+        slogtauy->GetKnot(knot, t, y);
 
         auto mark = [](double const& x, double const& y) {
             auto marker = new TGraph(1, &x, &y);
@@ -362,9 +372,9 @@ int undulate(char const* config, char const* output) {
             return new TGraph(n, x, y);
         };
 
-        auto tlogtaur = trace((*logtaur)[i], points);
-        auto tlogtaux = trace((*logtaux)[i], points);
-        auto tlogtauy = trace((*logtauy)[i], points);
+        (*logtaur)[i] = trace(slogtaur, points);
+        (*logtaux)[i] = trace(slogtaux, points);
+        (*logtauy)[i] = trace(slogtauy, points);
 
         /* input folds */
         (*shaded)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
@@ -374,6 +384,13 @@ int undulate(char const* config, char const* output) {
         /* normalise to unity */
         (*fold0)[i]->Scale(1. / (*fold0)[i]->Integral("width"));
         (*side0)[i]->Scale(1. / (*side0)[i]->Integral("width"));
+
+        /* set titles */
+        (*logtaur)[i]->SetTitle(";log_{10}#tau;#rho");
+        (*logtaux)[i]->SetTitle(";log_{10}#tau;log_{10}L_{1}");
+        (*logtauy)[i]->SetTitle(";log_{10}#tau;log_{10}L_{2}/#tau^{2}");
+        (*lcurve)[i]->SetTitle(";log_{10}L_{1};log_{10}L_{2}/#tau^{2}");
+        (*result)[i]->SetTitle("");
 
         /* figures */
         cs[0]->add((*matrices)[i]);
@@ -387,18 +404,18 @@ int undulate(char const* config, char const* output) {
         cs[3]->add((*lmatrix)[i]);
         cs[3]->adjust((*lmatrix)[i], "colz", "");
 
-        cs[4]->add(tlogtaur);
-        cs[4]->adjust(tlogtaur, "al", "");
+        cs[4]->add((*logtaur)[i]);
+        cs[4]->adjust((*logtaur)[i], "al", "");
         cs[4]->stack(opt_logtaur, "optimal");
         cs[4]->adjust(opt_logtaur, "p", "");
 
-        cs[5]->add(tlogtaux);
-        cs[5]->adjust(tlogtaux, "al", "");
+        cs[5]->add((*logtaux)[i]);
+        cs[5]->adjust((*logtaux)[i], "al", "");
         cs[5]->stack(opt_logtaux, "optimal");
         cs[5]->adjust(opt_logtaux, "p", "");
 
-        cs[6]->add(tlogtauy);
-        cs[6]->adjust(tlogtauy, "al", "");
+        cs[6]->add((*logtauy)[i]);
+        cs[6]->adjust((*logtauy)[i], "al", "");
         cs[6]->stack(opt_logtauy, "optimal");
         cs[6]->adjust(opt_logtauy, "p", "");
 
