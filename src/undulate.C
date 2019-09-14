@@ -12,6 +12,7 @@
 #include "../git/tricks-and-treats/include/trunk.h"
 #include "../git/tricks-and-treats/include/zip.h"
 
+#include "TDecompSVD.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TH2.h"
@@ -155,6 +156,29 @@ void pattern<TUnfold::ERegMode::kRegModeCurvature>(TUnfoldDensity* u,
                 common / ds[0][i], common / ds[0][i + 1]);
         }
     }
+}
+
+double condition(TH2* h) {
+    double cond = -1;
+
+    auto rows = h->GetNbinsX();
+    auto cols = h->GetNbinsY();
+
+    auto m = new TMatrixT<double>(rows, cols);
+    for (int64_t i = 0; i < rows; ++i)
+        for (int64_t j = 0; j < cols; ++j)
+            (*m)[i][j] = h->GetBinContent(i + 1, j + 1);
+
+    auto svd = new TDecompSVD(*m);
+    if (svd->Decompose()) {
+        auto s = svd->GetSig();
+        cond = s[0] / s[cols - 1];
+    }
+
+    delete m;
+    delete svd;
+
+    return cond;
 }
 
 int undulate(char const* config, char const* output) {
@@ -309,6 +333,10 @@ int undulate(char const* config, char const* output) {
         if (u->SetInput((*victims)[i]) > 9999) {
             printf("  [!] error: set input\n"); exit(1);
         }
+
+        /* calculate condition number */
+        auto cond = condition((*matrices)[i]);
+        printf("condition: %f\n", cond);
 
         /* set density factors */
         (*br)[i]->SetBinFactorFunction(1., (TF1*)sr);
