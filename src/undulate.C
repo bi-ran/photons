@@ -187,6 +187,7 @@ int undulate(char const* config, char const* output) {
     auto input = conf->get<std::string>("input");
     auto system = conf->get<std::string>("system");
     auto tag = conf->get<std::string>("tag");
+    auto type = conf->get<std::string>("type");
 
     auto victim = conf->get<std::string>("victim");
     auto label = conf->get<std::string>("label");
@@ -322,7 +323,7 @@ int undulate(char const* config, char const* output) {
 
     std::vector<paper*> cs(15, nullptr);
     zip([&](paper*& c, std::string const& title) {
-        c = new paper(tag + "_dhf_" + title, hb);
+        c = new paper(tag + "_" + type + "_" + title, hb);
         apply_style(c, system_info);
         c->accessory(pthf_info);
         c->divide(mpthf->shape()[0], -1);
@@ -504,11 +505,11 @@ int undulate(char const* config, char const* output) {
 
     /* save output */
     in(output, [&]() {
-        matrices->save("");
-        victims->save("");
-        shaded->save("");
-        side0->save("");
-        side1->save("");
+        matrices->save();
+        victims->save();
+        shaded->save();
+        side0->save();
+        side1->save();
 
         bias->save(tag);
         ematrix->save(tag);
