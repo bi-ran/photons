@@ -51,8 +51,8 @@ int vacillate(char const* config, char const* output) {
     auto hf_min = dhf.front();
 
     /* prepare histograms */
+    auto incl = new interval(""s, 1, 0.f, 9999.f);
     auto ihf = new interval(dhf);
-    auto mhf = new multival(dhf);
 
     auto mcdr = new multival(rdrr, rdrg);
     auto mcpt = new multival(rptr, rptg);
@@ -60,17 +60,23 @@ int vacillate(char const* config, char const* output) {
     auto mr = new multival(rdrr, rptr);
     auto mg = new multival(rdrg, rptg);
 
+    auto fn = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
     auto fcdr = std::bind(&multival::book<TH2F>, mcdr, _1, _2, _3);
     auto fcpt = std::bind(&multival::book<TH2F>, mcpt, _1, _2, _3);
+
+    auto fg = [&](int64_t, std::string const& name, std::string const& label) {
+        return new TH1F(name.data(), (";gen;"s + label).data(),
+            mg->size(), 0, mg->size()); };
 
     auto fc = [&](int64_t, std::string const& name, std::string const& label) {
         return new TH2F(name.data(), (";reco;gen;"s + label).data(),
             mr->size(), 0, mr->size(), mg->size(), 0, mg->size()); };
 
-    auto cdr = new memory<TH2F>("cdr"s, "counts", fcdr, mhf);
-    auto cpt = new memory<TH2F>("cpt"s, "counts", fcpt, mhf);
-
-    auto c = new memory<TH2F>("c"s, "counts", fc, mhf);
+    auto n = new history<TH1F>("n"s, "events", fn, ihf->size());
+    auto g = new history<TH1F>("g"s, "counts", fg, ihf->size());
+    auto cdr = new history<TH2F>("cdr"s, "counts", fcdr, ihf->size());
+    auto cpt = new history<TH2F>("cpt"s, "counts", fcpt, ihf->size());
+    auto c = new history<TH2F>("c"s, "counts", fc, ihf->size());
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -90,6 +96,9 @@ int vacillate(char const* config, char const* output) {
 
         if (p->hiHF <= hf_min) { continue; }
 
+        auto hf_x = ihf->index_for(p->hiHF);
+        (*n)[hf_x]->Fill(1., p->weight);
+
         std::vector<int64_t> exclusion;
         for (int64_t j = 0; j < p->nMC; ++j) {
             auto pid = (*p->mcPID)[j];
@@ -106,8 +115,6 @@ int vacillate(char const* config, char const* output) {
         std::unordered_map<float, int64_t> genid;
         for (int64_t j = 0; j < p->ngen; ++j)
             genid[(*p->genpt)[j]] = j;
-
-        auto hf_x = ihf->index_for(p->hiHF);
 
         for (int64_t j = 0; j < p->nref; ++j) {
             if ((*p->subid)[j] > 0) { continue; }
@@ -137,25 +144,32 @@ int vacillate(char const* config, char const* output) {
             auto id = genid[gen_pt];
             auto gdr = std::sqrt(dr2(gen_eta, (*p->WTAgeneta)[id],
                                      gen_phi, (*p->WTAgenphi)[id]));
+            auto g_x = mg->index_for(v{gdr, gen_pt});
+
+            (*g)[hf_x]->Fill(g_x, p->weight);
 
             if (reco_pt <= rptr.front() || reco_pt >= rptr.back()) {
-                (*c)[hf_x]->Fill(-1, mg->index_for(v{gdr, gen_pt}), p->weight);
+                (*c)[hf_x]->Fill(-1, g_x, p->weight);
                 continue;
             }
 
             auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
                                      reco_phi, (*p->WTAphi)[j]));
+            auto r_x = mr->index_for(v{rdr, reco_pt});
 
             (*cdr)[hf_x]->Fill(rdr, gdr, p->weight);
             (*cpt)[hf_x]->Fill(reco_pt, gen_pt, p->weight);
-            (*c)[hf_x]->Fill(mr->index_for(v{rdr, reco_pt}),
-                             mg->index_for(v{gdr, gen_pt}),
-                             p->weight);
+            (*c)[hf_x]->Fill(r_x, g_x, p->weight);
         }
     }
 
+    g->divide(*n);
+
     /* save output */
     in(output, [&]() {
+        n->save(tag);
+        g->save(tag);
+
         cdr->save(tag);
         cpt->save(tag);
         c->save(tag);
