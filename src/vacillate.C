@@ -89,9 +89,10 @@ int vacillate(char const* config, char const* output) {
     auto n = new history<TH1F>("n"s, "events", fn, ihf->size());
     auto r = new history<TH1F>("r"s, "counts", fr, ihf->size());
     auto g = new history<TH1F>("g"s, "counts", fg, ihf->size());
+    auto c = new history<TH2F>("c"s, "counts", fc, ihf->size());
+
     auto cdr = new history<TH2F>("cdr"s, "counts", fcdr, ihf->size());
     auto cpt = new history<TH2F>("cpt"s, "counts", fcpt, ihf->size());
-    auto c = new history<TH2F>("c"s, "counts", fc, ihf->size());
 
     /* manage memory manually */
     TH1::AddDirectory(false);
