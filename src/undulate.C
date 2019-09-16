@@ -198,6 +198,7 @@ int undulate(char const* config, char const* output) {
 
     auto points = conf->get<int64_t>("points");
     auto taus = conf->get<std::vector<float>>("taus");
+    auto scale = conf->get<std::vector<float>>("scale");
 
     auto rdrr = conf->get<std::vector<float>>("drr_range");
     auto rdrg = conf->get<std::vector<float>>("drg_range");
@@ -338,7 +339,7 @@ int undulate(char const* config, char const* output) {
 
     /* unfold */
     uf->apply([&](TUnfoldDensity* u, int64_t i) {
-        if (u->SetInput((*victims)[i]) > 9999) {
+        if (u->SetInput((*victims)[i], scale[i]) > 9999) {
             printf("  [!] error: set input\n"); exit(1);
         }
 
