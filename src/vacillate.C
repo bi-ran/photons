@@ -37,6 +37,9 @@ int vacillate(char const* config, char const* output) {
     auto input = conf->get<std::string>("input");
     auto tag = conf->get<std::string>("tag");
 
+    auto start = conf->get<int64_t>("start");
+    auto end = conf->get<int64_t>("end");
+
     auto heavyion = conf->get<bool>("heavyion");
     auto eta_max = conf->get<float>("eta_max");
 
@@ -88,9 +91,9 @@ int vacillate(char const* config, char const* output) {
     auto p = new pjtree(true, false, t, { 1, 1, 1, 0, 1, 0 });
 
     /* fill histograms */
-    auto nentries = static_cast<int64_t>(t->GetEntries());
-    for (int64_t i = 0; i < nentries; ++i) {
-        if (i % 100000 == 0) { printf("%li/%li\n", i, nentries); }
+    if (!end) { end = t->GetEntries(); }
+    for (int64_t i = start; i < end; ++i) {
+        if (i % 100000 == 0) { printf("%li/%li\n", i, end); }
 
         t->GetEntry(i);
 
