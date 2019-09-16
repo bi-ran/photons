@@ -53,6 +53,7 @@ int distillate(char const* config, char const* output) {
 
     auto heavyion = conf->get<bool>("heavyion");
     auto fit = conf->get<bool>("fit");
+    auto func = conf->get<std::string>("func");
 
     auto rpt = conf->get<std::vector<float>>("pt_range");
     auto reta = conf->get<std::vector<float>>("eta_range");
@@ -155,7 +156,9 @@ int distillate(char const* config, char const* output) {
         fhe[i] = conf->get<std::vector<float>>("fhe_"s + hf_str);
     }
 
-    auto set_csn = [&](TF1* f, int64_t hf_x) {
+    auto resolution_function = [&](char const* label, int64_t hf_x) {
+        TF1* f = new TF1(label, "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
+
         if (!heavyion || csn.empty()) {
             f->SetParameters(0.08, 0.32, 0.);
         } else {
@@ -165,6 +168,8 @@ int distillate(char const* config, char const* output) {
                 f->FixParameter(1, csn[1]);
             }
         }
+
+        return f;
     };
 
     /* info text */
@@ -234,9 +239,8 @@ int distillate(char const* config, char const* output) {
 
         if (fit) {
             auto label = "f_s_dhf_f_pt_"s + std::to_string(index);
-            TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
-            f->SetParameters(1.1, 1.2, 4.8);
-            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+            TF1* f = new TF1(label.data(), func.data());
+            h->Fit(f, "MEQ", "", 30, rpt.back());
         }
 
         c2->add(h, "mc");
@@ -251,20 +255,16 @@ int distillate(char const* config, char const* output) {
     r_dhf_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(r_range[0], r_range[1], "Y");
 
-        if (fit) {
-            auto label = "f_r_dhf_f_pt_"s + std::to_string(index);
-            TF1* f = new TF1(label.data(),
-                "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
-            set_csn(f, index);
-            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        auto label = "f_r_dhf_f_pt_"s + std::to_string(index);
+        auto f = resolution_function(label.data(), index);
+        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
-            csn[0] = f->GetParameter(0);
-            csn[1] = f->GetParameter(1);
-            csn[2] = f->GetParameter(2);
+        csn[0] = f->GetParameter(0);
+        csn[1] = f->GetParameter(1);
+        csn[2] = f->GetParameter(2);
 
-            printf("%i - %i%%: %.3f, %.3f, %.3f\n",
-                dcent[index + 1], dcent[index], csn[0], csn[1], csn[2]);
-        }
+        printf("%i - %i%%: %.3f, %.3f, %.3f\n",
+            dcent[index + 1], dcent[index], csn[0], csn[1], csn[2]);
 
         c3->add(h, "mc");
     });
@@ -377,9 +377,8 @@ int distillate(char const* config, char const* output) {
 
         if (fit) {
             auto label = "f_s_f_pt_"s + std::to_string(index);
-            TF1* f = new TF1(label.data(), "[0]+[1]/x+[2]/(x*x)");
-            f->SetParameters(1.1, 1.2, 4.8);
-            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+            TF1* f = new TF1(label.data(), func.data());
+            h->Fit(f, "MEQ", "", 30, rpt.back());
         }
 
         auto eta_x = s_f_pt->indices_for(index)[0];
@@ -389,16 +388,12 @@ int distillate(char const* config, char const* output) {
     r_f_pt->apply([&](TH1* h, int64_t index) {
         h->SetAxisRange(r_range[0], r_range[1], "Y");
 
-        if (fit) {
-            auto label = "f_r_f_pt_"s + std::to_string(index);
-            TF1* f = new TF1(label.data(),
-                "sqrt([0]*[0]+[1]*[1]/x+[2]*[2]/(x*x))");
-            set_csn(f, index);
-            h->Fit(label.data(), "MEQ", "", 30, rpt.back());
+        auto label = "f_r_f_pt_"s + std::to_string(index);
+        auto f = resolution_function(label.data(), index);
+        h->Fit(label.data(), "MEQ", "", 30, rpt.back());
 
-            csn[1] = f->GetParameter(1);
-            csn[2] = f->GetParameter(2);
-        }
+        csn[1] = f->GetParameter(1);
+        csn[2] = f->GetParameter(2);
 
         auto eta_x = r_f_pt->indices_for(index)[0];
         c9[eta_x]->add(h, "mc");
