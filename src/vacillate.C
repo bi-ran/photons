@@ -126,6 +126,7 @@ int vacillate(char const* config, char const* output) {
             auto gen_eta = (*p->refeta)[j];
             auto gen_phi = (*p->refphi)[j];
 
+            if (gen_pt < rptg.front()) { continue; }
             if (std::abs(gen_eta) >= eta_max) { continue; }
 
             bool match = false;
