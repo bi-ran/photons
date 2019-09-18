@@ -151,7 +151,7 @@ void pattern<TUnfold::ERegMode::kRegModeCurvature>(TUnfoldDensity* u,
         for (int64_t i = 0; i < shape[0] - 2; ++i) {
             auto index = m->index_for(x{i, j});
 
-            auto common = as[0] * as[0] / (ds[0][i] + ds[0][i + 1]);
+            auto common = -as[0] * as[0] / (ds[0][i] + ds[0][i + 1]);
             u->RegularizeCurvature(index, index + step, index + step + step,
                 common / ds[0][i], common / ds[0][i + 1]);
         }
