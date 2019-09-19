@@ -488,45 +488,30 @@ int undulate(char const* config, char const* output) {
     for (auto c : cs)
         c->draw("pdf");
 
-    bias->rename();
-    ematrix->rename();
-    lmatrix->rename();
-
-    logtaur->rename();
-    logtaux->rename();
-    logtauy->rename();
-    lcurve->rename();
-
-    result->rename();
-    refold->rename();
-    sresult->rename();
-    srefold->rename();
-    fold0->rename();
-    fold1->rename();
-
     /* save output */
     in(output, [&]() {
         matrices->save();
         victims->save();
-        shaded->save();
-        side0->save();
-        side1->save();
 
-        bias->save(tag);
-        ematrix->save(tag);
-        lmatrix->save(tag);
+        shaded->saveas();
+        side0->saveas();
+        side1->saveas();
 
-        logtaur->save(tag);
-        logtaux->save(tag);
-        logtauy->save(tag);
-        lcurve->save(tag);
+        bias->saveby(tag);
+        ematrix->saveby(tag);
+        lmatrix->saveby(tag);
 
-        result->save(tag);
-        refold->save(tag);
-        sresult->save(tag);
-        srefold->save(tag);
-        fold0->save(tag);
-        fold1->save(tag);
+        logtaur->saveby(tag);
+        logtaux->saveby(tag);
+        logtauy->saveby(tag);
+        lcurve->saveby(tag);
+
+        result->saveby(tag);
+        refold->saveby(tag);
+        sresult->saveby(tag);
+        srefold->saveby(tag);
+        fold0->saveby(tag);
+        fold1->saveby(tag);
     });
 
     return 0;
