@@ -191,8 +191,8 @@ int undulate(char const* config, char const* output) {
 
     auto victim = conf->get<std::string>("victim");
     auto label = conf->get<std::string>("label");
+    auto reference = conf->get<std::string>("reference");
 
-    auto refs = conf->get<std::vector<std::string>>("refs");
     auto extensions = conf->get<std::vector<int64_t>>("extensions");
     auto dimensions = conf->get<std::vector<int64_t>>("dimensions");
 
@@ -219,6 +219,8 @@ int undulate(char const* config, char const* output) {
     auto mr = new multival(*idrr, *iptr);
     auto mg = new multival(*idrg, *iptg);
 
+    if (reference.empty()) { reference = label; }
+
     /* manage memory manually */
     TH1::AddDirectory(false);
     TH1::SetDefaultSumw2();
@@ -229,10 +231,7 @@ int undulate(char const* config, char const* output) {
 
     TFile* fv = new TFile(victim.data(), "read");
     auto victims = new history<TH1F>(fv, label);
-
-    std::vector<history<TH1F>*> notes(refs.size(), nullptr);
-    zip([&](history<TH1F>*& n, std::string const& ref) {
-        n = new history<TH1F>(fv, ref); }, notes, refs);
+    auto ref = new history<TH1F>(fv, reference);
 
     zip([&](int64_t extension, int64_t dimension) {
         matrices = matrices->extend("ext"s + std::to_string(extension),
@@ -316,13 +315,13 @@ int undulate(char const* config, char const* output) {
 
     /* figures */
     auto hb = new pencil();
-    hb->category("type", "data", "unfolded", "refolded", "optimal", "bias");
+    hb->category("type", "data", "unfolded", "refolded", "optimal", "truth");
     hb->category("bins", "gen", "reco");
 
     hb->alias("gen", "");
     hb->alias("reco", "");
 
-    std::vector<paper*> cs(15, nullptr);
+    std::vector<paper*> cs(16, nullptr);
     zip([&](paper*& c, std::string const& title) {
         c = new paper(tag + "_" + type + "_" + title, hb);
         apply_style(c, system_info);
@@ -332,7 +331,7 @@ int undulate(char const* config, char const* output) {
         "matrices"s, "bias"s, "ematrix"s, "lmatrix"s,
         "logtaur"s, "logtaux"s, "logtauy"s, "lcurve"s,
         "unfold"s, "refold"s, "sresult"s, "srefold"s,
-        "fold0"s, "fold1"s, "shaded"s });
+        "fold0"s, "fold1"s, "shaded"s, "closure"s });
 
     cs[12]->format(std::bind(default_formatter, _1, -2., 27.));
     cs[13]->format(std::bind(default_formatter, _1, -0.001, 0.02));
@@ -433,7 +432,7 @@ int undulate(char const* config, char const* output) {
         cs[0]->add((*matrices)[i]);
         cs[0]->adjust((*matrices)[i], "colz", "");
 
-        cs[1]->add((*bias)[i], "bias");
+        cs[1]->add((*bias)[i], "truth");
 
         cs[2]->add((*ematrix)[i]);
         cs[2]->adjust((*ematrix)[i], "colz", "");
@@ -471,15 +470,16 @@ int undulate(char const* config, char const* output) {
         cs[11]->add((*srefold)[i]);
         cs[11]->adjust((*srefold)[i], "colz", "");
 
-        cs[12]->add((*notes[0])[i], "data", "gen");
-        cs[12]->stack((*side0)[i], "data", "reco");
+        cs[12]->add((*side0)[i], "data", "reco");
         cs[12]->stack((*fold0)[i], "unfolded", "gen");
-        cs[13]->add((*notes[1])[i], "data", "gen");
-        cs[13]->stack((*side1)[i], "data", "reco");
+        cs[13]->add((*side1)[i], "data", "reco");
         cs[13]->stack((*fold1)[i], "unfolded", "gen");
 
         cs[14]->add((*shaded)[i]);
         cs[14]->adjust((*shaded)[i], "colz", "");
+
+        cs[15]->add((*result)[i], "unfolded");
+        cs[15]->stack((*ref)[i], "truth");
     });
 
     hb->set_binary("bins");
