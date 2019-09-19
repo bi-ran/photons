@@ -1,4 +1,5 @@
 #include "../include/pjtree.h"
+#include "../include/specifics.h"
 
 #include "../git/config/include/configurer.h"
 
@@ -41,7 +42,13 @@ int vacillate(char const* config, char const* output) {
     auto end = conf->get<int64_t>("end");
 
     auto heavyion = conf->get<bool>("heavyion");
-    auto eta_max = conf->get<float>("eta_max");
+    auto jet_eta_max = conf->get<float>("jet_eta_max");
+    auto photon_pt_min = conf->get<float>("photon_pt_min");
+    auto photon_eta_max = conf->get<float>("photon_eta_max");
+    auto hovere_max = conf->get<float>("hovere_max");
+    auto see_min = conf->get<float>("see_min");
+    auto see_max = conf->get<float>("see_max");
+    auto iso_max = conf->get<float>("iso_max");
 
     auto rdrr = conf->get<std::vector<float>>("drr_range");
     auto rdrg = conf->get<std::vector<float>>("drg_range");
@@ -99,22 +106,62 @@ int vacillate(char const* config, char const* output) {
 
         if (p->hiHF <= hf_min) { continue; }
 
+        int64_t leading = -1;
+        for (int64_t j = 0; j < p->nPho; ++j) {
+            if ((*p->phoEt)[j] <= photon_pt_min) { continue; }
+            if (std::abs((*p->phoSCEta)[j]) >= photon_eta_max) { continue; }
+            if ((*p->phoHoverE)[j] > hovere_max) { continue; }
+
+            leading = j;
+            break;
+        }
+
+        /* require leading photon */
+        if (leading < 0) { continue; }
+
+        if ((*p->phoSigmaIEtaIEta_2012)[leading] > see_max
+                || (*p->phoSigmaIEtaIEta_2012)[leading] < see_min)
+            continue;
+
+        /* hem failure region exclusion */
+        if (heavyion && within_hem_failure_region(p, leading)) { continue; }
+
+        /* require match to gen */
+        auto gen_index = (*p->pho_genMatchedIndex)[leading];
+        if (gen_index == -1) { continue; }
+
+        /* isolation requirement */
+        float isolation = (*p->pho_ecalClusterIsoR3)[leading]
+            + (*p->pho_hcalRechitIsoR3)[leading]
+            + (*p->pho_trackIsoR3PtCut20)[leading];
+        if (isolation > iso_max) { continue; }
+
+        /* photon axis */
+        auto photon_eta = (*p->phoEta)[leading];
+        auto photon_phi = convert_radian((*p->phoPhi)[leading]);
+
+        /* electron rejection */
+        bool electron = false;
+        for (int64_t j = 0; j < p->nEle; ++j) {
+            auto deta = photon_eta - (*p->eleEta)[j];
+            if (deta > 0.1) { continue; }
+
+            auto ele_phi = convert_radian((*p->elePhi)[j]);
+            auto dphi = revert_radian(photon_phi - ele_phi);
+            auto dr2 = deta * deta + dphi * dphi;
+
+            if (dr2 < 0.01 && passes_electron_id<det::barrel, wp::loose>(
+                    p, j, heavyion)) {
+                electron = true; break; }
+        }
+
+        if (electron) { continue; }
+
+        /* fill event weight */
         auto hf_x = ihf->index_for(p->hiHF);
         (*n)[hf_x]->Fill(1., p->weight);
 
-        std::vector<int64_t> exclusion;
-        for (int64_t j = 0; j < p->nMC; ++j) {
-            auto pid = (*p->mcPID)[j];
-            auto mpid = (*p->mcMomPID)[j];
-            if (pid != 22 || (std::abs(mpid) > 22 && mpid != -999)) { continue; }
-
-            /* gen isolation requirement */
-            float isolation = (*p->mcCalIsoDR04)[j];
-            if (isolation > 5.) { continue; }
-
-            exclusion.push_back(j);
-        }
-
+        /* map reco jet to gen jet */
         std::unordered_map<float, int64_t> genid;
         for (int64_t j = 0; j < p->ngen; ++j)
             genid[(*p->genpt)[j]] = j;
@@ -127,23 +174,18 @@ int vacillate(char const* config, char const* output) {
             auto gen_phi = (*p->refphi)[j];
 
             if (gen_pt < rptg.front()) { continue; }
-            if (std::abs(gen_eta) >= eta_max) { continue; }
-
-            bool match = false;
-            for (auto const& index : exclusion) {
-                if (dr2((*p->mcEta)[index], gen_eta,
-                        (*p->mcPhi)[index], gen_phi) < 0.01) {
-                    match = true; break; }
-            }
-
-            if (match == true) { continue; }
-
-            if (heavyion && in_hem_failure_region(gen_eta, gen_phi))
-                continue;
+            if (std::abs(gen_eta) >= jet_eta_max) { continue; }
 
             auto reco_pt = (*p->jtpt)[j];
             auto reco_eta = (*p->jteta)[j];
             auto reco_phi = (*p->jtphi)[j];
+
+            if (heavyion && in_hem_failure_region(reco_eta, reco_phi))
+                continue;
+
+            /* require back-to-back jets */
+            if (std::abs(photon_phi - convert_radian(reco_phi)) < 0.875_pi)
+                continue;
 
             auto id = genid[gen_pt];
             auto gdr = std::sqrt(dr2(gen_eta, (*p->WTAgeneta)[id],
@@ -153,17 +195,17 @@ int vacillate(char const* config, char const* output) {
             (*g)[hf_x]->Fill(g_x, p->weight);
 
             if (reco_pt <= rptr.front() || reco_pt >= rptr.back()) {
+                (*cpt)[hf_x]->Fill(-1, gen_pt, p->weight);
                 (*c)[hf_x]->Fill(-1, g_x, p->weight);
-                continue;
+            } else {
+                auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
+                                         reco_phi, (*p->WTAphi)[j]));
+                auto r_x = mr->index_for(v{rdr, reco_pt});
+
+                (*cdr)[hf_x]->Fill(rdr, gdr, p->weight);
+                (*cpt)[hf_x]->Fill(reco_pt, gen_pt, p->weight);
+                (*c)[hf_x]->Fill(r_x, g_x, p->weight);
             }
-
-            auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
-                                     reco_phi, (*p->WTAphi)[j]));
-            auto r_x = mr->index_for(v{rdr, reco_pt});
-
-            (*cdr)[hf_x]->Fill(rdr, gdr, p->weight);
-            (*cpt)[hf_x]->Fill(reco_pt, gen_pt, p->weight);
-            (*c)[hf_x]->Fill(r_x, g_x, p->weight);
         }
     }
 
