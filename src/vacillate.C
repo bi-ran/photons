@@ -74,6 +74,10 @@ int vacillate(char const* config, char const* output) {
     auto fcdr = std::bind(&multival::book<TH2F>, mcdr, _1, _2, _3);
     auto fcpt = std::bind(&multival::book<TH2F>, mcpt, _1, _2, _3);
 
+    auto fr = [&](int64_t, std::string const& name, std::string const& label) {
+        return new TH1F(name.data(), (";reco;"s + label).data(),
+            mr->size(), 0, mr->size()); };
+
     auto fg = [&](int64_t, std::string const& name, std::string const& label) {
         return new TH1F(name.data(), (";gen;"s + label).data(),
             mg->size(), 0, mg->size()); };
@@ -83,6 +87,7 @@ int vacillate(char const* config, char const* output) {
             mr->size(), 0, mr->size(), mg->size(), 0, mg->size()); };
 
     auto n = new history<TH1F>("n"s, "events", fn, ihf->size());
+    auto r = new history<TH1F>("r"s, "counts", fr, ihf->size());
     auto g = new history<TH1F>("g"s, "counts", fg, ihf->size());
     auto cdr = new history<TH2F>("cdr"s, "counts", fcdr, ihf->size());
     auto cpt = new history<TH2F>("cpt"s, "counts", fcpt, ihf->size());
@@ -194,26 +199,31 @@ int vacillate(char const* config, char const* output) {
 
             (*g)[hf_x]->Fill(g_x, p->weight);
 
-            if (reco_pt <= rptr.front() || reco_pt >= rptr.back()) {
-                (*cpt)[hf_x]->Fill(-1, gen_pt, p->weight);
-                (*c)[hf_x]->Fill(-1, g_x, p->weight);
-            } else {
+            if (reco_pt > rptr.front() && reco_pt < rptr.back()) {
                 auto rdr = std::sqrt(dr2(reco_eta, (*p->WTAeta)[j],
                                          reco_phi, (*p->WTAphi)[j]));
                 auto r_x = mr->index_for(v{rdr, reco_pt});
 
+                (*r)[hf_x]->Fill(r_x, p->weight);
+
                 (*cdr)[hf_x]->Fill(rdr, gdr, p->weight);
                 (*cpt)[hf_x]->Fill(reco_pt, gen_pt, p->weight);
                 (*c)[hf_x]->Fill(r_x, g_x, p->weight);
+            } else {
+                /* missed */
+                (*cpt)[hf_x]->Fill(-1, gen_pt, p->weight);
+                (*c)[hf_x]->Fill(-1, g_x, p->weight);
             }
         }
     }
 
+    r->divide(*n);
     g->divide(*n);
 
     /* save output */
     in(output, [&]() {
         n->save(tag);
+        r->save(tag);
         g->save(tag);
 
         cdr->save(tag);
