@@ -279,9 +279,10 @@ int undulate(char const* config, char const* output) {
 
     auto uf = new history<TUnfoldDensity>("uf"s, "", factory, shape);
 
-    auto bias = new history<TH1>("bias"s, "", null<TH1>, shape);
+    auto pmatrix = new history<TH2>("pmatrix"s, "", null<TH2>, shape);
     auto ematrix = new history<TH2>("ematrix"s, "", null<TH2>, shape);
     auto lmatrix = new history<TH2>("lmatrix"s, "", null<TH2>, shape);
+    auto bias = new history<TH1>("bias"s, "", null<TH1>, shape);
 
     auto logtaur = new history<TGraph>("logtaur"s, "", null<TGraph>, shape);
     auto logtaux = new history<TGraph>("logtaux"s, "", null<TGraph>, shape);
@@ -315,7 +316,8 @@ int undulate(char const* config, char const* output) {
 
     /* figures */
     auto hb = new pencil();
-    hb->category("type", "data", "unfolded", "refolded", "optimal", "truth");
+    hb->category("type", "data", "unfolded", "refolded", "optimal", "bias",
+                         "truth");
     hb->category("bins", "gen", "reco");
 
     hb->alias("gen", "");
@@ -328,7 +330,7 @@ int undulate(char const* config, char const* output) {
         c->accessory(pthf_info);
         c->divide(mpthf->shape()[0], -1);
     }, cs, (std::initializer_list<std::string> const) {
-        "matrices"s, "bias"s, "ematrix"s, "lmatrix"s,
+        "matrices"s, "pmatrix"s, "ematrix"s, "lmatrix"s,
         "logtaur"s, "logtaux"s, "logtauy"s, "lcurve"s,
         "unfold"s, "refold"s, "sresult"s, "srefold"s,
         "fold0"s, "fold1"s, "shaded"s, "closure"s });
@@ -373,9 +375,13 @@ int undulate(char const* config, char const* output) {
         (*fold1)[i] = fold<TH1, 4>((*result)[i], mg, 1, { 0, 0, 2, 1 });
 
         /* information and settings */
-        (*bias)[i] = u->GetBias(nullptr);
+        printf("chi2/ndf: (%f [A] + %f [L]) / %i\n", u->GetChi2A(),
+            u->GetChi2L(), u->GetNdf());
+
+        (*pmatrix)[i] = u->GetProbabilityMatrix(nullptr);
         (*ematrix)[i] = u->GetEmatrixInput(nullptr);
         (*lmatrix)[i] = u->GetL(nullptr);
+        (*bias)[i] = u->GetBias(nullptr);
 
         double t;
         double r;
@@ -432,7 +438,8 @@ int undulate(char const* config, char const* output) {
         cs[0]->add((*matrices)[i]);
         cs[0]->adjust((*matrices)[i], "colz", "");
 
-        cs[1]->add((*bias)[i], "truth");
+        cs[1]->add((*pmatrix)[i]);
+        cs[1]->adjust((*pmatrix)[i], "colz", "");
 
         cs[2]->add((*ematrix)[i]);
         cs[2]->adjust((*ematrix)[i], "colz", "");
@@ -479,6 +486,7 @@ int undulate(char const* config, char const* output) {
         cs[14]->adjust((*shaded)[i], "colz", "");
 
         cs[15]->add((*result)[i], "unfolded");
+        cs[15]->stack((*bias)[i], "bias");
         cs[15]->stack((*ref)[i], "truth");
     });
 
@@ -497,9 +505,10 @@ int undulate(char const* config, char const* output) {
         side0->saveas();
         side1->saveas();
 
-        bias->saveby(tag);
+        pmatrix->saveby(tag);
         ematrix->saveby(tag);
         lmatrix->saveby(tag);
+        bias->saveby(tag);
 
         logtaur->saveby(tag);
         logtaux->saveby(tag);
