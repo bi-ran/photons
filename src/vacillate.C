@@ -148,6 +148,8 @@ int vacillate(char const* config, char const* output) {
         /* electron rejection */
         bool electron = false;
         for (int64_t j = 0; j < p->nEle; ++j) {
+            if (std::abs((*p->eleSCEta)[j]) > 1.4442) { continue; }
+
             auto deta = photon_eta - (*p->eleEta)[j];
             if (deta > 0.1) { continue; }
 
@@ -155,8 +157,9 @@ int vacillate(char const* config, char const* output) {
             auto dphi = revert_radian(photon_phi - ele_phi);
             auto dr2 = deta * deta + dphi * dphi;
 
-            if (dr2 < 0.01 && passes_electron_id<det::barrel, wp::loose>(
-                    p, j, heavyion)) {
+            if (dr2 < 0.01 && passes_electron_id<
+                        det::barrel, wp::loose, pjtree
+                    >(p, j, heavyion)) {
                 electron = true; break; }
         }
 

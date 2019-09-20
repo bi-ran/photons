@@ -259,6 +259,8 @@ int populate(char const* config, char const* output) {
         if (ele_rej) {
             bool electron = false;
             for (int64_t j = 0; j < pjt->nEle; ++j) {
+                if (std::abs((*pjt->eleSCEta)[j]) > 1.4442) { continue; }
+
                 auto deta = photon_eta - (*pjt->eleEta)[j];
                 if (deta > 0.1) { continue; }
 
@@ -266,8 +268,9 @@ int populate(char const* config, char const* output) {
                 auto dphi = revert_radian(photon_phi - ele_phi);
                 auto dr2 = deta * deta + dphi * dphi;
 
-                if (dr2 < 0.01 && passes_electron_id<det::barrel, wp::loose>(
-                        pjt, j, heavyion)) {
+                if (dr2 < 0.01 && passes_electron_id<
+                            det::barrel, wp::loose, pjtree
+                        >(pjt, j, heavyion)) {
                     electron = true; break; }
             }
 
