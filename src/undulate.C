@@ -33,8 +33,20 @@ T* null(int64_t, std::string const&, std::string const&) {
     return nullptr;
 }
 
-template <typename T, int64_t N>
-TH1F* fold(T* flat, multival const* m, int64_t axis,
+TH2F* variance(TH1* flat, multival const* m) {
+    auto cov = new TH2F("cov", "", m->size(), 0, m->size(),
+        m->size(), 0, m->size());
+
+    for (int64_t i = 0; i < m->size(); ++i) {
+        auto err = flat->GetBinError(i + 1);
+        cov->SetBinContent(i + 1, i + 1, err * err);
+    }
+
+    return cov;
+}
+
+template <std::size_t N>
+TH1F* fold(TH1* flat, TH2* covariance, multival const* m, int64_t axis,
            std::array<int64_t, N> const& offsets) {
     auto name = std::string(flat->GetName()) + "_fold" + std::to_string(axis);
     auto hfold = m->axis(axis).book<TH1F, 2>(0, name, "",
@@ -42,24 +54,52 @@ TH1F* fold(T* flat, multival const* m, int64_t axis,
 
     auto shape = m->shape();
 
+    auto front = std::vector<int64_t>(m->dims(), 0);
+    auto back = std::vector<int64_t>(m->dims(), 0);
+    for (int64_t i = 0; i < m->dims(); ++i) {
+        front[i] = offsets[i << 1];
+        back[i] = shape[i] - offsets[(i << 1) + 1];
+    }
+
+    auto size = back[axis] - front[axis];
+    auto list = new std::vector<int64_t>[size];
+
     for (int64_t i = 0; i < m->size(); ++i) {
         auto indices = m->indices_for(i);
 
         bool flag = false;
-        for (int64_t j = 0; j < m->dims(); ++j)
-            if (indices[j] >= shape[j] - offsets[(j << 1) + 1]
-                    || indices[j] < offsets[j << 1])
-                flag = true;
+        zip([&](int64_t index, int64_t f, int64_t b) {
+            flag = flag || index < f || index >= b;
+        }, indices, front, back);
         if (flag) { continue; }
 
-        auto index = indices[axis] - offsets[axis << 1];
-
+        auto index = indices[axis] - front[axis];
         hfold->SetBinContent(index + 1, hfold->GetBinContent(index + 1)
             + flat->GetBinContent(i + 1));
-        hfold->SetBinError(index + 1, std::sqrt(hfold->GetBinError(index + 1)
-            * hfold->GetBinError(index + 1) + flat->GetBinError(i + 1)
-            * flat->GetBinError(i + 1)));
+
+        list[index].push_back(i);
     }
+
+    auto cov = covariance ? (TH2F*)covariance->Clone() : variance(flat, m);
+
+    for (int64_t i = 0; i < size; ++i) {
+        auto indices = list[i];
+        int64_t count = indices.size();
+
+        auto error = 0.;
+        for (int64_t j = 0; j < count; ++j) {
+            auto j_x = indices[j] + 1;
+            for (int64_t k = 0; k < count; ++k) {
+                auto k_x = indices[k] + 1;
+                error = error + cov->GetBinContent(j_x, k_x);
+            }
+        }
+
+        hfold->SetBinError(i + 1, std::sqrt(error));
+    }
+
+    delete [] list;
+    delete cov;
 
     hfold->Scale(1., "width");
 
@@ -293,6 +333,7 @@ int undulate(char const* config, char const* output) {
     auto side0 = new history<TH1F>(label + "_side0", "", null<TH1F>, shape);
     auto side1 = new history<TH1F>(label + "_side1", "", null<TH1F>, shape);
 
+    auto error = new history<TH2>("error"s, "", null<TH2>, shape);
     auto result = new history<TH1>("result"s, "", null<TH1>, shape);
     auto refold = new history<TH1>("refold"s, "", null<TH1>, shape);
 
@@ -301,6 +342,9 @@ int undulate(char const* config, char const* output) {
 
     auto fold0 = new history<TH1F>("fold0"s, "", null<TH1F>, shape);
     auto fold1 = new history<TH1F>("fold1"s, "", null<TH1F>, shape);
+
+    std::array<int64_t, 4> osg = { 0, 0, 2, 1 };
+    std::array<int64_t, 4> osr = { 0, 0, 0, 0 };
 
     /* info text */
     std::function<void(int64_t, float)> pt_info = [&](int64_t x, float pos) {
@@ -323,7 +367,7 @@ int undulate(char const* config, char const* output) {
     hb->alias("gen", "");
     hb->alias("reco", "");
 
-    std::vector<paper*> cs(16, nullptr);
+    std::vector<paper*> cs(17, nullptr);
     zip([&](paper*& c, std::string const& title) {
         c = new paper(tag + "_" + type + "_" + title, hb);
         apply_style(c, system_info);
@@ -333,7 +377,7 @@ int undulate(char const* config, char const* output) {
         "matrices"s, "pmatrix"s, "ematrix"s, "lmatrix"s,
         "logtaur"s, "logtaux"s, "logtauy"s, "lcurve"s,
         "unfold"s, "refold"s, "sresult"s, "srefold"s,
-        "fold0"s, "fold1"s, "shaded"s, "closure"s });
+        "fold0"s, "fold1"s, "error"s, "shaded"s, "closure"s });
 
     cs[12]->format(std::bind(default_formatter, _1, -2., 27.));
     cs[13]->format(std::bind(default_formatter, _1, -0.001, 0.02));
@@ -365,14 +409,15 @@ int undulate(char const* config, char const* output) {
                                &(*lcurve)[i], &slogtaux, &slogtauy);
 
         /* results */
-        (*result)[i] = u->GetOutput("Unfolded");
-        (*refold)[i] = u->GetFoldedOutput("FoldedBack");
+        (*error)[i] = u->GetEmatrixTotal(nullptr);
+        (*result)[i] = u->GetOutput(nullptr);
+        (*refold)[i] = u->GetFoldedOutput(nullptr);
 
-        (*sresult)[i] = shade((*result)[i], mg, { 0, 0, 2, 1 });
-        (*srefold)[i] = shade((*refold)[i], mr, { 0, 0, 0, 0 });
+        (*sresult)[i] = shade((*result)[i], mg, osg);
+        (*srefold)[i] = shade((*refold)[i], mr, osr);
 
-        (*fold0)[i] = fold<TH1, 4>((*result)[i], mg, 0, { 0, 0, 2, 1 });
-        (*fold1)[i] = fold<TH1, 4>((*result)[i], mg, 1, { 0, 0, 2, 1 });
+        (*fold0)[i] = fold((*result)[i], (*error)[i], mg, 0, osg);
+        (*fold1)[i] = fold((*result)[i], (*error)[i], mg, 1, osg);
 
         /* information and settings */
         printf("chi2/ndf: (%f [A] + %f [L]) / %i\n", u->GetChi2A(),
@@ -419,9 +464,9 @@ int undulate(char const* config, char const* output) {
         (*logtauy)[i] = trace(slogtauy, points);
 
         /* input folds */
-        (*shaded)[i] = shade((*victims)[i], mr, { 0, 0, 0, 0 });
-        (*side0)[i] = fold<TH1, 4>((*victims)[i], mr, 0, { 0, 0, 0, 0 });
-        (*side1)[i] = fold<TH1, 4>((*victims)[i], mr, 1, { 0, 0, 0, 0 });
+        (*shaded)[i] = shade((*victims)[i], mr, osr);
+        (*side0)[i] = fold((*victims)[i], nullptr, mr, 0, osr);
+        (*side1)[i] = fold((*victims)[i], nullptr, mr, 1, osr);
 
         /* normalise to unity */
         (*fold0)[i]->Scale(1. / (*fold0)[i]->Integral("width"));
@@ -482,12 +527,15 @@ int undulate(char const* config, char const* output) {
         cs[13]->add((*side1)[i], "data", "reco");
         cs[13]->stack((*fold1)[i], "unfolded", "gen");
 
-        cs[14]->add((*shaded)[i]);
-        cs[14]->adjust((*shaded)[i], "colz", "");
+        cs[14]->add((*error)[i]);
+        cs[14]->adjust((*error)[i], "colz", "");
 
-        cs[15]->add((*result)[i], "unfolded");
-        cs[15]->stack((*bias)[i], "bias");
-        cs[15]->stack((*ref)[i], "truth");
+        cs[15]->add((*shaded)[i]);
+        cs[15]->adjust((*shaded)[i], "colz", "");
+
+        cs[16]->add((*result)[i], "unfolded");
+        cs[16]->stack((*bias)[i], "bias");
+        cs[16]->stack((*ref)[i], "truth");
     });
 
     hb->set_binary("bins");
@@ -515,6 +563,7 @@ int undulate(char const* config, char const* output) {
         logtauy->saveby(tag);
         lcurve->saveby(tag);
 
+        error->saveby(tag);
         result->saveby(tag);
         refold->saveby(tag);
         sresult->saveby(tag);
