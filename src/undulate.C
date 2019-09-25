@@ -235,6 +235,7 @@ int undulate(char const* config, char const* output) {
 
     auto extensions = conf->get<std::vector<int64_t>>("extensions");
     auto dimensions = conf->get<std::vector<int64_t>>("dimensions");
+    auto divisions = conf->get<std::vector<int64_t>>("divisions");
 
     auto points = conf->get<int64_t>("points");
     auto taus = conf->get<std::vector<float>>("taus");
@@ -372,7 +373,7 @@ int undulate(char const* config, char const* output) {
         c = new paper(tag + "_" + type + "_" + title, hb);
         apply_style(c, system_info);
         c->accessory(pthf_info);
-        c->divide(mpthf->shape()[0], -1);
+        c->divide(divisions[0], divisions[1]);
     }, cs, (std::initializer_list<std::string> const) {
         "matrices"s, "pmatrix"s, "ematrix"s, "lmatrix"s,
         "logtaur"s, "logtaux"s, "logtauy"s, "lcurve"s,
