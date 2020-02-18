@@ -23,17 +23,24 @@ CPPDEPS = $(patsubst $(SRCDIR)/%.cpp,$(BLDDIR)/%.d,$(CPPSRCS))
 EXES = $(RPPEXES) $(CPPEXES)
 DEPS = $(RPPDEPS) $(CPPDEPS)
 
-.PHONY: all clean
+.PHONY: all submodules clean
 
 all: $(RPPEXES) $(CPPEXES)
 
-$(BINDIR)/% : $(SRCDIR)/%.C
+submodules:
+	$(MAKE) -C ./git/config
+	$(MAKE) -C ./git/foliage
+	$(MAKE) -C ./git/history
+	$(MAKE) -C ./git/paper-and-pencil
+	$(MAKE) -C ./git/tricks-and-treats
+
+$(BINDIR)/%: $(SRCDIR)/%.C
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(BLDDIR)
 	$(CXX) $(CXXFLAGS) $(RCXXFLAGS) -MMD -MF $(BLDDIR)/$(*F).d $< -o $@ \
 		$(LDFLAGS) $(RLDFLAGS)
 
-$(BINDIR)/% : $(SRCDIR)/%.cpp
+$(BINDIR)/%: $(SRCDIR)/%.cpp
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(BLDDIR)/$(@D)
 	$(CXX) $(CXXFLAGS) -MMD -MF $(BLDDIR)/$(*F).d $< -o $@ \
