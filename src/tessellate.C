@@ -74,7 +74,8 @@ void fill_data(memory<TH1F>* see_iso, memory<TH1F>* see_noniso,
 void fill_signal(memory<TH1F>* see, memory<TH1F>* sfrac,
                  multival* mpthf, TTree* t, pjtree* p, bool heavyion,
                  float pt_min, float eta_max, float hovere_max, float hf_min,
-                 float iso_max, float noniso_min, float noniso_max) {
+                 float iso_max, float noniso_min, float noniso_max,
+                 float offset) {
     printf("fill signal\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -113,7 +114,8 @@ void fill_signal(memory<TH1F>* see, memory<TH1F>* sfrac,
         if (isolation > 5.) { continue; }
 
         int64_t index = mpthf->index_for(v{(*p->phoEt)[leading], p->hiHF});
-        (*see)[index]->Fill((*p->phoSigmaIEtaIEta_2012)[leading], p->weight);
+        (*see)[index]->Fill((*p->phoSigmaIEtaIEta_2012)[leading] + offset,
+            p->weight);
 
         /* isolation requirement */
         float recoiso = (*p->pho_ecalClusterIsoR3)[leading]
@@ -182,6 +184,7 @@ int tessellate(char const* config, char const* output) {
     auto noniso_max = conf->get<float>("noniso_max");
     auto see_max = conf->get<float>("see_max");
 
+    auto offset = conf->get<float>("offset");
     auto rsee = conf->get<std::vector<float>>("rsee");
     auto rfit = conf->get<std::vector<float>>("rfit");
 
@@ -231,7 +234,7 @@ int tessellate(char const* config, char const* output) {
 
     fill_signal(see_sig, sfrac, mpthf, ts, ps, heavyion,
                 pt_min, eta_max, hovere_max, hf_min,
-                iso_max, noniso_min, noniso_max);
+                iso_max, noniso_min, noniso_max, offset);
 
     auto hb = new pencil();
     hb->category("type", "data", "sig", "bkg");
