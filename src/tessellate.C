@@ -28,9 +28,8 @@ using namespace std::placeholders;
 
 void fill_data(memory<TH1F>* see_iso, memory<TH1F>* see_noniso,
                multival* mpthf, TTree* t, pjtree* p, bool heavyion,
-               float pt_min, float eta_max, float hovere_max,
-               float iso_max, float noniso_min, float noniso_max,
-               float hf_min) {
+               float pt_min, float eta_max, float hovere_max, float hf_min,
+               float iso_max, float noniso_min, float noniso_max) {
     printf("fill data\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -72,10 +71,10 @@ void fill_data(memory<TH1F>* see_iso, memory<TH1F>* see_noniso,
     printf("\n");
 }
 
-void fill_signal(memory<TH1F>* see, multival* mpthf,
-                 TTree* t, pjtree* p, bool heavyion,
-                 float pt_min, float eta_max, float hovere_max,
-                 float hf_min) {
+void fill_signal(memory<TH1F>* see, memory<TH1F>* sfrac,
+                 multival* mpthf, TTree* t, pjtree* p, bool heavyion,
+                 float pt_min, float eta_max, float hovere_max, float hf_min,
+                 float iso_max, float noniso_min, float noniso_max) {
     printf("fill signal\n");
 
     auto nentries = static_cast<int64_t>(t->GetEntries());
@@ -115,12 +114,23 @@ void fill_signal(memory<TH1F>* see, multival* mpthf,
 
         int64_t index = mpthf->index_for(v{(*p->phoEt)[leading], p->hiHF});
         (*see)[index]->Fill((*p->phoSigmaIEtaIEta_2012)[leading], p->weight);
+
+        /* isolation requirement */
+        float recoiso = (*p->pho_ecalClusterIsoR3)[leading]
+            + (*p->pho_hcalRechitIsoR3)[leading]
+            + (*p->pho_trackIsoR3PtCut20)[leading];
+
+        if ((recoiso > iso_max && recoiso < noniso_min)
+            || recoiso > noniso_max) { continue; }
+
+        (*sfrac)[index]->Fill(recoiso > iso_max ? 1.5 : 0.5, p->weight);
     }
 
     printf("\n");
 }
 
 auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
+                   TH1F* hpurity, TH1F* hsfrac,
                    std::vector<float> const& range) {
     auto stub = "_"s + hdata->GetName();
 
@@ -129,6 +139,11 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
     TH1F* tbkg = (TH1F*)hbkg->Clone(("t_b"s + stub).data());
 
     tsig->Scale(1. / tsig->Integral());
+
+    auto signorm = tbkg->Integral() * hpurity->GetBinContent(1)
+        * hsfrac->GetBinContent(2) / hsfrac->GetBinContent(1);
+
+    tbkg->Add(tsig, -signorm);
     tbkg->Scale(1. / tbkg->Integral());
 
     auto evaluate = [&](double* x, double* p) {
@@ -146,16 +161,7 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
     tdata->Fit(("f"s + stub).data(), "L0Q", "", range[0], range[1]);
     tdata->Fit(("f"s + stub).data(), "L0QM", "", range[0], range[1]);
 
-    auto p0 = f->GetParameter(0);
-    auto p1 = f->GetParameter(1);
-
-    auto p0_err = f->GetParError(0);
-    auto p1_err = f->GetParError(1);
-
-    auto chisq = f->GetChisquare();
-    auto ndof = f->GetNDF();
-
-    return std::make_tuple(p0, p1, p0_err, p1_err, chisq, ndof);
+    return std::make_tuple(f, tsig, tbkg);
 }
 
 int tessellate(char const* config, char const* output) {
@@ -190,9 +196,11 @@ int tessellate(char const* config, char const* output) {
     auto mpthf = new multival(dpt, dhf);
 
     auto incl = new interval(""s, 1, 0., 1.);
+    auto itwo = new interval(""s, 2, 0., 2.);
     auto isee = new interval("#sigma_{#eta#eta}"s, rsee[0], rsee[1], rsee[2]);
 
     auto fincl = std::bind(&interval::book<TH1F>, incl, _1, _2, _3);
+    auto ftwo = std::bind(&interval::book<TH1F>, itwo, _1, _2, _3);
     auto fsee = std::bind(&interval::book<TH1F>, isee, _1, _2, _3);
 
     auto ipt = new interval(dpt);
@@ -202,6 +210,7 @@ int tessellate(char const* config, char const* output) {
     auto see_bkg = new memory<TH1F>("see_bkg"s, "counts", fsee, mpthf);
 
     auto purity = new memory<TH1F>("pthf"s, "purity"s, fincl, mpthf);
+    auto sfrac = new memory<TH1F>("sfrac"s, "counts"s, ftwo, mpthf);
 
     /* manage memory manually */
     TH1::AddDirectory(false);
@@ -217,12 +226,12 @@ int tessellate(char const* config, char const* output) {
     auto ps = new pjtree(true, false, ts, { 1, 1, 1, 0, 0, 0 });
 
     fill_data(see_data, see_bkg, mpthf, td, pd, heavyion,
-              pt_min, eta_max, hovere_max, iso_max, noniso_min, noniso_max,
-              hf_min);
+              pt_min, eta_max, hovere_max, hf_min,
+              iso_max, noniso_min, noniso_max);
 
-    fill_signal(see_sig, mpthf, ts, ps, heavyion,
-                pt_min, eta_max, hovere_max,
-                hf_min);
+    fill_signal(see_sig, sfrac, mpthf, ts, ps, heavyion,
+                pt_min, eta_max, hovere_max, hf_min,
+                iso_max, noniso_min, noniso_max);
 
     auto hb = new pencil();
     hb->category("type", "data", "sig", "bkg");
@@ -271,15 +280,41 @@ int tessellate(char const* config, char const* output) {
     printf("fit templates\n");
 
     for (int64_t i = 0; i < mpthf->size(); ++i) {
-        auto res = fit_templates((*see_data)[i], (*see_sig)[i], (*see_bkg)[i],
-                                 rfit);
+        std::vector<float> iters = {0};
 
-        auto stub = "p_"s + (*see_data)[i]->GetName();
-        auto pfit = (TH1F*)(*see_sig)[i]->Clone((stub + "f").data());
-        auto pbkg = (TH1F*)(*see_bkg)[i]->Clone((stub + "b").data());
+        TF1* f = nullptr;
+        TH1F* pfit = nullptr;
+        TH1F* pbkg = nullptr;
 
-        auto entries = std::get<0>(res);
-        auto fraction = std::get<1>(res);
+        do {
+            auto res = fit_templates(
+                (*see_data)[i], (*see_sig)[i], (*see_bkg)[i],
+                (*purity)[i], (*sfrac)[i], rfit);
+
+            f = std::get<0>(res);
+            pfit = std::get<1>(res);
+            pbkg = std::get<2>(res);
+
+            auto frac = f->GetParameter(1);
+            auto chi2 = f->GetChisquare();
+            auto ndof = f->GetNDF();
+
+            auto nsig = pfit->Integral(1, pfit->FindBin(see_max))
+                * frac / pfit->Integral();
+            auto nbkg = pbkg->Integral(1, pbkg->FindBin(see_max))
+                * (1. - frac) / pbkg->Integral();
+
+            auto val = nsig / (nsig + nbkg);
+            (*purity)[i]->SetBinContent(1, val);
+            printf("  purity: %.3f, chi2/ndof: %.0f/%i\n", val, chi2, ndof);
+
+            iters.push_back(val);
+        } while (std::abs(iters.end()[-1] - iters.end()[-2]) > 0.001);
+
+        printf("iterations: %zu\n", iters.size());
+
+        auto entries = f->GetParameter(0);
+        auto fraction = f->GetParameter(1);
 
         pfit->Scale(entries * fraction / pfit->Integral());
         pbkg->Scale(entries * (1. - fraction) / pbkg->Integral());
@@ -292,13 +327,6 @@ int tessellate(char const* config, char const* output) {
 
         c1->adjust(pfit, "hist f", "lf");
         c1->adjust(pbkg, "hist f", "lf");
-
-        auto ntot = pfit->Integral(1, pfit->FindBin(see_max));
-        auto nbkg = pbkg->Integral(1, pbkg->FindBin(see_max));
-
-        (*purity)[i]->SetBinContent(1, 1. - nbkg / ntot);
-
-        printf("purity: %.3f\n", (*purity)[i]->GetBinContent(1));
     }
 
     hb->sketch();
@@ -307,6 +335,7 @@ int tessellate(char const* config, char const* output) {
     /* save purities */
     in(output, [&]() {
         purity->save(tag);
+        sfrac->save(tag);
 
         see_data->save(tag);
         see_sig->save(tag);
