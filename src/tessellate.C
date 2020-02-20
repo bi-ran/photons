@@ -132,8 +132,8 @@ void fill_signal(memory<TH1F>* see, memory<TH1F>* sfrac,
 }
 
 auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
-                   TH1F* hpurity, TH1F* hsfrac,
-                   std::vector<float> const& range) {
+                   TH1F* hpurity, TH1F* hsfrac, float see_max,
+                   std::vector<float> const& range, float bkgnorm) {
     auto stub = "_"s + hdata->GetName();
 
     TH1F* tdata = (TH1F*)hdata->Clone(("t"s + stub).data());
@@ -142,8 +142,9 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
 
     tsig->Scale(1. / tsig->Integral());
 
-    auto signorm = tbkg->Integral() * hpurity->GetBinContent(1)
-        * hsfrac->GetBinContent(2) / hsfrac->GetBinContent(1);
+    auto signorm = tdata->Integral() * hpurity->GetBinContent(1)
+        * (hsfrac->GetBinContent(2) / hsfrac->GetBinContent(1))
+        * (tbkg->Integral() / bkgnorm);
 
     tbkg->Add(tsig, -signorm);
     tbkg->Scale(1. / tbkg->Integral());
@@ -156,7 +157,7 @@ auto fit_templates(TH1F* hdata, TH1F* hsig, TH1F* hbkg,
     };
 
     TF1* f = new TF1(("f"s + stub).data(), evaluate, range[0], range[1], 2);
-    f->SetParameters(tdata->Integral(), 0.8);
+    f->SetParameters(tdata->Integral(1, tdata->FindBin(see_max)), 0.8);
     f->SetParLimits(1, 0., 1.);
 
     tdata->Fit(("f"s + stub).data(), "L0Q", "", range[0], range[1]);
@@ -291,18 +292,23 @@ int tessellate(char const* config, char const* output) {
         TH1F* pfit = nullptr;
         TH1F* pbkg = nullptr;
 
+        float bkgnorm = 1;
+
         do {
             auto res = fit_templates(
                 (*see_data)[i], (*see_sig)[i], (*see_bkg)[i],
-                (*purity)[i], (*sfrac)[i], rfit);
+                (*purity)[i], (*sfrac)[i], see_max, rfit, bkgnorm);
 
             f = std::get<0>(res);
             pfit = std::get<1>(res);
             pbkg = std::get<2>(res);
 
+            auto norm = f->GetParameter(0);
             auto frac = f->GetParameter(1);
             auto chi2 = f->GetChisquare();
             auto ndof = f->GetNDF();
+
+            bkgnorm = norm * (1. - frac);
 
             auto nsig = pfit->Integral(1, pfit->FindBin(see_max))
                 * frac / pfit->Integral();
