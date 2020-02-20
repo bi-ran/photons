@@ -278,7 +278,7 @@ int tessellate(char const* config, char const* output) {
     apply_style(c1, system + " #sqrt{s_{NN}} = 5.02 TeV"s);
     c1->accessory(pthf_info);
     c1->accessory(purity_info);
-    c1->divide(ipt->size(), -1);
+    c1->divide(ipt->size() - 1, -1);
 
     printf("fit templates\n");
 
@@ -316,20 +316,23 @@ int tessellate(char const* config, char const* output) {
 
         printf("iterations: %zu\n", iters.size());
 
-        auto entries = f->GetParameter(0);
-        auto fraction = f->GetParameter(1);
+        auto indices = mpthf->indices_for(i);
+        if (indices[0] < ipt->size() - 1) {
+            auto entries = f->GetParameter(0);
+            auto fraction = f->GetParameter(1);
 
-        pfit->Scale(entries * fraction / pfit->Integral());
-        pbkg->Scale(entries * (1. - fraction) / pbkg->Integral());
+            pfit->Scale(entries * fraction / pfit->Integral());
+            pbkg->Scale(entries * (1. - fraction) / pbkg->Integral());
 
-        pfit->Add(pbkg);
+            pfit->Add(pbkg);
 
-        c1->add((*see_data)[i], "data");
-        c1->stack(pfit, "sig");
-        c1->stack(pbkg, "bkg");
+            c1->add((*see_data)[i], "data");
+            c1->stack(pfit, "sig");
+            c1->stack(pbkg, "bkg");
 
-        c1->adjust(pfit, "hist f", "lf");
-        c1->adjust(pbkg, "hist f", "lf");
+            c1->adjust(pfit, "hist f", "lf");
+            c1->adjust(pbkg, "hist f", "lf");
+        }
     }
 
     hb->sketch();
